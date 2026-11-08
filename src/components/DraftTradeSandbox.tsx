@@ -2,14 +2,6 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  ArrowRightLeft,
-  Award,
-  CheckCircle2,
-  Scale,
-  Sparkles,
-  UserPlus,
-} from 'lucide-react';
-import {
   generateRookieContract,
   getDraftPickTradeValue,
   getPlayerTradeValue,
@@ -23,11 +15,8 @@ import {
 import { useGMStore } from '@/store/useGMStore';
 
 export function DraftTradeSandbox() {
-  const {
-    derivedState,
-    addDraftSigningTransaction,
-    addTradeTransaction,
-  } = useGMStore();
+  const { derivedState, addDraftSigningTransaction, addTradeTransaction } =
+    useGMStore();
 
   const [chartModel, setChartModel] = useState<TradeChartModel>('RichHill');
   const [partnerTeamId, setPartnerTeamId] = useState<string>('LV');
@@ -48,7 +37,6 @@ export function DraftTradeSandbox() {
     string[]
   >([]);
 
-  // Selected prospect per pick ID for quick rookie simulation
   const [selectedProspectByPick, setSelectedProspectByPick] = useState<
     Record<string, string>
   >({});
@@ -63,7 +51,6 @@ export function DraftTradeSandbox() {
   const replacementCutoff2026 =
     derivedState.years[2026].replacementLevelCutoff;
 
-  // Compute Trade Value Sent vs Received
   const tradeEvaluation = useMemo(() => {
     const outgoingPlayers = derivedState.roster.filter((p) =>
       selectedOutgoingPlayerIds.includes(p.id)
@@ -102,13 +89,13 @@ export function DraftTradeSandbox() {
         ? (totalReceived / Math.max(1, totalSent)) * 100
         : 100;
 
-    let fairnessVerdict = 'Balanced Trade Package';
+    let fairnessVerdict = 'Balanced Exchange';
     if (totalSent === 0 && totalReceived === 0) {
       fairnessVerdict = 'Select assets on both sides to evaluate parity';
     } else if (parityRatio >= 88 && parityRatio <= 115) {
-      fairnessVerdict = 'Fair / Accepted by AI Front Office';
+      fairnessVerdict = 'Fair / Accepted by Partner Club';
     } else if (parityRatio > 115) {
-      fairnessVerdict = 'Favorable Surplus for You (Partner Likely Declines Without Sweetener)';
+      fairnessVerdict = 'Surplus Value for You (Partner Likely Declines)';
     } else {
       fairnessVerdict = 'Overpay by Your Front Office';
     }
@@ -145,57 +132,55 @@ export function DraftTradeSandbox() {
   };
 
   return (
-    <section className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 space-y-8">
-      {/* PART 1: Rookie Wage Scale & Top-51 Displacement Calculator */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+    <section className="mx-auto max-w-[1440px] px-6 py-8 space-y-14">
+      {/* PART 1: Rookie Wage Scale Ledger */}
+      <div>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-[#dfd9cc] pb-5">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Award className="h-4 w-4 text-teal-400" />
-              Rookie Pool Wage Scale & Top-51 Displacement Simulator
+            <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
+              CBA Rookie Pool Schedule
+            </p>
+            <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
+              Draft Pick Wage Scale & Top-51 Displacement
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Every draft pick signed displaces the 51st-lowest contract on your
-              roster (currently{' '}
-              <strong className="text-slate-200">
-                ${replacementCutoff2026.toFixed(2)}M
-              </strong>
-              ), so Net Cap Impact reflects true marginal cap space consumed.
+            <p className="mt-1 text-sm text-[#57534e]">
+              Signing a draft pick displaces the 51st-lowest contract ($
+              {replacementCutoff2026.toFixed(2)}M), so net marginal cap impact is
+              substantially lower than gross Year-1 cap hit.
             </p>
           </div>
 
-          <div className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-xs">
+          <div className="flex items-baseline gap-6 font-mono-ledger text-xs">
             <div>
-              <span className="text-slate-400">Gross Rookie Pool:</span>{' '}
-              <strong className="font-mono text-white">
+              <span className="text-[#8a8379]">Gross Rookie Pool:</span>{' '}
+              <strong className="text-[#1c1917]">
                 ${derivedState.years[2026].rookiePoolReserve.toFixed(2)}M
               </strong>
             </div>
-            <div className="h-4 w-px bg-slate-800" />
             <div>
-              <span className="text-slate-400">Net Cap Impact (After Top-51):</span>{' '}
-              <strong className="font-mono text-teal-400">
-                ${derivedState.years[2026].netRookiePoolImpact.toFixed(2)}M
+              <span className="text-[#8a8379]">Net Cap Impact:</span>{' '}
+              <strong className="text-[#2d5a43]">
+                −${derivedState.years[2026].netRookiePoolImpact.toFixed(2)}M
               </strong>
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/90 text-[11px] uppercase text-slate-400 border-b border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead className="border-b-2 border-[#1c1917] text-[11px] uppercase tracking-[0.12em] text-[#57534e]">
               <tr>
-                <th className="py-2.5 px-4">Pick / Round</th>
-                <th className="py-2.5 px-3">4-Yr Total Deal</th>
-                <th className="py-2.5 px-3">Signing Bonus (Prorated)</th>
-                <th className="py-2.5 px-3">2026 Gross Cap Hit</th>
-                <th className="py-2.5 px-3">2026 Net Marginal Cost</th>
-                <th className="py-2.5 px-3">2027–2029 Cap Hits</th>
-                <th className="py-2.5 px-3">5th-Yr Option Est.</th>
-                <th className="py-2.5 px-4">Simulate Draft Selection</th>
+                <th className="py-3 pr-4">Pick / Round</th>
+                <th className="py-3 px-4">4-Yr Total</th>
+                <th className="py-3 px-4">Signing Bonus</th>
+                <th className="py-3 px-4">2026 Gross Hit</th>
+                <th className="py-3 px-4">2026 Net Marginal</th>
+                <th className="py-3 px-4">2027–2029 Progression</th>
+                <th className="py-3 px-4">5th-Yr Option</th>
+                <th className="py-3 pl-4">Draft Selection</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody className="divide-y divide-[#dfd9cc]">
               {derivedState.draftPicks.map((pick) => {
                 const slot = generateRookieContract(
                   pick.overallPick,
@@ -212,30 +197,30 @@ export function DraftTradeSandbox() {
                 return (
                   <tr
                     key={pick.id}
-                    className="bg-slate-900/40 hover:bg-slate-900/80 transition"
+                    className="hover:bg-[#fcfaf6] transition-colors"
                   >
-                    <td className="py-3 px-4 font-bold text-white">
-                      Rd {pick.round}, Pick #{pick.overallPick}
+                    <td className="py-3.5 pr-4 font-medium text-[#1c1917]">
+                      Round {pick.round}, Pick #{pick.overallPick}
                       {pick.originalTeamId !== derivedState.teamId && (
-                        <span className="ml-1.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-300">
-                          via {pick.originalTeamId}
+                        <span className="ml-2 font-mono-ledger text-[11px] text-[#8a8379]">
+                          (via {pick.originalTeamId})
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 font-mono text-slate-200">
+                    <td className="py-3.5 px-4 font-mono-ledger text-[#1c1917]">
                       ${slot.totalFourYearValue.toFixed(2)}M
                     </td>
-                    <td className="py-3 px-3 font-mono text-slate-300">
+                    <td className="py-3.5 px-4 font-mono-ledger text-[#57534e]">
                       ${slot.signingBonusTotal.toFixed(2)}M ($
                       {slot.annualProratedBonus.toFixed(2)}M/yr)
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold text-white">
+                    <td className="py-3.5 px-4 font-mono-ledger font-semibold text-[#1c1917]">
                       ${slot.year1CapHit.toFixed(2)}M
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold text-teal-400">
-                      -${slot.year1NetCapImpactAfterDisplacement.toFixed(2)}M
+                    <td className="py-3.5 px-4 font-mono-ledger font-semibold text-[#2d5a43]">
+                      −${slot.year1NetCapImpactAfterDisplacement.toFixed(2)}M
                     </td>
-                    <td className="py-3 px-3 font-mono text-[11px] text-slate-400">
+                    <td className="py-3.5 px-4 font-mono-ledger text-[11px] text-[#8a8379]">
                       ${(
                         (slot.contractYears[2027]?.baseSalary ?? 0) +
                         slot.annualProratedBonus
@@ -252,19 +237,19 @@ export function DraftTradeSandbox() {
                       ).toFixed(2)}
                       M
                     </td>
-                    <td className="py-3 px-3 font-mono text-slate-300">
+                    <td className="py-3.5 px-4 font-mono-ledger text-[#57534e]">
                       {slot.projectedFifthYearOption
                         ? `$${slot.projectedFifthYearOption.toFixed(1)}M`
                         : '—'}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 pl-4">
                       {pick.selectedPlayerName ? (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300 border border-emerald-500/30">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Drafted: {pick.selectedPlayerName} ({pick.selectedPosition})
+                        <span className="font-medium text-[#2d5a43]">
+                          Selected: {pick.selectedPlayerName} (
+                          {pick.selectedPosition})
                         </span>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <select
                             aria-label={`Select draft prospect for pick ${pick.overallPick}`}
                             value={selectedProspectId}
@@ -274,11 +259,11 @@ export function DraftTradeSandbox() {
                                 [pick.id]: e.target.value,
                               }))
                             }
-                            className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-white"
+                            className="border-b border-[#c7bfb0] bg-transparent py-1 text-xs text-[#1c1917] focus:border-[#1c1917] focus:outline-none"
                           >
                             {TOP_DRAFT_PROSPECTS.map((p) => (
                               <option key={p.id} value={p.id}>
-                                {p.name} ({p.position} - {p.school})
+                                {p.name} ({p.position} · {p.school})
                               </option>
                             ))}
                           </select>
@@ -293,9 +278,9 @@ export function DraftTradeSandbox() {
                                 position: prospect.position,
                               })
                             }
-                            className="flex items-center gap-1 rounded-lg bg-teal-600 hover:bg-teal-500 px-2.5 py-1 text-xs font-bold text-white transition"
+                            className="border border-[#1c1917] px-2.5 py-1 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
                           >
-                            <UserPlus className="h-3 w-3" /> Draft
+                            Select
                           </button>
                         </div>
                       )}
@@ -308,41 +293,41 @@ export function DraftTradeSandbox() {
         </div>
       </div>
 
-      {/* PART 2: Interactive Multi-Asset Trade Value Calculator */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+      {/* PART 2: Trade Desk */}
+      <div className="border-t-2 border-[#1c1917] pt-10">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Scale className="h-4 w-4 text-amber-400" />
-              Front-Office Trade Builder & Value Chart Parity Meter
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Package players and draft picks across teams. Toggle between the{' '}
-              <strong>Rich Hill</strong> consensus chart and the analytical{' '}
-              <strong>Fitzgerald-Spielberger</strong> curve.
+            <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
+              Valuation Model
             </p>
+            <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
+              Multi-Asset Trade Desk
+            </h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-800 text-xs">
+          <div className="flex flex-wrap items-center gap-6 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="uppercase tracking-[0.1em] text-[#8a8379]">
+                Chart:
+              </span>
               <button
                 type="button"
                 onClick={() => setChartModel('RichHill')}
-                className={`rounded px-2.5 py-1 font-semibold ${
+                className={`pb-0.5 cursor-pointer ${
                   chartModel === 'RichHill'
-                    ? 'bg-amber-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
+                    : 'text-[#8a8379]'
                 }`}
               >
-                Rich Hill Chart
+                Rich Hill Consensus
               </button>
               <button
                 type="button"
                 onClick={() => setChartModel('FitzgeraldSpielberger')}
-                className={`rounded px-2.5 py-1 font-semibold ${
+                className={`pb-0.5 cursor-pointer ${
                   chartModel === 'FitzgeraldSpielberger'
-                    ? 'bg-amber-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
+                    : 'text-[#8a8379]'
                 }`}
               >
                 Fitzgerald-Spielberger
@@ -357,7 +342,7 @@ export function DraftTradeSandbox() {
                 setSelectedIncomingPlayerIds([]);
                 setSelectedIncomingPickIds([]);
               }}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs font-bold text-white"
+              className="border-b border-[#1c1917] bg-transparent py-1 text-xs font-semibold text-[#1c1917] cursor-pointer"
             >
               {TRADE_PARTNER_TEAMS.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -368,32 +353,22 @@ export function DraftTradeSandbox() {
           </div>
         </div>
 
-        {/* Parity Meter Banner */}
-        <div className="mb-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
-          <div className="flex items-center justify-between text-xs mb-2">
-            <div>
-              <span className="text-slate-400">Your Package Sent:</span>{' '}
-              <strong className="font-mono text-sm text-indigo-400">
-                {tradeEvaluation.totalSent} pts
-              </strong>
-            </div>
-            <div className="font-bold text-amber-300 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" />
+        {/* Minimalist Parity Scale */}
+        <div className="mb-8 border-y border-[#dfd9cc] py-4">
+          <div className="flex items-baseline justify-between text-xs mb-2">
+            <span className="font-mono-ledger">
+              Outgoing Value: <strong>{tradeEvaluation.totalSent} pts</strong>
+            </span>
+            <span className="font-editorial text-sm italic text-[#1c1917]">
               {tradeEvaluation.fairnessVerdict}
-            </div>
-            <div>
-              <span className="text-slate-400">
-                {partnerTeam.abbreviation} Package Received:
-              </span>{' '}
-              <strong className="font-mono text-sm text-emerald-400">
-                {tradeEvaluation.totalReceived} pts
-              </strong>
-            </div>
+            </span>
+            <span className="font-mono-ledger">
+              Incoming Value: <strong>{tradeEvaluation.totalReceived} pts</strong>
+            </span>
           </div>
-
-          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800 flex">
+          <div className="h-1.5 w-full bg-[#e5dfd3] flex overflow-hidden">
             <div
-              className="bg-indigo-500 h-full transition-all duration-300"
+              className="bg-[#1c1917] h-full transition-all duration-300"
               style={{
                 width: `${
                   tradeEvaluation.totalSent + tradeEvaluation.totalReceived > 0
@@ -405,22 +380,19 @@ export function DraftTradeSandbox() {
                 }%`,
               }}
             />
-            <div className="bg-emerald-500 h-full flex-1 transition-all duration-300" />
+            <div className="bg-[#2d5a43] h-full flex-1 transition-all duration-300" />
           </div>
         </div>
 
-        {/* Two-Column Asset Selector */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Left: Your Team Assets */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-300 mb-3">
-              {derivedState.teamName} Outgoing Assets
+        {/* Two-Column Open Ledger */}
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#dfd9cc]">
+          {/* Left: Outgoing */}
+          <div className="lg:pr-8">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#57534e] mb-3">
+              {derivedState.teamName} Assets
             </h3>
 
-            <div className="mb-3 text-[11px] font-semibold text-slate-400">
-              Draft Picks
-            </div>
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-6">
               {derivedState.draftPicks.map((pk) => {
                 const val = getDraftPickTradeValue(pk.overallPick, chartModel);
                 const selected = selectedOutgoingPickIds.includes(pk.id);
@@ -435,24 +407,20 @@ export function DraftTradeSandbox() {
                         pk.id
                       )
                     }
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                    className={`border px-2.5 py-1 text-xs font-mono-ledger transition-colors cursor-pointer ${
                       selected
-                        ? 'border-indigo-400 bg-indigo-600/30 text-white'
-                        : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                        ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
+                        : 'border-[#c7bfb0] text-[#1c1917] hover:border-[#1c1917]'
                     }`}
                   >
-                    Rd {pk.round} (#{pk.overallPick}) •{' '}
-                    <span className="font-mono text-indigo-300">{val} pts</span>
+                    Rd {pk.round} (#{pk.overallPick}) · {val} pts
                   </button>
                 );
               })}
             </div>
 
-            <div className="mb-2 text-[11px] font-semibold text-slate-400">
-              Tradeable Roster Players (Top 12)
-            </div>
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 max-h-60 overflow-y-auto pr-1">
-              {derivedState.roster.slice(0, 12).map((p: Player) => {
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc]">
+              {derivedState.roster.slice(0, 10).map((p: Player) => {
                 const val = getPlayerTradeValue(p, chartModel, 2026);
                 const selected = selectedOutgoingPlayerIds.includes(p.id);
                 return (
@@ -466,19 +434,17 @@ export function DraftTradeSandbox() {
                         p.id
                       )
                     }
-                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition ${
-                      selected
-                        ? 'border-indigo-400 bg-indigo-600/30 text-white'
-                        : 'border-slate-800 bg-slate-900/90 text-slate-300 hover:border-slate-700'
+                    className={`flex w-full items-baseline justify-between py-2.5 px-2 text-left text-xs transition-colors cursor-pointer ${
+                      selected ? 'bg-[#ede8dd] font-semibold' : 'hover:bg-[#fcfaf6]'
                     }`}
                   >
                     <div>
-                      <div className="font-bold">{p.name}</div>
-                      <div className="text-[10px] text-slate-400">
-                        {p.position} • Age {p.ageIn2026}
-                      </div>
+                      <span className="text-[#1c1917]">{p.name}</span>{' '}
+                      <span className="text-[#8a8379]">
+                        ({p.position} · Age {p.ageIn2026})
+                      </span>
                     </div>
-                    <span className="font-mono font-bold text-indigo-300">
+                    <span className="font-mono-ledger text-[#57534e]">
                       {val} pts
                     </span>
                   </button>
@@ -487,16 +453,13 @@ export function DraftTradeSandbox() {
             </div>
           </div>
 
-          {/* Right: Partner Team Assets */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-300 mb-3">
-              {partnerTeam.name} Incoming Assets
+          {/* Right: Incoming */}
+          <div className="pt-8 lg:pt-0 lg:pl-8">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#57534e] mb-3">
+              {partnerTeam.name} Assets
             </h3>
 
-            <div className="mb-3 text-[11px] font-semibold text-slate-400">
-              Partner Draft Picks
-            </div>
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-6">
               {partnerTeam.availablePicks.map((pk) => {
                 const val = getDraftPickTradeValue(pk.overallPick, chartModel);
                 const selected = selectedIncomingPickIds.includes(pk.id);
@@ -511,23 +474,19 @@ export function DraftTradeSandbox() {
                         pk.id
                       )
                     }
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                    className={`border px-2.5 py-1 text-xs font-mono-ledger transition-colors cursor-pointer ${
                       selected
-                        ? 'border-emerald-400 bg-emerald-600/30 text-white'
-                        : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                        ? 'border-[#2d5a43] bg-[#2d5a43] text-[#f6f3ec]'
+                        : 'border-[#c7bfb0] text-[#1c1917] hover:border-[#1c1917]'
                     }`}
                   >
-                    Rd {pk.round} (#{pk.overallPick}) •{' '}
-                    <span className="font-mono text-emerald-300">{val} pts</span>
+                    Rd {pk.round} (#{pk.overallPick}) · {val} pts
                   </button>
                 );
               })}
             </div>
 
-            <div className="mb-2 text-[11px] font-semibold text-slate-400">
-              Partner Blockbuster Trade Targets
-            </div>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc]">
               {partnerTeam.availablePlayers.map((p) => {
                 const val = getPlayerTradeValue(p, chartModel, 2026);
                 const selected = selectedIncomingPlayerIds.includes(p.id);
@@ -543,25 +502,22 @@ export function DraftTradeSandbox() {
                         p.id
                       )
                     }
-                    className={`flex items-center justify-between rounded-lg border px-3.5 py-2.5 text-left text-xs transition ${
-                      selected
-                        ? 'border-emerald-400 bg-emerald-600/30 text-white'
-                        : 'border-slate-800 bg-slate-900/90 text-slate-300 hover:border-slate-700'
+                    className={`flex w-full items-baseline justify-between py-3 px-2 text-left text-xs transition-colors cursor-pointer ${
+                      selected ? 'bg-[#ede8dd] font-semibold' : 'hover:bg-[#fcfaf6]'
                     }`}
                   >
                     <div>
-                      <div className="font-bold text-sm">
+                      <div className="text-sm font-medium text-[#1c1917]">
                         {p.name}{' '}
-                        <span className="text-xs font-normal text-slate-400">
-                          ({p.position} • OVR {p.overallRating})
+                        <span className="text-xs font-normal text-[#8a8379]">
+                          ({p.position} · OVR {p.overallRating})
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        Acquiring 2026 Base Salary: ${acquiringHit.toFixed(2)}M (Zero
-                        Prior Bonus Proration)
+                      <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                        2026 Acquiring Base: ${acquiringHit.toFixed(2)}M
                       </div>
                     </div>
-                    <span className="font-mono text-sm font-bold text-emerald-300">
+                    <span className="font-mono-ledger text-[#2d5a43]">
                       {val} pts
                     </span>
                   </button>
@@ -571,16 +527,16 @@ export function DraftTradeSandbox() {
           </div>
         </div>
 
-        <div className="mt-5 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-400">Cap Accounting Designation:</span>
+        <div className="mt-8 flex items-center justify-between border-t border-[#dfd9cc] pt-5">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-[#8a8379]">Accounting:</span>
             <button
               type="button"
               onClick={() => setTradeDesignation('PRE_JUNE_1')}
-              className={`rounded px-2.5 py-1 font-semibold ${
+              className={`cursor-pointer ${
                 tradeDesignation === 'PRE_JUNE_1'
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-400'
+                  ? 'underline font-semibold text-[#1c1917]'
+                  : 'text-[#8a8379]'
               }`}
             >
               Pre-June 1
@@ -588,10 +544,10 @@ export function DraftTradeSandbox() {
             <button
               type="button"
               onClick={() => setTradeDesignation('POST_JUNE_1')}
-              className={`rounded px-2.5 py-1 font-semibold ${
+              className={`cursor-pointer ${
                 tradeDesignation === 'POST_JUNE_1'
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-400'
+                  ? 'underline font-semibold text-[#1c1917]'
+                  : 'text-[#8a8379]'
               }`}
             >
               Post-June 1
@@ -621,10 +577,9 @@ export function DraftTradeSandbox() {
               setSelectedIncomingPlayerIds([]);
               setSelectedIncomingPickIds([]);
             }}
-            className="flex items-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 px-5 py-2.5 text-xs font-bold text-white shadow-lg transition"
+            className="bg-[#1c1917] px-6 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] disabled:opacity-40 cursor-pointer"
           >
-            <ArrowRightLeft className="h-4 w-4" />
-            Execute Multi-Asset Trade onto Scenario Stack
+            Record Trade in Notebook
           </button>
         </div>
       </div>

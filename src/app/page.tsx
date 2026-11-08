@@ -16,12 +16,12 @@ export default function ArmchairGMApp() {
   const { activeTab } = useGMStore();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#f6f3ec] text-[#1c1917] flex flex-col">
       {/* 1. Sticky 4-Year Cap Horizon Header */}
       <CapHorizonHeader />
 
       {/* 2. Main Workspace View */}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-24">
         {activeTab === 'matrix' && <RosterMatrix />}
         {activeTab === 'draft' && <DraftTradeSandbox />}
         {activeTab === 'free-agency' && <FreeAgencySimulatorView />}

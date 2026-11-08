@@ -1,13 +1,34 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  --paper: #f6f3ec;
+  --paper-elevated: #fcfaf6;
+  --paper-muted: #ede8dd;
+  --ink: #1c1917;
+  --ink-secondary: #57534e;
+  --ink-muted: #8a8379;
+  --rule: #dfd9cc;
+  --rule-strong: #c7bfb0;
+  --forest: #2d5a43;
+  --terracotta: #b84a27;
+  --ochre: #b57c1e;
 }
 
 body {
-  background-color: #020617;
-  color: #f8fafc;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.font-editorial {
+  font-family: var(--font-serif), Georgia, Cambria, "Times New Roman", serif;
+}
+
+.font-mono-ledger {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Native Modal Dialog Scroll Containment (modern-web-guidance: dialog) */
@@ -23,7 +44,7 @@ dialog::backdrop {
 /* Complex Layout Containment for 60FPS Roster Matrix rows (modern-web-guidance: interactions-in-complex-layouts) */
 .board-row {
   content-visibility: auto;
-  contain-intrinsic-size: auto 900px auto 64px;
+  contain-intrinsic-size: auto 900px auto 58px;
 }
 
 @supports not (content-visibility: auto) {
@@ -37,15 +58,15 @@ dialog::backdrop {
   container-type: inline-size;
 }
 
-/* Brand-Consistent Native Range Slider (modern-web-guidance: slider) */
+/* Editorial Range Slider (modern-web-guidance: slider) */
 input[type="range"].gm-range-slider {
-  --slider-track-size: 0.5rem;
-  --slider-thumb-size: 1.25rem;
+  --slider-track-size: 0.375rem;
+  --slider-thumb-size: 1.125rem;
   --slider-track-radius: 999px;
   --slider-thumb-radius: 50%;
-  --slider-track-color: #1e293b;
-  --slider-fill-color: #6366f1;
-  --slider-thumb-color: #818cf8;
+  --slider-track-color: #dfd9cc;
+  --slider-fill-color: #1c1917;
+  --slider-thumb-color: #1c1917;
   --slider-direction: to right;
 
   --attr-min: attr(min type(<number>), 0);
@@ -57,7 +78,7 @@ input[type="range"].gm-range-slider {
 
   appearance: none;
   inline-size: 100%;
-  block-size: 2rem;
+  block-size: 1.75rem;
   margin: 0;
   padding: 0;
   border: 0;
@@ -93,7 +114,7 @@ input[type="range"].gm-range-slider::-webkit-slider-thumb {
   margin-block-start: calc(
     (var(--slider-track-size) - var(--slider-thumb-size)) / 2
   );
-  border: 2px solid #e0e7ff;
+  border: 2px solid #f6f3ec;
   border-radius: var(--slider-thumb-radius);
   background: var(--slider-thumb-color);
 }
@@ -114,7 +135,7 @@ input[type="range"].gm-range-slider::-moz-range-progress {
 input[type="range"].gm-range-slider::-moz-range-thumb {
   inline-size: var(--slider-thumb-size);
   block-size: var(--slider-thumb-size);
-  border: 2px solid #e0e7ff;
+  border: 2px solid #f6f3ec;
   border-radius: var(--slider-thumb-radius);
   background: var(--slider-thumb-color);
 }

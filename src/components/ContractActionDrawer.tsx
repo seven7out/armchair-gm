@@ -1,15 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import {
-  ArrowRightLeft,
-  CalendarPlus,
-  Check,
-  Scissors,
-  Sliders,
-  Sparkles,
-  X,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import {
   applyPlayerExtension,
   ContractStructureTemplate,
@@ -49,19 +41,15 @@ export function ContractActionDrawer() {
 
   const [activeTab, setActiveTab] = useState<ActionTab>('restructure');
   const [actionYear, setActionYear] = useState<LeagueYear>(2026);
-
-  // Restructure Controls
   const [restructurePct, setRestructurePct] = useState<number>(1.0);
   const [addVoidYears, setAddVoidYears] = useState<number>(1);
 
-  // Extension Controls
   const [extYears, setExtYears] = useState<number>(3);
   const [extApy, setExtApy] = useState<number>(22.0);
   const [extGuaranteedPct, setExtGuaranteedPct] = useState<number>(0.6);
   const [extStructure, setExtStructure] =
     useState<ContractStructureTemplate>('Backloaded');
 
-  // Quick Trade Controls
   const [partnerTeamId, setPartnerTeamId] = useState<string>('LV');
   const [selectedIncomingPickId, setSelectedIncomingPickId] =
     useState<string>('lv-2026-2');
@@ -69,7 +57,6 @@ export function ContractActionDrawer() {
     'PRE_JUNE_1' | 'POST_JUNE_1'
   >('PRE_JUNE_1');
 
-  // Open / close native <dialog> modal
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -78,7 +65,6 @@ export function ContractActionDrawer() {
       if (!dialog.open) {
         dialog.showModal();
       }
-      // Set default sensible tab & APY when opening for a new player
       const cy2026 = player.contractYears[2026];
       if (cy2026 && cy2026.baseSalary > 4.0) {
         setActiveTab('restructure');
@@ -153,59 +139,52 @@ export function ContractActionDrawer() {
       {...({ closedby: 'any' } as React.DialogHTMLAttributes<HTMLDialogElement>)}
       onClose={() => selectPlayer(null)}
       onClick={(e) => {
-        if (e.target === dialogRef.current) {
-          selectPlayer(null);
-        }
+        if (e.target === dialogRef.current) selectPlayer(null);
       }}
-      className="m-auto w-full max-w-3xl rounded-2xl border border-slate-700/80 bg-slate-950 p-0 text-slate-100 shadow-2xl backdrop:bg-slate-950/75 backdrop:backdrop-blur-sm"
+      className="m-auto w-full max-w-2xl border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-xl backdrop:bg-[#1c1917]/30"
     >
-      {/* Header */}
-      <div className="flex items-start justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/80">
+      {/* Editorial Header */}
+      <div className="flex items-start justify-between border-b border-[#dfd9cc] px-7 py-5">
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 text-xs font-bold text-indigo-300 border border-indigo-500/30">
-              {player.position}
-            </span>
-            <h2 id={titleId} className="text-lg font-bold text-white">
-              {player.name}
-            </h2>
-            <span className="text-xs text-slate-400">
-              Age {player.ageIn2026} • OVR {player.overallRating} •{' '}
-              {player.accruedSeasons} Accrued Seasons
-            </span>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
+            {player.position} · Age {player.ageIn2026} · OVR {player.overallRating}{' '}
+            · {player.accruedSeasons} Accrued Seasons
           </div>
+          <h2 id={titleId} className="font-editorial mt-1 text-2xl text-[#1c1917]">
+            {player.name}
+          </h2>
           {player.notes && (
-            <p className="mt-1 text-xs text-slate-300">{player.notes}</p>
+            <p className="mt-1 text-xs text-[#57534e]">{player.notes}</p>
           )}
         </div>
 
         <button
           type="button"
           onClick={() => selectPlayer(null)}
-          aria-label="Close contract drawer"
-          className="rounded-lg bg-slate-800/80 p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition"
+          aria-label="Close contract dossier"
+          className="p-1 text-[#8a8379] hover:text-[#1c1917] cursor-pointer"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Current 4-Year Contract Snapshot Strip */}
-      <div className="border-b border-slate-800 bg-slate-900/40 px-6 py-3">
-        <div className="mb-2 flex items-center justify-between text-xs">
-          <span className="font-semibold text-slate-400 uppercase tracking-wider">
-            Current 2026–2029 Contract Ledger
+      {/* Current 4-Year Ledger Strip */}
+      <div className="border-b border-[#dfd9cc] bg-[#ede8dd]/50 px-7 py-4">
+        <div className="mb-2.5 flex items-baseline justify-between text-xs">
+          <span className="uppercase tracking-[0.12em] text-[10px] text-[#8a8379]">
+            Current Contract Schedule
           </span>
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400">Action League Year:</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-[#8a8379]">Effective Year:</span>
             {([2026, 2027] as LeagueYear[]).map((yr) => (
               <button
                 key={yr}
                 type="button"
                 onClick={() => setActionYear(yr)}
-                className={`rounded px-2 py-0.5 text-xs font-bold ${
+                className={`font-mono-ledger text-xs cursor-pointer ${
                   actionYear === yr
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                    ? 'border-b border-[#1c1917] font-semibold text-[#1c1917]'
+                    : 'text-[#8a8379] hover:text-[#1c1917]'
                 }`}
               >
                 {yr}
@@ -214,44 +193,30 @@ export function ContractActionDrawer() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2.5">
-          {LEAGUE_YEARS.map((yr) => {
+        <div className="grid grid-cols-4 divide-x divide-[#dfd9cc]">
+          {LEAGUE_YEARS.map((yr, idx) => {
             const cy = player.contractYears[yr];
             const hit = getContractYearCapHit(cy);
-            const age = player.ageIn2026 + (yr - 2026);
             return (
               <div
                 key={yr}
-                className={`rounded-lg border p-2.5 text-xs ${
-                  cy?.isVoidYear
-                    ? 'border-dashed border-purple-500/40 bg-purple-950/20'
-                    : cy
-                    ? 'border-slate-800 bg-slate-900'
-                    : 'border-dashed border-slate-800 bg-slate-950/40 opacity-50'
-                }`}
+                className={`${idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}`}
               >
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="font-bold text-slate-200">{yr}</span>
-                  <span>Age {age}</span>
+                <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                  {yr}
                 </div>
                 {cy ? (
                   <>
-                    <div className="font-mono text-sm font-black text-white">
-                      ${hit.toFixed(2)}M{' '}
-                      {cy.isVoidYear && (
-                        <span className="text-[10px] font-semibold text-purple-300">
-                          (VOID)
-                        </span>
-                      )}
+                    <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
+                      ${hit.toFixed(2)}M{cy.isVoidYear ? ' (Void)' : ''}
                     </div>
-                    <div className="mt-1 text-[10px] text-slate-400">
-                      Base: ${cy.baseSalary.toFixed(2)}M | Bonus: $
-                      {cy.proratedBonus.toFixed(2)}M
+                    <div className="font-mono-ledger text-[10px] text-[#8a8379]">
+                      B ${cy.baseSalary.toFixed(1)}M · P ${cy.proratedBonus.toFixed(1)}M
                     </div>
                   </>
                 ) : (
-                  <div className="text-[11px] text-slate-500 py-1">
-                    Unsigned / FA
+                  <div className="font-mono-ledger text-xs text-[#8a8379]/60">
+                    Unsigned
                   </div>
                 )}
               </div>
@@ -260,75 +225,47 @@ export function ContractActionDrawer() {
         </div>
       </div>
 
-      {/* Action Mode Selector Tabs */}
-      <div className="flex border-b border-slate-800 bg-slate-900/60 px-6 pt-2 gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab('restructure')}
-          className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition ${
-            activeTab === 'restructure'
-              ? 'border-indigo-500 text-indigo-400'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Sliders className="h-3.5 w-3.5" />
-          Restructure Slider
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('cut')}
-          className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition ${
-            activeTab === 'cut'
-              ? 'border-rose-500 text-rose-400'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Scissors className="h-3.5 w-3.5" />
-          Release (Pre vs Post-June 1)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('extend')}
-          className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition ${
-            activeTab === 'extend'
-              ? 'border-emerald-500 text-emerald-400'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <CalendarPlus className="h-3.5 w-3.5" />
-          Extend / 5th-Yr Option
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('trade')}
-          className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition ${
-            activeTab === 'trade'
-              ? 'border-amber-500 text-amber-400'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <ArrowRightLeft className="h-3.5 w-3.5" />
-          Trade Player
-        </button>
+      {/* Action Mode Tabs */}
+      <div className="flex border-b border-[#dfd9cc] px-7 pt-3 gap-6 text-xs uppercase tracking-[0.1em]">
+        {(
+          [
+            { id: 'restructure', label: 'Restructure' },
+            { id: 'cut', label: 'Release (Pre / Post-June 1)' },
+            { id: 'extend', label: 'Extend Contract' },
+            { id: 'trade', label: 'Trade' },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`pb-2.5 transition-colors cursor-pointer ${
+              activeTab === tab.id
+                ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
+                : 'text-[#8a8379] hover:text-[#1c1917]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Tab Content Area */}
-      <div className="p-6">
-        {/* 1. RESTRUCTURE TAB */}
+      {/* Body */}
+      <div className="p-7">
         {activeTab === 'restructure' && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-              <div className="flex items-center justify-between mb-2">
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-baseline justify-between mb-2">
                 <label
                   htmlFor={restructureSliderId}
-                  className="text-xs font-bold text-white"
+                  className="text-xs font-medium text-[#1c1917]"
                 >
                   Convert {actionYear} Base Salary Above Vet Minimum ($
                   {restructureSim.vetMinimumFloor.toFixed(2)}M Floor)
                 </label>
-                <span className="font-mono text-sm font-black text-indigo-400">
+                <span className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
                   {Math.round(restructurePct * 100)}% ($
-                  {restructureSim.convertedBonusAmount.toFixed(2)}M Converted)
+                  {restructureSim.convertedBonusAmount.toFixed(2)}M)
                 </span>
               </div>
 
@@ -339,7 +276,6 @@ export function ContractActionDrawer() {
                 max={100}
                 step={5}
                 value={Math.round(restructurePct * 100)}
-                aria-valuetext={`${Math.round(restructurePct * 100)}% of restructurable salary ($${restructureSim.convertedBonusAmount.toFixed(2)}M)`}
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   e.currentTarget.style.setProperty('--control-value', String(val));
@@ -355,35 +291,33 @@ export function ContractActionDrawer() {
                 className="gm-range-slider w-full"
               />
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400">Add Void Years for Proration:</span>
+              <div className="mt-3 flex items-center justify-between text-xs text-[#57534e]">
+                <div className="flex items-center gap-3">
+                  <span>Void Years Added:</span>
                   {[0, 1, 2].map((vCount) => (
                     <button
                       key={vCount}
                       type="button"
                       onClick={() => setAddVoidYears(vCount)}
-                      className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                      className={`px-2 py-0.5 font-mono-ledger cursor-pointer ${
                         addVoidYears === vCount
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-[#1c1917] text-[#f6f3ec]'
+                          : 'border border-[#c7bfb0] text-[#57534e]'
                       }`}
                     >
-                      +{vCount} Void Yr{vCount === 1 ? '' : 's'}
+                      +{vCount}
                     </button>
                   ))}
                 </div>
-                <span className="text-slate-300">
-                  Prorated across{' '}
-                  <strong>{restructureSim.prorationYearsCount} seasons</strong> (+$
-                  {restructureSim.annualProrationAdded.toFixed(2)}M/yr)
+                <span className="font-mono-ledger">
+                  +{restructureSim.annualProrationAdded.toFixed(2)}M/yr across{' '}
+                  {restructureSim.prorationYearsCount} yrs
                 </span>
               </div>
             </div>
 
-            {/* 4-Year Ripple Preview */}
-            <div className="grid grid-cols-4 gap-2.5">
-              {LEAGUE_YEARS.map((yr) => {
+            <div className="grid grid-cols-4 divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
+              {LEAGUE_YEARS.map((yr, idx) => {
                 const delta = restructureSim.capDeltaByYear[yr];
                 const newHit = getContractYearCapHit(
                   restructureSim.updatedPlayer.contractYears[yr]
@@ -391,41 +325,41 @@ export function ContractActionDrawer() {
                 return (
                   <div
                     key={yr}
-                    className="rounded-lg border border-slate-800 bg-slate-900/90 p-3 text-xs"
+                    className={idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}
                   >
-                    <div className="text-slate-400 font-semibold">{yr} New Hit</div>
-                    <div className="font-mono text-base font-bold text-white mt-0.5">
+                    <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                      {yr} Revised
+                    </div>
+                    <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
                       ${newHit.toFixed(2)}M
                     </div>
                     <div
-                      className={`mt-1 font-mono text-xs font-bold ${
+                      className={`font-mono-ledger text-[11px] ${
                         delta < 0
-                          ? 'text-emerald-400'
+                          ? 'text-[#2d5a43]'
                           : delta > 0
-                          ? 'text-amber-400'
-                          : 'text-slate-500'
+                          ? 'text-[#b84a27]'
+                          : 'text-[#8a8379]'
                       }`}
                     >
                       {delta < 0
                         ? `Saves $${Math.abs(delta).toFixed(2)}M`
                         : delta > 0
-                        ? `+$${delta.toFixed(2)}M Proration`
-                        : 'No change'}
+                        ? `+$${delta.toFixed(2)}M`
+                        : '—'}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-slate-400">
-                Creates{' '}
-                <strong className="text-emerald-400">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#57534e]">
+                Immediate {actionYear} relief:{' '}
+                <strong className="font-mono-ledger text-[#2d5a43]">
                   +${restructureSim.currentYearCapSavings.toFixed(2)}M
-                </strong>{' '}
-                in {actionYear} cap space by pushing dead-cap risk into{' '}
-                {actionYear + 1}–2029.
-              </p>
+                </strong>
+              </span>
               <button
                 type="button"
                 disabled={restructureSim.currentYearCapSavings <= 0}
@@ -437,63 +371,49 @@ export function ContractActionDrawer() {
                     actionYear
                   )
                 }
-                className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition"
+                className="bg-[#1c1917] px-5 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] disabled:opacity-40 cursor-pointer"
               >
-                <Check className="h-4 w-4" />
-                Execute Restructure (+$
+                Record Restructure (+$
                 {restructureSim.currentYearCapSavings.toFixed(2)}M)
               </button>
             </div>
           </div>
         )}
 
-        {/* 2. RELEASE (PRE-JUNE 1 VS POST-JUNE 1) TAB */}
         {activeTab === 'cut' && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Pre-June 1 Card */}
-            <div className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#dfd9cc]">
+            <div className=" flex flex-col justify-between sm:pr-4">
               <div>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white">
-                    Standard Pre-June 1 Release
-                  </h3>
-                  <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
-                    Immediate Acceleration
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-400">
-                  All remaining unamortized signing bonus accelerates immediately into{' '}
-                  {actionYear} Dead Money; {actionYear + 1}–2029 books are 100% clean.
+                <h3 className="font-editorial text-lg text-[#1c1917]">
+                  Pre-June 1 Release
+                </h3>
+                <p className="mt-1 text-xs text-[#57534e]">
+                  All remaining unamortized bonus accelerates immediately into{' '}
+                  {actionYear}; clears {actionYear + 1}–2029 books completely.
                 </p>
 
-                <div className="mt-4 space-y-2 border-t border-slate-800 pt-3 text-xs">
+                <div className="mt-4 space-y-2 border-t border-[#dfd9cc] pt-3 font-mono-ledger text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">{actionYear} Original Cap Hit:</span>
-                    <span className="font-mono text-white">
-                      ${preJuneCut.currentYearOriginalCapHit.toFixed(2)}M
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">{actionYear} Accelerated Dead Cap:</span>
-                    <span className="font-mono text-amber-400 font-semibold">
+                    <span className="text-[#8a8379]">{actionYear} Dead Cap:</span>
+                    <span className="text-[#b84a27]">
                       ${preJuneCut.currentYearDeadCap.toFixed(2)}M
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">{actionYear + 1} Dead Cap:</span>
-                    <span className="font-mono text-emerald-400">$0.00M</span>
+                    <span className="text-[#8a8379]">{actionYear + 1} Dead Cap:</span>
+                    <span>$0.00M</span>
                   </div>
-                  <div className="flex justify-between border-t border-slate-800 pt-2 text-sm font-bold">
-                    <span className="text-white">{actionYear} Net Cap Savings:</span>
+                  <div className="flex justify-between border-t border-[#dfd9cc] pt-2 font-semibold">
+                    <span>{actionYear} Net Savings:</span>
                     <span
-                      className={`font-mono ${
+                      className={
                         preJuneCut.currentYearCapSavings >= 0
-                          ? 'text-emerald-400'
-                          : 'text-rose-400'
-                      }`}
+                          ? 'text-[#2d5a43]'
+                          : 'text-[#b84a27]'
+                      }
                     >
-                      {preJuneCut.currentYearCapSavings >= 0 ? '+' : ''}$
-                      {preJuneCut.currentYearCapSavings.toFixed(2)}M
+                      {preJuneCut.currentYearCapSavings >= 0 ? '+$' : '−$'}
+                      {Math.abs(preJuneCut.currentYearCapSavings).toFixed(2)}M
                     </span>
                   </div>
                 </div>
@@ -504,62 +424,48 @@ export function ContractActionDrawer() {
                 onClick={() =>
                   addCutTransaction(player, 'PRE_JUNE_1_CUT', actionYear)
                 }
-                className="mt-4 w-full rounded-xl bg-rose-600/90 hover:bg-rose-500 py-2.5 text-xs font-bold text-white transition"
+                className="mt-5 w-full border border-[#1c1917] py-2 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
               >
-                Release Pre-June 1 ({preJuneCut.currentYearCapSavings >= 0 ? '+' : ''}
-                ${preJuneCut.currentYearCapSavings.toFixed(2)}M)
+                Release Pre-June 1
               </button>
             </div>
 
-            {/* Post-June 1 Designation Card */}
-            <div className="flex flex-col justify-between rounded-xl border border-indigo-500/40 bg-indigo-950/20 p-4">
+            <div className="flex flex-col justify-between pt-6 sm:pt-0 sm:pl-6">
               <div>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white">
-                    Post-June 1 Designation
-                  </h3>
-                  <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-300 border border-indigo-500/30">
-                    Split Dead Cap
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-300">
-                  Only {actionYear}&apos;s scheduled bonus proration stays on{' '}
-                  {actionYear}; future unamortized bonus defers into {actionYear + 1}{' '}
-                  Dead Money.
+                <h3 className="font-editorial text-lg text-[#1c1917]">
+                  Post-June 1 Designation
+                </h3>
+                <p className="mt-1 text-xs text-[#57534e]">
+                  Keeps only {actionYear}&apos;s scheduled proration on{' '}
+                  {actionYear} cap and defers remaining bonus to {actionYear + 1}.
                 </p>
 
-                <div className="mt-4 space-y-2 border-t border-slate-800/80 pt-3 text-xs">
+                <div className="mt-4 space-y-2 border-t border-[#dfd9cc] pt-3 font-mono-ledger text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">{actionYear} Original Cap Hit:</span>
-                    <span className="font-mono text-white">
-                      ${postJuneCut.currentYearOriginalCapHit.toFixed(2)}M
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">{actionYear} Dead Cap Kept:</span>
-                    <span className="font-mono text-amber-300 font-semibold">
+                    <span className="text-[#8a8379]">{actionYear} Dead Cap:</span>
+                    <span className="text-[#b84a27]">
                       ${postJuneCut.currentYearDeadCap.toFixed(2)}M
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">
-                      {actionYear + 1} Deferred Dead Cap:
+                    <span className="text-[#8a8379]">
+                      {actionYear + 1} Deferred Dead:
                     </span>
-                    <span className="font-mono text-amber-400 font-semibold">
+                    <span className="text-[#b84a27]">
                       ${postJuneCut.nextYearDeadCap.toFixed(2)}M
                     </span>
                   </div>
-                  <div className="flex justify-between border-t border-slate-800 pt-2 text-sm font-bold">
-                    <span className="text-white">{actionYear} Net Cap Savings:</span>
+                  <div className="flex justify-between border-t border-[#dfd9cc] pt-2 font-semibold">
+                    <span>{actionYear} Net Savings:</span>
                     <span
-                      className={`font-mono ${
+                      className={
                         postJuneCut.currentYearCapSavings >= 0
-                          ? 'text-emerald-400'
-                          : 'text-rose-400'
-                      }`}
+                          ? 'text-[#2d5a43]'
+                          : 'text-[#b84a27]'
+                      }
                     >
-                      {postJuneCut.currentYearCapSavings >= 0 ? '+' : ''}$
-                      {postJuneCut.currentYearCapSavings.toFixed(2)}M
+                      {postJuneCut.currentYearCapSavings >= 0 ? '+$' : '−$'}
+                      {Math.abs(postJuneCut.currentYearCapSavings).toFixed(2)}M
                     </span>
                   </div>
                 </div>
@@ -570,32 +476,26 @@ export function ContractActionDrawer() {
                 onClick={() =>
                   addCutTransaction(player, 'POST_JUNE_1_CUT', actionYear)
                 }
-                className="mt-4 w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white transition"
+                className="mt-5 w-full bg-[#1c1917] py-2 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
               >
-                Designate Post-June 1 (
-                {postJuneCut.currentYearCapSavings >= 0 ? '+' : ''}$
-                {postJuneCut.currentYearCapSavings.toFixed(2)}M)
+                Designate Post-June 1
               </button>
             </div>
           </div>
         )}
 
-        {/* 3. EXTEND / 5TH-YEAR OPTION TAB */}
         {activeTab === 'extend' && (
-          <div className="space-y-4">
-            {/* Optional 1st-Round 5th-Year Option Banner */}
+          <div className="space-y-5">
             {fifthYearOptionAmount !== null && (
-              <div className="flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-950/20 p-3.5">
+              <div className="flex items-center justify-between border border-[#2d5a43] bg-[#2d5a43]/5 px-4 py-3 text-xs">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
-                    <Sparkles className="h-4 w-4" />
+                  <div className="font-semibold text-[#2d5a43]">
                     Eligible for Round 1 Fifth-Year Option (2027)
                   </div>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    Pick #{player.draftPick} ({player.position}) projected 5th-year
-                    option: <strong>${fifthYearOptionAmount.toFixed(2)}M</strong> fully
-                    guaranteed.
-                  </p>
+                  <div className="text-[#57534e]">
+                    Projected fully guaranteed salary: $
+                    {fifthYearOptionAmount.toFixed(2)}M
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -606,39 +506,39 @@ export function ContractActionDrawer() {
                       fifthYearOptionAmount
                     )
                   }
-                  className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white transition"
+                  className="bg-[#2d5a43] px-3 py-1.5 text-xs font-medium text-[#f6f3ec] cursor-pointer"
                 >
-                  Exercise 2027 Option (${fifthYearOptionAmount.toFixed(1)}M)
+                  Exercise Option
                 </button>
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase">
-                  Years Added ({extYears} Yrs)
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                  New Years Added
                 </label>
-                <div className="mt-2 flex gap-1.5">
+                <div className="mt-2 flex gap-2">
                   {[1, 2, 3].map((yrs) => (
                     <button
                       key={yrs}
                       type="button"
                       onClick={() => setExtYears(yrs)}
-                      className={`flex-1 rounded-lg py-1.5 text-xs font-bold ${
+                      className={`flex-1 py-1.5 font-mono-ledger text-xs cursor-pointer ${
                         extYears === yrs
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-slate-800 text-slate-300'
+                          ? 'bg-[#1c1917] text-[#f6f3ec]'
+                          : 'border border-[#c7bfb0] text-[#57534e]'
                       }`}
                     >
-                      +{yrs} Yr{yrs > 1 ? 's' : ''}
+                      +{yrs} yr
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase">
-                  New Money APY: ${extApy.toFixed(1)}M / yr
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                  APY (${extApy.toFixed(1)}M / yr)
                 </label>
                 <input
                   type="range"
@@ -647,83 +547,54 @@ export function ContractActionDrawer() {
                   step={0.5}
                   value={extApy}
                   onChange={(e) => setExtApy(parseFloat(e.target.value))}
-                  className="mt-2 w-full accent-emerald-500"
+                  className="mt-3 w-full accent-[#1c1917]"
                 />
-                <div className="mt-1 flex justify-between text-[10px] text-slate-400">
-                  <span>Total New: ${(extApy * extYears).toFixed(1)}M</span>
-                  <span>
-                    {((extApy / derivedState.years[2026].adjustedCapCeiling) * 100).toFixed(
-                      1
-                    )}
-                    % of 2026 Cap
-                  </span>
-                </div>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase">
-                  Structure Template
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                  Pacing Structure
                 </label>
                 <select
                   value={extStructure}
                   onChange={(e) =>
                     setExtStructure(e.target.value as ContractStructureTemplate)
                   }
-                  className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white"
+                  className="mt-2 w-full border-b border-[#1c1917] bg-transparent py-1.5 text-xs font-medium text-[#1c1917]"
                 >
                   <option value="Backloaded">Team-Friendly Backload</option>
-                  <option value="Flat">Flat / Balanced</option>
+                  <option value="Flat">Flat / Even</option>
                   <option value="FrontLoaded">Front-Loaded</option>
-                  <option value="VoidHeavy">Max Void-Year Proration</option>
+                  <option value="VoidHeavy">Void-Year Deferral</option>
                 </select>
               </div>
             </div>
 
-            {/* Post-Extension 4-Year Cap Preview */}
-            <div className="grid grid-cols-4 gap-2.5">
-              {LEAGUE_YEARS.map((yr) => {
+            <div className="grid grid-cols-4 divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
+              {LEAGUE_YEARS.map((yr, idx) => {
                 const newCy = extensionSim.updatedPlayer.contractYears[yr];
                 const newHit = getContractYearCapHit(newCy);
-                const delta = extensionSim.capDeltaByYear[yr];
                 return (
                   <div
                     key={yr}
-                    className="rounded-lg border border-slate-800 bg-slate-900/90 p-3 text-xs"
+                    className={idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}
                   >
-                    <div className="text-slate-400 font-semibold">{yr} Extended Hit</div>
-                    <div className="font-mono text-base font-bold text-white mt-0.5">
-                      ${newHit.toFixed(2)}M
+                    <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                      {yr} Extended
                     </div>
-                    <div
-                      className={`mt-1 font-mono text-[11px] font-semibold ${
-                        delta < 0
-                          ? 'text-emerald-400'
-                          : delta > 0
-                          ? 'text-indigo-300'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      {delta < 0
-                        ? `Saves $${Math.abs(delta).toFixed(2)}M in ${yr}`
-                        : delta > 0
-                        ? `+$${delta.toFixed(2)}M added`
-                        : 'Unchanged'}
+                    <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
+                      ${newHit.toFixed(2)}M
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-xs text-slate-300">
-                Longevity Verdict:{' '}
-                <strong className="text-emerald-400">
-                  {longevity.extensionRecommendation}
-                </strong>{' '}
-                ({longevity.postContractViableYears} viable starter yr
-                {longevity.postContractViableYears === 1 ? '' : 's'} before Age-
-                {longevity.cliffAge} cliff)
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#57534e]">
+                {longevity.extensionRecommendation} ({longevity.postContractViableYears}{' '}
+                viable post-deal yrs)
+              </span>
               <button
                 type="button"
                 onClick={() =>
@@ -736,22 +607,20 @@ export function ContractActionDrawer() {
                     actionYear
                   )
                 }
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition"
+                className="bg-[#1c1917] px-5 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] cursor-pointer"
               >
-                <Check className="h-4 w-4" />
-                Sign {extYears}-Yr, ${(extYears * extApy).toFixed(1)}M Extension
+                Sign {extYears}-Yr Extension (${(extYears * extApy).toFixed(1)}M)
               </button>
             </div>
           </div>
         )}
 
-        {/* 4. QUICK TRADE TAB */}
         {activeTab === 'trade' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase">
-                  Trade Partner Team
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                  Partner Club
                 </label>
                 <select
                   value={partnerTeamId}
@@ -763,7 +632,7 @@ export function ContractActionDrawer() {
                       setSelectedIncomingPickId(found.availablePicks[0].id);
                     }
                   }}
-                  className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white"
+                  className="mt-2 w-full border-b border-[#1c1917] bg-transparent py-1.5 text-xs font-medium text-[#1c1917]"
                 >
                   {TRADE_PARTNER_TEAMS.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -773,35 +642,35 @@ export function ContractActionDrawer() {
                 </select>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase">
-                  Draft Pick Compensation Received
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                  Pick Acquired
                 </label>
                 <select
                   value={selectedIncomingPickId}
                   onChange={(e) => setSelectedIncomingPickId(e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white"
+                  className="mt-2 w-full border-b border-[#1c1917] bg-transparent py-1.5 text-xs font-medium text-[#1c1917]"
                 >
                   {partnerTeam.availablePicks.map((pk) => (
                     <option key={pk.id} value={pk.id}>
-                      2026 Round {pk.round}, Pick #{pk.overallPick} ({pk.originalTeamId})
+                      Round {pk.round}, Pick #{pk.overallPick}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase">
-                  Trade Timing Designation
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                  Timing
                 </label>
-                <div className="mt-2 flex gap-1.5">
+                <div className="mt-2 flex gap-2">
                   <button
                     type="button"
                     onClick={() => setTradeDesignation('PRE_JUNE_1')}
-                    className={`flex-1 rounded-lg py-1.5 text-xs font-bold ${
+                    className={`flex-1 py-1.5 text-xs cursor-pointer ${
                       tradeDesignation === 'PRE_JUNE_1'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-slate-800 text-slate-300'
+                        ? 'bg-[#1c1917] text-[#f6f3ec]'
+                        : 'border border-[#c7bfb0] text-[#57534e]'
                     }`}
                   >
                     Pre-June 1
@@ -809,10 +678,10 @@ export function ContractActionDrawer() {
                   <button
                     type="button"
                     onClick={() => setTradeDesignation('POST_JUNE_1')}
-                    className={`flex-1 rounded-lg py-1.5 text-xs font-bold ${
+                    className={`flex-1 py-1.5 text-xs cursor-pointer ${
                       tradeDesignation === 'POST_JUNE_1'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-slate-800 text-slate-300'
+                        ? 'bg-[#1c1917] text-[#f6f3ec]'
+                        : 'border border-[#c7bfb0] text-[#57534e]'
                     }`}
                   >
                     Post-June 1
@@ -821,36 +690,15 @@ export function ContractActionDrawer() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <span className="text-slate-400">
-                    Base Salary Transferred to {partnerTeam.abbreviation}:
-                  </span>{' '}
-                  <strong className="font-mono text-white">
-                    ${player.contractYears[actionYear]?.baseSalary.toFixed(2) ?? '0.00'}M
-                  </strong>
-                  <p className="mt-1 text-slate-400">
-                    Guaranteed base salary travels with the player on a trade; only
-                    unamortized bonus proration stays on your dead cap.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-emerald-400">
-                    {actionYear} Trade Cap Savings:{' '}
-                    {tradeSim.currentYearCapSavings >= 0 ? '+' : ''}$
-                    {tradeSim.currentYearCapSavings.toFixed(2)}M
-                  </div>
-                  <div className="text-amber-300 font-mono">
-                    {actionYear} Dead Cap: ${tradeSim.currentYearDeadCap.toFixed(2)}M
-                    {tradeSim.nextYearDeadCap > 0 &&
-                      ` (+$${tradeSim.nextYearDeadCap.toFixed(2)}M in ${actionYear + 1})`}
-                  </div>
-                </div>
+            <div className="flex items-center justify-between border-t border-[#dfd9cc] pt-4 text-xs">
+              <div className="font-mono-ledger text-[#57534e]">
+                {actionYear} Savings:{' '}
+                <strong className="text-[#2d5a43]">
+                  {tradeSim.currentYearCapSavings >= 0 ? '+$' : '−$'}
+                  {Math.abs(tradeSim.currentYearCapSavings).toFixed(2)}M
+                </strong>{' '}
+                · Dead Cap: ${tradeSim.currentYearDeadCap.toFixed(2)}M
               </div>
-            </div>
-
-            <div className="flex justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -867,10 +715,9 @@ export function ContractActionDrawer() {
                     tradeValueReceived: 150,
                   });
                 }}
-                className="flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition"
+                className="bg-[#1c1917] px-5 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] cursor-pointer"
               >
-                <ArrowRightLeft className="h-4 w-4" />
-                Trade {player.name} to {partnerTeam.abbreviation} for Pick #
+                Trade to {partnerTeam.abbreviation} for Pick #
                 {incomingPick?.overallPick}
               </button>
             </div>

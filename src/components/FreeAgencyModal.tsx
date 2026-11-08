@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import {
-  Check,
-  DollarSign,
-  PlusCircle,
-  Sparkles,
-  UserCheck,
-  X,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import {
   buildStructuredContract,
   ContractStructureTemplate,
@@ -65,7 +58,6 @@ export function FreeAgencySimulatorView({
     [years, apy, guaranteedPct, structure, selectedFA.accruedSeasons]
   );
 
-  // Identify in-house extension candidates expiring in 2026
   const inHouseExpiringPlayers = useMemo(() => {
     return derivedState.roster
       .filter((p) => {
@@ -81,17 +73,16 @@ export function FreeAgencySimulatorView({
   const curve = POSITIONAL_AGING_CURVES[selectedFA.position];
 
   return (
-    <div className={isModal ? 'p-6' : 'mx-auto max-w-[1600px] px-4 py-6 sm:px-6'}>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left 5 Cols: Top Free Agent Market Pool + In-House Expiring Core */}
-        <div className="lg:col-span-5 space-y-5">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-300 mb-3 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" />
-              Open Market Free Agent Targets (2026 Pool)
+    <div className={isModal ? 'p-7' : 'mx-auto max-w-[1440px] px-6 py-8'}>
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#dfd9cc]">
+        {/* Left 5 Cols: Open Market Index */}
+        <div className="lg:col-span-5 lg:pr-8 space-y-8">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379] mb-3">
+              Open Market Free Agents (2026)
             </h3>
 
-            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-[380px] overflow-y-auto">
               {SEED_FREE_AGENTS.map((fa) => {
                 const isSelected = selectedFA.id === fa.id;
                 const faCurve = POSITIONAL_AGING_CURVES[fa.position];
@@ -100,29 +91,26 @@ export function FreeAgencySimulatorView({
                     key={fa.id}
                     type="button"
                     onClick={() => handleSelectFA(fa)}
-                    className={`w-full rounded-xl border p-3 text-left transition ${
+                    className={`w-full py-3 px-2.5 text-left transition-colors cursor-pointer ${
                       isSelected
-                        ? 'border-emerald-500/80 bg-emerald-950/30 shadow-md'
-                        : 'border-slate-800 bg-slate-950/70 hover:border-slate-700'
+                        ? 'bg-[#ede8dd]'
+                        : 'hover:bg-[#fcfaf6]'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                          {fa.position}
-                        </span>
-                        <span className="font-bold text-sm text-white">
+                    <div className="flex items-baseline justify-between">
+                      <div>
+                        <span className="font-medium text-sm text-[#1c1917]">
                           {fa.name}
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          Age {fa.ageIn2026} (Cliff @ {faCurve.cliffAge})
+                        </span>{' '}
+                        <span className="text-xs text-[#8a8379]">
+                          ({fa.position} · Age {fa.ageIn2026} · Cliff @{faCurve.cliffAge})
                         </span>
                       </div>
-                      <span className="font-mono text-xs font-bold text-emerald-400">
+                      <span className="font-mono-ledger text-xs font-semibold text-[#1c1917]">
                         ~${fa.marketApy.toFixed(1)}M/yr
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-400 line-clamp-2">
+                    <p className="mt-0.5 text-[11px] text-[#57534e] line-clamp-1">
                       {fa.scoutingNote}
                     </p>
                   </button>
@@ -131,38 +119,35 @@ export function FreeAgencySimulatorView({
             </div>
           </div>
 
-          {/* In-House Impending Free Agents */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-300 mb-2.5 flex items-center gap-1.5">
-              <UserCheck className="h-3.5 w-3.5" />
-              In-House Impending Free Agents (Expiring After 2026)
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379] mb-3">
+              In-House Expiring Contracts (After 2026)
             </h3>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-48 overflow-y-auto">
               {inHouseExpiringPlayers.map((p) => {
                 const lon = evaluatePlayerLongevity(p);
                 return (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs"
+                    className="flex items-baseline justify-between py-2.5 px-2 text-xs"
                   >
                     <div>
-                      <span className="font-bold text-white">{p.name}</span>{' '}
-                      <span className="text-slate-400">
-                        ({p.position} • Age {p.ageIn2026} • OVR {p.overallRating})
+                      <span className="font-medium text-[#1c1917]">
+                        {p.name}
+                      </span>{' '}
+                      <span className="text-[#8a8379]">
+                        ({p.position} · Age {p.ageIn2026})
                       </span>
-                      <div className="text-[10px] text-emerald-400">
-                        {lon.extensionRecommendation} (+
-                        {lon.postContractViableYears} viable post-deal yrs)
+                      <div className="text-[10px] text-[#2d5a43]">
+                        {lon.extensionRecommendation}
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        selectPlayer(p.id);
-                      }}
-                      className="rounded-lg bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 px-2.5 py-1 text-[11px] font-bold text-indigo-200 hover:text-white transition"
+                      onClick={() => selectPlayer(p.id)}
+                      className="underline decoration-[#c7bfb0] underline-offset-4 text-[#1c1917] hover:text-[#2d5a43] cursor-pointer"
                     >
-                      Extend
+                      Extend →
                     </button>
                   </div>
                 );
@@ -171,278 +156,199 @@ export function FreeAgencySimulatorView({
           </div>
         </div>
 
-        {/* Right 7 Cols: Interactive Multi-Year Contract Architect */}
-        <div className="lg:col-span-7">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-xl space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-300 border border-emerald-500/30">
-                    {selectedFA.position}
-                  </span>
-                  <h2 className="text-xl font-black text-white">
-                    {selectedFA.name}
-                  </h2>
-                  <span className="text-xs text-slate-400">
-                    Age {selectedFA.ageIn2026} • OVR {selectedFA.overallRating} •
-                    Prev: {selectedFA.previousTeam}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-300">
-                  {selectedFA.scoutingNote}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-right">
-                <div className="text-[10px] uppercase text-slate-400">
-                  Total Contract Value
-                </div>
-                <div className="font-mono text-lg font-black text-emerald-400">
-                  ${offer.totalValue.toFixed(1)}M{' '}
-                  <span className="text-xs font-normal text-slate-400">
-                    (${offer.totalGuaranteed.toFixed(1)}M Gtd)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sliders & Structure Templates */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4">
-                <div className="flex justify-between text-xs mb-2">
-                  <label htmlFor={apySliderId} className="font-bold text-slate-200">
-                    Average Per Year (APY)
-                  </label>
-                  <span className="font-mono font-bold text-emerald-400">
-                    ${apy.toFixed(1)}M / yr (
-                    {(
-                      (apy / derivedState.years[2026].adjustedCapCeiling) *
-                      100
-                    ).toFixed(1)}
-                    % of Cap)
-                  </span>
-                </div>
-                <input
-                  id={apySliderId}
-                  type="range"
-                  min={2}
-                  max={45}
-                  step={0.5}
-                  value={apy}
-                  aria-valuetext={`$${apy.toFixed(1)} Million per year`}
-                  onChange={(e) => setApy(parseFloat(e.target.value))}
-                  className="w-full accent-emerald-500"
-                />
-                <div className="mt-2 flex justify-between text-[11px] text-slate-400">
-                  <span>Market Est: ${selectedFA.marketApy.toFixed(1)}M</span>
-                  <span>Signing Bonus: ${offer.signingBonusTotal.toFixed(1)}M</span>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4">
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="font-bold text-slate-200">
-                    Contract Length & Guarantee %
-                  </span>
-                  <span className="font-mono text-indigo-300 font-bold">
-                    {years} Yrs • {Math.round(guaranteedPct * 100)}% Gtd
-                  </span>
-                </div>
-                <div className="flex gap-1.5 mb-2.5">
-                  {[1, 2, 3, 4].map((y) => (
-                    <button
-                      key={y}
-                      type="button"
-                      onClick={() => setYears(y)}
-                      className={`flex-1 rounded-lg py-1 text-xs font-bold ${
-                        years === y
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {y} Yr{y > 1 ? 's' : ''}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="range"
-                  min={0.2}
-                  max={0.85}
-                  step={0.05}
-                  value={guaranteedPct}
-                  aria-label="Guaranteed Percentage"
-                  onChange={(e) => setGuaranteedPct(parseFloat(e.target.value))}
-                  className="w-full accent-indigo-500"
-                />
-              </div>
-            </div>
-
-            {/* Structure Template Pills */}
+        {/* Right 7 Cols: Contract Term Sheet */}
+        <div className="lg:col-span-7 pt-8 lg:pt-0 lg:pl-8 space-y-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-[#dfd9cc] pb-5">
             <div>
-              <div className="text-xs font-bold text-slate-300 mb-2">
-                Cap Structure Template
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
+                Contract Offer Sheet · {selectedFA.position} · Age{' '}
+                {selectedFA.ageIn2026}
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {(
-                  [
-                    {
-                      id: 'Backloaded',
-                      label: 'Team-Friendly Backload',
-                      desc: 'Low 2026 base + prorated bonus',
-                    },
-                    {
-                      id: 'Flat',
-                      label: 'Flat / Balanced',
-                      desc: 'Evenly paced cap hits',
-                    },
-                    {
-                      id: 'FrontLoaded',
-                      label: 'Front-Loaded',
-                      desc: 'Pay early, $0 future dead cap',
-                    },
-                    {
-                      id: 'VoidHeavy',
-                      label: 'Void-Year Max Deferral',
-                      desc: 'Pushes bonus into void years',
-                    },
-                  ] as const
-                ).map((tpl) => (
+              <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
+                {selectedFA.name}
+              </h2>
+              <p className="mt-1 text-xs text-[#57534e]">
+                {selectedFA.scoutingNote}
+              </p>
+            </div>
+
+            <div className="text-right font-mono-ledger">
+              <div className="text-[10px] uppercase tracking-[0.1em] text-[#8a8379]">
+                Total Value
+              </div>
+              <div className="text-xl font-semibold text-[#1c1917]">
+                ${offer.totalValue.toFixed(1)}M
+              </div>
+              <div className="text-[11px] text-[#57534e]">
+                ${offer.totalGuaranteed.toFixed(1)}M Guaranteed
+              </div>
+            </div>
+          </div>
+
+          {/* Sliders */}
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <label htmlFor={apySliderId} className="font-medium text-[#1c1917]">
+                  Annual Value (APY)
+                </label>
+                <span className="font-mono-ledger font-semibold text-[#1c1917]">
+                  ${apy.toFixed(1)}M / yr
+                </span>
+              </div>
+              <input
+                id={apySliderId}
+                type="range"
+                min={2}
+                max={45}
+                step={0.5}
+                value={apy}
+                onChange={(e) => setApy(parseFloat(e.target.value))}
+                className="w-full accent-[#1c1917]"
+              />
+              <div className="mt-1 flex justify-between font-mono-ledger text-[11px] text-[#8a8379]">
+                <span>Market: ${selectedFA.marketApy.toFixed(1)}M</span>
+                <span>Bonus: ${offer.signingBonusTotal.toFixed(1)}M</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="font-medium text-[#1c1917]">
+                  Term Length & Guarantee
+                </span>
+                <span className="font-mono-ledger font-semibold text-[#1c1917]">
+                  {years} Yrs · {Math.round(guaranteedPct * 100)}% Gtd
+                </span>
+              </div>
+              <div className="flex gap-2 mb-3">
+                {[1, 2, 3, 4].map((y) => (
                   <button
-                    key={tpl.id}
+                    key={y}
                     type="button"
-                    onClick={() => setStructure(tpl.id)}
-                    className={`rounded-xl border p-2.5 text-left transition ${
-                      structure === tpl.id
-                        ? 'border-emerald-500 bg-emerald-950/40 text-white'
-                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white'
+                    onClick={() => setYears(y)}
+                    className={`flex-1 py-1 font-mono-ledger text-xs cursor-pointer ${
+                      years === y
+                        ? 'bg-[#1c1917] text-[#f6f3ec]'
+                        : 'border border-[#c7bfb0] text-[#57534e]'
                     }`}
                   >
-                    <div className="text-xs font-bold">{tpl.label}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      {tpl.desc}
-                    </div>
+                    {y} yr
                   </button>
                 ))}
               </div>
+              <input
+                type="range"
+                min={0.2}
+                max={0.85}
+                step={0.05}
+                value={guaranteedPct}
+                aria-label="Guaranteed Percentage"
+                onChange={(e) => setGuaranteedPct(parseFloat(e.target.value))}
+                className="w-full accent-[#1c1917]"
+              />
             </div>
+          </div>
 
-            {/* 4-Year Cap & Positional Cliff Impact Preview */}
-            <div>
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="font-bold text-slate-300">
-                  4-Year Cap Hit & Team Effective Space Ripple Preview
-                </span>
-                <span className="text-[11px] text-teal-400">
-                  2026 Top-51 Displacement: -$
-                  {replacementCutoff.toFixed(2)}M offset applied
-                </span>
-              </div>
+          {/* Structure Template Selection */}
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-[#8a8379] mb-2">
+              Cap Accounting Structure
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {(
+                [
+                  { id: 'Backloaded', label: 'Backloaded', desc: 'Low Year-1 base' },
+                  { id: 'Flat', label: 'Flat Pacing', desc: 'Even annual hits' },
+                  { id: 'FrontLoaded', label: 'Front-Loaded', desc: '$0 late dead cap' },
+                  { id: 'VoidHeavy', label: 'Void Deferral', desc: 'Max bonus spread' },
+                ] as const
+              ).map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => setStructure(tpl.id)}
+                  className={`border p-2.5 text-left transition-colors cursor-pointer ${
+                    structure === tpl.id
+                      ? 'border-[#1c1917] bg-[#ede8dd]'
+                      : 'border-[#dfd9cc] hover:border-[#c7bfb0]'
+                  }`}
+                >
+                  <div className="text-xs font-semibold text-[#1c1917]">
+                    {tpl.label}
+                  </div>
+                  <div className="text-[10px] text-[#8a8379]">{tpl.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <div className="grid grid-cols-4 gap-2.5">
-                {LEAGUE_YEARS.map((yr) => {
-                  const cy = offer.contractYears[yr];
-                  const hit = offer.capHitsByYear[yr];
-                  const playerAge = selectedFA.ageIn2026 + (yr - 2026);
-                  const isPastCliff = playerAge >= curve.cliffAge;
-                  const currentTeamSpace =
-                    derivedState.years[yr].effectiveCapSpace;
-                  const newTeamSpace =
-                    currentTeamSpace -
-                    (cy && !cy.isVoidYear
-                      ? Math.max(
-                          0,
-                          hit - derivedState.years[yr].replacementLevelCutoff
-                        )
-                      : cy?.isVoidYear
-                      ? cy.proratedBonus
-                      : 0);
+          {/* 4-Year Schedule Breakdown */}
+          <div className="grid grid-cols-4 divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
+            {LEAGUE_YEARS.map((yr, idx) => {
+              const cy = offer.contractYears[yr];
+              const hit = offer.capHitsByYear[yr];
+              const playerAge = selectedFA.ageIn2026 + (yr - 2026);
+              const isPastCliff = playerAge >= curve.cliffAge;
 
-                  return (
-                    <div
-                      key={yr}
-                      className={`rounded-xl border p-3 text-xs ${
-                        cy?.isVoidYear
-                          ? 'border-dashed border-purple-500/40 bg-purple-950/20'
-                          : cy
-                          ? 'border-slate-800 bg-slate-950'
-                          : 'border-dashed border-slate-800 bg-slate-950/40 opacity-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-white">{yr}</span>
-                        <span
-                          className={`text-[10px] font-semibold ${
-                            isPastCliff ? 'text-amber-400' : 'text-slate-400'
-                          }`}
-                        >
-                          Age {playerAge}
-                          {isPastCliff ? ' ⚠️' : ''}
-                        </span>
+              return (
+                <div
+                  key={yr}
+                  className={idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}
+                >
+                  <div className="flex items-baseline justify-between font-mono-ledger text-[11px] text-[#8a8379]">
+                    <span>{yr}</span>
+                    <span className={isPastCliff ? 'text-[#b84a27]' : ''}>
+                      Age {playerAge}
+                    </span>
+                  </div>
+                  {cy ? (
+                    <>
+                      <div className="font-mono-ledger text-base font-semibold text-[#1c1917] mt-0.5">
+                        ${hit.toFixed(2)}M
                       </div>
-
-                      {cy ? (
-                        <>
-                          <div className="font-mono text-base font-black text-white">
-                            ${hit.toFixed(2)}M
-                          </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">
-                            {cy.isVoidYear
-                              ? 'Void Year Proration'
-                              : `Base $${cy.baseSalary.toFixed(1)}M + Bonus $${cy.proratedBonus.toFixed(1)}M`}
-                          </div>
-                          <div
-                            className={`mt-2 border-t border-slate-800 pt-1.5 font-mono text-[10px] font-bold ${
-                              newTeamSpace < 0
-                                ? 'text-rose-400'
-                                : 'text-emerald-400'
-                            }`}
-                          >
-                            New {yr} Cap: ${newTeamSpace.toFixed(1)}M
-                          </div>
-                        </>
-                      ) : (
-                        <div className="py-3 text-[11px] text-slate-500">
-                          Not Under Contract
-                        </div>
-                      )}
+                      <div className="font-mono-ledger text-[10px] text-[#8a8379]">
+                        {cy.isVoidYear
+                          ? 'Void Proration'
+                          : `B $${cy.baseSalary.toFixed(1)}M · P $${cy.proratedBonus.toFixed(1)}M`}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="py-2 font-mono-ledger text-xs text-[#8a8379]/50">
+                      —
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div className="font-mono-ledger text-xs text-[#57534e]">
+              2026 Gross: ${offer.capHitsByYear[2026].toFixed(2)}M · Net Marginal:{' '}
+              <strong className="text-[#2d5a43]">
+                −${net2026Impact.toFixed(2)}M
+              </strong>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-xs text-slate-400">
-                2026 Gross Cap Hit:{' '}
-                <strong className="text-white">
-                  ${offer.capHitsByYear[2026].toFixed(2)}M
-                </strong>{' '}
-                • True Net Marginal Cost:{' '}
-                <strong className="text-emerald-400">
-                  -${net2026Impact.toFixed(2)}M
-                </strong>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  addSignFATransaction(
-                    selectedFA,
-                    years,
-                    apy,
-                    guaranteedPct,
-                    structure
-                  );
-                  if (!isModal) {
-                    setActiveTab('matrix');
-                  }
-                }}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg transition"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Sign {selectedFA.name} to Roster
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                addSignFATransaction(
+                  selectedFA,
+                  years,
+                  apy,
+                  guaranteedPct,
+                  structure
+                );
+                if (!isModal) {
+                  setActiveTab('matrix');
+                }
+              }}
+              className="bg-[#1c1917] px-6 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] cursor-pointer"
+            >
+              Sign {selectedFA.name} to Roster
+            </button>
           </div>
         </div>
       </div>
@@ -474,20 +380,17 @@ export function FreeAgencyModal() {
       onClick={(e) => {
         if (e.target === dialogRef.current) setFreeAgencyModalOpen(false);
       }}
-      className="m-auto w-full max-w-6xl rounded-2xl border border-slate-700/80 bg-slate-950 p-0 text-slate-100 shadow-2xl backdrop:bg-slate-950/75 backdrop:backdrop-blur-sm"
+      className="m-auto w-full max-w-5xl border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-xl backdrop:bg-[#1c1917]/30"
     >
-      <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-6 py-4">
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-emerald-400" />
-          <h2 id={titleId} className="text-base font-bold text-white">
-            Free Agency & Multi-Year Contract Structure Simulator
-          </h2>
-        </div>
+      <div className="flex items-center justify-between border-b border-[#dfd9cc] px-7 py-4">
+        <h2 id={titleId} className="font-editorial text-xl text-[#1c1917]">
+          Free Agency & Contract Structure Desk
+        </h2>
         <button
           type="button"
           onClick={() => setFreeAgencyModalOpen(false)}
           aria-label="Close Free Agency Simulator"
-          className="rounded-lg bg-slate-800 p-1.5 text-slate-400 hover:text-white"
+          className="p-1 text-[#8a8379] hover:text-[#1c1917] cursor-pointer"
         >
           <X className="h-4 w-4" />
         </button>
