@@ -3,10 +3,12 @@
 import React, { useMemo, useState } from 'react';
 import {
   evaluateFreeAgentTarget,
+  POSITION_GROUPS,
   POSITIONAL_AGING_CURVES,
+  PositionGroup,
   scanRosterForCapCasualties,
 } from '@/engine';
-import { SEED_FREE_AGENTS } from '@/data/seed/freeAgents';
+import { getLeagueWideFreeAgentPool } from '@/data/seed/freeAgents';
 import { runHistoricalBacktestSuite } from '@/data/seed/historicalBacktest2026';
 import { useGMStore } from '@/store/useGMStore';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -15,13 +17,13 @@ export function PredictorBacktestLab() {
   const {
     derivedState,
     selectPlayer,
-    setActiveTab,
-    setFreeAgencyModalOpen,
+    openFreeAgencyModal,
   } = useGMStore();
 
   const [filterClass, setFilterClass] = useState<
     'ALL' | 'STREET_FA' | 'LIKELY_UFA' | 'TAG_TRAP'
   >('ALL');
+  const [posFilter, setPosFilter] = useState<PositionGroup | 'ALL'>('ALL');
 
   // 1. Run Historical Backtest Suite (2025-2026 Offseason Cohort)
   const backtest = useMemo(() => runHistoricalBacktestSuite(), []);
@@ -37,24 +39,28 @@ export function PredictorBacktestLab() {
     [derivedState.roster, derivedState.years]
   );
 
-  // 3. Evaluate External Free Agent Pool
+  // 3. Evaluate External Free Agent Pool (Across All 32 Teams)
   const evaluatedMarketPool = useMemo(() => {
-    return SEED_FREE_AGENTS.map((fa) => ({
-      fa,
-      prediction: evaluateFreeAgentTarget(fa),
-    })).filter((item) => {
-      if (filterClass === 'STREET_FA') {
-        return !item.prediction.countsTowardCompFormula;
-      }
-      if (filterClass === 'LIKELY_UFA') {
-        return item.prediction.classification === 'LIKELY_UFA';
-      }
-      if (filterClass === 'TAG_TRAP') {
-        return item.prediction.classification === 'TAG_OR_EXTEND_TRAP';
-      }
-      return true;
-    });
-  }, [filterClass]);
+    const pool = getLeagueWideFreeAgentPool(derivedState.teamId);
+    return pool
+      .map((fa) => ({
+        fa,
+        prediction: evaluateFreeAgentTarget(fa),
+      }))
+      .filter((item) => {
+        if (posFilter !== 'ALL' && item.fa.position !== posFilter) return false;
+        if (filterClass === 'STREET_FA') {
+          return !item.prediction.countsTowardCompFormula;
+        }
+        if (filterClass === 'LIKELY_UFA') {
+          return item.prediction.classification === 'LIKELY_UFA';
+        }
+        if (filterClass === 'TAG_TRAP') {
+          return item.prediction.classification === 'TAG_OR_EXTEND_TRAP';
+        }
+        return true;
+      });
+  }, [derivedState.teamId, filterClass, posFilter]);
 
   return (
     <section className="mx-auto max-w-[1440px] px-6 py-8 space-y-14">
@@ -243,7 +249,36 @@ export function PredictorBacktestLab() {
             </div>
           </div>
 
-          <div className="divide-y divide-[#dfd9cc] border-t border-[#1c1917]">
+          {/* Position Filter Pills */}
+          <div className="mb-3 flex flex-wrap gap-1.5 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setPosFilter('ALL')}
+              className={`px-2 py-0.5 cursor-pointer ${
+                posFilter === 'ALL'
+                  ? 'bg-[#1c1917] text-[#f6f3ec] font-medium'
+                  : 'text-[#57534e] hover:text-[#1c1917]'
+              }`}
+            >
+              All Positions ({evaluatedMarketPool.length})
+            </button>
+            {POSITION_GROUPS.map((pos) => (
+              <button
+                key={pos}
+                type="button"
+                onClick={() => setPosFilter(pos)}
+                className={`px-2 py-0.5 cursor-pointer ${
+                  posFilter === pos
+                    ? 'bg-[#1c1917] text-[#f6f3ec] font-medium'
+                    : 'text-[#57534e] hover:text-[#1c1917]'
+                }`}
+              >
+                {pos}
+              </button>
+            ))}
+          </div>
+
+          <div className="divide-y divide-[#dfd9cc] border-t border-[#1c1917] max-h-[640px] overflow-y-auto">
             {evaluatedMarketPool.map(({ fa, prediction }) => {
               const curve = POSITIONAL_AGING_CURVES[fa.position];
               return (
@@ -310,7 +345,7 @@ export function PredictorBacktestLab() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setFreeAgencyModalOpen(true)}
+                      onClick={() => openFreeAgencyModal({ freeAgentId: fa.id })}
                       className="border border-[#1c1917] px-3 py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
                     >
                       Make Offer
@@ -333,7 +368,7 @@ export function PredictorBacktestLab() {
             age cliffs.
           </p>
 
-          <div className="divide-y divide-[#dfd9cc] border-t border-[#1c1917]">
+          <div className="divide-y divide-[#dfd9cc] border-t border-[#1c1917] max-h-[640px] overflow-y-auto">
             {rosterScan.map((item) => (
               <div
                 key={item.player.id}
@@ -383,12 +418,11 @@ export function PredictorBacktestLab() {
                   <button
                     type="button"
                     onClick={() => {
-                      selectPlayer(item.player.id);
-                      setActiveTab('matrix');
+                      selectPlayer(item.player.id, 'cut');
                     }}
                     className="mt-1 text-xs underline decoration-[#c7bfb0] underline-offset-4 text-[#1c1917] hover:text-[#b84a27] cursor-pointer"
                   >
-                    Inspect →
+                    Inspect Release →
                   </button>
                 </div>
               </div>

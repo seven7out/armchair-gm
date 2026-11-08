@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import {
   generateRookieContract,
   getDraftPickTradeValue,
   getPlayerTradeValue,
   Player,
+  roundCap,
+  simulateCutOrTrade,
   TradeChartModel,
 } from '@/engine';
 import {
@@ -41,6 +44,7 @@ export function DraftTradeSandbox() {
   const [selectedProspectByPick, setSelectedProspectByPick] = useState<
     Record<string, string>
   >({});
+  const [tradePlayerSearch, setTradePlayerSearch] = useState<string>('');
 
   const partnerTeams = useMemo(
     () =>
@@ -52,10 +56,31 @@ export function DraftTradeSandbox() {
           abbreviation: t.abbreviation,
           logoUrl: t.logoUrl,
           availablePicks: t.draftPicks.slice(0, 5),
-          availablePlayers: t.roster.slice(0, 10),
+          availablePlayers: t.roster.slice(0, 12),
         })),
     [derivedState.teamId]
   );
+
+  const leagueSearchMatches = useMemo(() => {
+    const q = tradePlayerSearch.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const matches: { teamId: string; teamAbbr: string; player: Player }[] = [];
+    for (const t of partnerTeams) {
+      for (const p of t.availablePlayers) {
+        if (
+          p.name.toLowerCase().includes(q) ||
+          p.position.toLowerCase().includes(q)
+        ) {
+          matches.push({
+            teamId: t.id,
+            teamAbbr: t.abbreviation,
+            player: p,
+          });
+        }
+      }
+    }
+    return matches.slice(0, 8);
+  }, [partnerTeams, tradePlayerSearch]);
 
   const partnerTeam = useMemo(
     () =>
@@ -116,6 +141,33 @@ export function DraftTradeSandbox() {
       fairnessVerdict = 'Overpay by Your Front Office';
     }
 
+    // Compute live 2026 Cap Space Delta for both clubs
+    const mode =
+      tradeDesignation === 'POST_JUNE_1'
+        ? 'POST_JUNE_1_TRADE'
+        : 'PRE_JUNE_1_TRADE';
+    let ourCapDelta2026 = 0;
+    let partnerCapDelta2026 = 0;
+
+    for (const outP of outgoingPlayers) {
+      const sim = simulateCutOrTrade(outP, 2026, mode);
+      ourCapDelta2026 += sim.currentYearCapSavings;
+      const cy = outP.contractYears[2026];
+      if (cy) {
+        partnerCapDelta2026 -=
+          cy.baseSalary + cy.rosterBonus + cy.workoutBonus;
+      }
+    }
+
+    for (const inP of incomingPlayers) {
+      const sim = simulateCutOrTrade(inP, 2026, mode);
+      partnerCapDelta2026 += sim.currentYearCapSavings;
+      const cy = inP.contractYears[2026];
+      if (cy) {
+        ourCapDelta2026 -= cy.baseSalary + cy.rosterBonus + cy.workoutBonus;
+      }
+    }
+
     return {
       outgoingPlayers,
       outgoingPicks,
@@ -125,6 +177,8 @@ export function DraftTradeSandbox() {
       totalReceived,
       parityRatio,
       fairnessVerdict,
+      ourCapDelta2026: roundCap(ourCapDelta2026),
+      partnerCapDelta2026: roundCap(partnerCapDelta2026),
     };
   }, [
     derivedState.roster,
@@ -135,6 +189,7 @@ export function DraftTradeSandbox() {
     selectedIncomingPlayerIds,
     selectedIncomingPickIds,
     chartModel,
+    tradeDesignation,
   ]);
 
   const toggleId = (
@@ -350,6 +405,46 @@ export function DraftTradeSandbox() {
               </button>
             </div>
 
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8a8379]" />
+              <input
+                type="search"
+                value={tradePlayerSearch}
+                onChange={(e) => setTradePlayerSearch(e.target.value)}
+                placeholder="Find player across 31 teams..."
+                aria-label="Search trade targets across 31 teams"
+                className="w-52 border-b border-[#c7bfb0] bg-transparent py-1 pl-7 pr-2 text-xs text-[#1c1917] placeholder-[#8a8379] focus:border-[#1c1917] focus:outline-none"
+              />
+              {leagueSearchMatches.length > 0 && (
+                <div className="absolute right-0 top-full z-30 mt-1 w-72 border border-[#1c1917] bg-[#fcfaf6] shadow-lg divide-y divide-[#dfd9cc]">
+                  {leagueSearchMatches.map(({ teamId, teamAbbr, player }) => (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => {
+                        setPartnerTeamId(teamId);
+                        setSelectedIncomingPlayerIds([player.id]);
+                        setTradePlayerSearch('');
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-[#ede8dd] cursor-pointer"
+                    >
+                      <div>
+                        <span className="font-medium text-[#1c1917]">
+                          {player.name}
+                        </span>{' '}
+                        <span className="text-[11px] text-[#8a8379]">
+                          ({player.position} · {teamAbbr})
+                        </span>
+                      </div>
+                      <span className="font-mono-ledger text-[10px] text-[#2d5a43]">
+                        Select →
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <select
               aria-label="Select Trade Partner Team"
               value={partnerTeamId}
@@ -369,9 +464,9 @@ export function DraftTradeSandbox() {
           </div>
         </div>
 
-        {/* Minimalist Parity Scale */}
-        <div className="mb-8 border-y border-[#dfd9cc] py-4">
-          <div className="flex items-baseline justify-between text-xs mb-2">
+        {/* Minimalist Parity Scale + Dual-Team Live 2026 Cap Impact */}
+        <div className="mb-8 border-y border-[#dfd9cc] py-4 space-y-3">
+          <div className="flex items-baseline justify-between text-xs">
             <span className="font-mono-ledger">
               Outgoing Value: <strong>{tradeEvaluation.totalSent} pts</strong>
             </span>
@@ -397,6 +492,41 @@ export function DraftTradeSandbox() {
               }}
             />
             <div className="bg-[#2d5a43] h-full flex-1 transition-all duration-300" />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-1 font-mono-ledger text-[11px] text-[#57534e]">
+            <div>
+              {derivedState.teamName} 2026 Cap Impact:{' '}
+              <strong
+                className={
+                  tradeEvaluation.ourCapDelta2026 >= 0
+                    ? 'text-[#2d5a43]'
+                    : 'text-[#b84a27]'
+                }
+              >
+                {tradeEvaluation.ourCapDelta2026 >= 0 ? '+$' : '−$'}
+                {Math.abs(tradeEvaluation.ourCapDelta2026).toFixed(2)}M
+              </strong>{' '}
+              (Projected Space: $
+              {(
+                derivedState.years[2026].effectiveCapSpace +
+                tradeEvaluation.ourCapDelta2026
+              ).toFixed(2)}
+              M)
+            </div>
+            <div>
+              {partnerTeam.name} 2026 Cap Impact:{' '}
+              <strong
+                className={
+                  tradeEvaluation.partnerCapDelta2026 >= 0
+                    ? 'text-[#2d5a43]'
+                    : 'text-[#b84a27]'
+                }
+              >
+                {tradeEvaluation.partnerCapDelta2026 >= 0 ? '+$' : '−$'}
+                {Math.abs(tradeEvaluation.partnerCapDelta2026).toFixed(2)}M
+              </strong>
+            </div>
           </div>
         </div>
 

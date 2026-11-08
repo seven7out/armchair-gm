@@ -1,4 +1,11 @@
+import {
+  FRANCHISE_TAG_BY_POSITION_2026,
+  getContractYearCapHit,
+  roundCap,
+  simulateCutOrTrade,
+} from '@/engine';
 import { FreeAgentTarget } from '@/engine/types';
+import { SEED_TEAMS } from './teams';
 
 /**
  * Seed Free Agent & Cap Casualty Radar Pool (`freeAgents.ts`).
@@ -327,3 +334,92 @@ export const SEED_FREE_AGENTS: FreeAgentTarget[] = [
     },
   },
 ];
+
+/**
+ * Dynamically builds a comprehensive league-wide Free Agent & Cap Casualty pool across all 32 NFL teams,
+ * combining the curated top targets with real expiring starters & high-savings cap casualties from `SEED_TEAMS`.
+ */
+export function getLeagueWideFreeAgentPool(
+  excludeTeamId?: string
+): FreeAgentTarget[] {
+  const seenNames = new Set(SEED_FREE_AGENTS.map((f) => f.name.toLowerCase()));
+  const dynamicTargets: FreeAgentTarget[] = [];
+
+  for (const team of Object.values(SEED_TEAMS)) {
+    if (team.id === excludeTeamId) continue;
+
+    for (const player of team.roster) {
+      const lowerName = player.name.toLowerCase();
+      if (seenNames.has(lowerName)) continue;
+
+      const cy26 = player.contractYears[2026];
+      const cy27 = player.contractYears[2027];
+      if (!cy26 || cy26.isVoidYear) continue;
+
+      const hit26 = getContractYearCapHit(cy26);
+      const isExpiringAfter2026 = !cy27 || cy27.isVoidYear;
+      const preCut = simulateCutOrTrade(player, 2026, 'PRE_JUNE_1_CUT');
+      const postCut = simulateCutOrTrade(player, 2026, 'POST_JUNE_1_CUT');
+      const bestCutSavings = Math.max(
+        preCut.currentYearCapSavings,
+        postCut.currentYearCapSavings
+      );
+
+      // Include notable expiring starters OR notable cap casualties across the 32 teams
+      const isNotableExpiring = isExpiringAfter2026 && hit26 >= 4.0;
+      const isNotableCapCasualty =
+        !isExpiringAfter2026 &&
+        bestCutSavings >= 9.0 &&
+        player.ageIn2026 >= 28 &&
+        player.overallRating <= 88;
+
+      if (!isNotableExpiring && !isNotableCapCasualty) continue;
+
+      seenNames.add(lowerName);
+      const estApy = roundCap(
+        Math.max(4.5, Math.min(34.0, hit26 * (isNotableExpiring ? 1.05 : 0.72)))
+      );
+      const estYears =
+        player.ageIn2026 >= 30 ? 2 : player.ageIn2026 >= 28 ? 3 : 4;
+      const tagCost =
+        FRANCHISE_TAG_BY_POSITION_2026[player.position]?.franchiseTag ?? 20.9;
+
+      dynamicTargets.push({
+        id: `fa-dyn-${player.id}`,
+        name: player.name,
+        position: player.position,
+        ageIn2026: player.ageIn2026,
+        tier: player.tier,
+        overallRating: player.overallRating,
+        accruedSeasons: player.accruedSeasons,
+        previousTeam: isNotableCapCasualty
+          ? `${team.abbreviation} (Projected Cut)`
+          : team.abbreviation,
+        headshotUrl: player.headshotUrl,
+        marketApy: estApy,
+        marketYears: estYears,
+        marketGuaranteedPct: isNotableCapCasualty ? 0.48 : 0.56,
+        scoutingNote: isNotableCapCasualty
+          ? `Carries a $${hit26.toFixed(1)}M scheduled cap hit on ${team.city} with +$${bestCutSavings.toFixed(1)}M release savings — projected Street FA (Comp-Pick Safe).`
+          : `Expiring ${team.city} ${player.position} (${hit26.toFixed(1)}M cap hit in 2026) entering open-market window at Age ${player.ageIn2026}.`,
+        predictionFeatures: {
+          originType: isNotableCapCasualty
+            ? 'UNDER_CONTRACT_VETERAN'
+            : 'EXPIRING_CONTRACT',
+          incumbentTeamCapSpace: team.initialRollover2026,
+          scheduledCapHit: hit26,
+          netCutSavings: isNotableCapCasualty ? bestCutSavings : 0,
+          deadCapOnCut: preCut.currentYearDeadCap,
+          franchiseTagCost: tagCost,
+          priorTagsCount: player.priorTagsCount ?? 0,
+          hasPositionalSuccessorOrBlock: isNotableCapCasualty,
+        },
+      });
+    }
+  }
+
+  return [
+    ...SEED_FREE_AGENTS,
+    ...dynamicTargets.sort((a, b) => b.marketApy - a.marketApy).slice(0, 60),
+  ];
+}

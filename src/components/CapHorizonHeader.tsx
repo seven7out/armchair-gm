@@ -3,7 +3,11 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, RotateCcw } from 'lucide-react';
-import { LEAGUE_YEARS } from '@/engine';
+import {
+  computeDerivedTeamCapState,
+  DEFAULT_CAP_GROWTH_RATE,
+  LEAGUE_YEARS,
+} from '@/engine';
 import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
 
@@ -32,7 +36,7 @@ export function CapHorizonHeader() {
     setActiveTab,
     setLedgerMode,
     setScenarioDrawerOpen,
-    setFreeAgencyModalOpen,
+    openFreeAgencyModal,
     resetScenarioStack,
   } = useGMStore();
 
@@ -45,7 +49,16 @@ export function CapHorizonHeader() {
     const allTeams = Object.values(SEED_TEAMS);
     return NFL_DIVISIONS.map((div) => ({
       division: div,
-      teams: allTeams.filter((t) => t.division === div),
+      teams: allTeams
+        .filter((t) => t.division === div)
+        .map((t) => {
+          const cap26 = computeDerivedTeamCapState(
+            t,
+            [],
+            DEFAULT_CAP_GROWTH_RATE
+          ).years[2026].effectiveCapSpace;
+          return { ...t, cap26 };
+        }),
     }));
   }, []);
 
@@ -193,7 +206,7 @@ export function CapHorizonHeader() {
 
           <button
             type="button"
-            onClick={() => setFreeAgencyModalOpen(true)}
+            onClick={() => openFreeAgencyModal({ position: 'ALL' })}
             className="border border-[#1c1917] px-3 py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
           >
             + Sign Free Agent
@@ -271,8 +284,19 @@ export function CapHorizonHeader() {
                             />
                           )}
                           <span className="truncate">{team.name}</span>
-                          <span className="ml-auto font-mono-ledger text-[10px] opacity-70">
-                            {team.abbreviation}
+                          <span
+                            className={`ml-auto font-mono-ledger text-[10px] ${
+                              isSelected
+                                ? 'text-[#f6f3ec]/90'
+                                : team.cap26 < 10
+                                ? 'text-[#b84a27] font-semibold'
+                                : team.cap26 >= 35
+                                ? 'text-[#2d5a43] font-medium'
+                                : 'text-[#8a8379]'
+                            }`}
+                          >
+                            {team.cap26 < 0 ? '−$' : '$'}
+                            {Math.abs(team.cap26).toFixed(0)}M
                           </span>
                         </button>
                       );

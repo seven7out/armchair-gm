@@ -35,6 +35,9 @@ interface GMStoreState {
   activeTab: ActiveTab;
   ledgerMode: 'CAP' | 'CASH';
   selectedPlayerId: string | null;
+  initialDrawerTab: 'cut' | 'restructure' | 'extend' | 'trade' | null;
+  preselectedFreeAgentId: string | null;
+  freeAgencyPositionFilter: PositionGroup | 'ALL';
   isScenarioDrawerOpen: boolean;
   isFreeAgencyModalOpen: boolean;
   positionFilter: PositionGroup | 'ALL';
@@ -45,7 +48,15 @@ interface GMStoreState {
   setCapGrowthRate: (rate: number) => void;
   setActiveTab: (tab: ActiveTab) => void;
   setLedgerMode: (mode: 'CAP' | 'CASH') => void;
-  selectPlayer: (playerId: string | null) => void;
+  selectPlayer: (
+    playerId: string | null,
+    initialTab?: 'cut' | 'restructure' | 'extend' | 'trade' | null
+  ) => void;
+  openFreeAgencyModal: (options?: {
+    freeAgentId?: string | null;
+    position?: PositionGroup | 'ALL';
+  }) => void;
+  applyMaxTopRestructures: () => void;
   setScenarioDrawerOpen: (open: boolean) => void;
   setFreeAgencyModalOpen: (open: boolean) => void;
   setPositionFilter: (pos: PositionGroup | 'ALL') => void;
@@ -138,6 +149,9 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     activeTab: 'matrix',
     ledgerMode: 'CAP',
     selectedPlayerId: null,
+    initialDrawerTab: null,
+    preselectedFreeAgentId: null,
+    freeAgencyPositionFilter: 'ALL',
     isScenarioDrawerOpen: false,
     isFreeAgencyModalOpen: false,
     positionFilter: 'ALL',
@@ -151,6 +165,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         baseTeam: nextTeam,
         transactions: [],
         selectedPlayerId: null,
+        initialDrawerTab: null,
         derivedState: recompute(nextTeam, [], rate),
       });
     },
@@ -165,7 +180,61 @@ export const useGMStore = create<GMStoreState>((set, get) => {
 
     setActiveTab: (tab) => set({ activeTab: tab }),
     setLedgerMode: (mode) => set({ ledgerMode: mode }),
-    selectPlayer: (playerId) => set({ selectedPlayerId: playerId }),
+    selectPlayer: (playerId, initialTab = null) =>
+      set({ selectedPlayerId: playerId, initialDrawerTab: initialTab }),
+    openFreeAgencyModal: (options) =>
+      set({
+        isFreeAgencyModalOpen: true,
+        preselectedFreeAgentId: options?.freeAgentId ?? null,
+        freeAgencyPositionFilter: options?.position ?? 'ALL',
+      }),
+    applyMaxTopRestructures: () => {
+      const { derivedState, transactions, baseTeam, capGrowthRate } = get();
+      const alreadyRestructuredIds = new Set(
+        transactions
+          .filter(
+            (t): t is import('@/engine').RestructureTransaction =>
+              t.type === 'RESTRUCTURE' && t.enabled
+          )
+          .map((t) => t.playerId)
+      );
+
+      const candidates = derivedState.roster
+        .filter((p) => !alreadyRestructuredIds.has(p.id))
+        .map((p) => ({
+          player: p,
+          sim: simulateRestructure(p, 2026, 1.0, 1),
+        }))
+        .filter((x) => x.sim.currentYearCapSavings >= 2.0)
+        .sort(
+          (a, b) => b.sim.currentYearCapSavings - a.sim.currentYearCapSavings
+        )
+        .slice(0, 3);
+
+      if (candidates.length === 0) return;
+
+      const addedTxs: Transaction[] = candidates.map(({ player, sim }, idx) => ({
+        id: `tx-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 5)}`,
+        type: 'RESTRUCTURE',
+        timestamp: Date.now() + idx,
+        enabled: true,
+        actionYear: 2026,
+        playerId: player.id,
+        playerName: player.name,
+        position: player.position,
+        convertPercentage: 1.0,
+        addVoidYears: 1,
+        label: `Restructured ${player.name} (100% Max)`,
+        sublabel: `Converted $${sim.convertedBonusAmount.toFixed(2)}M over ${sim.prorationYearsCount} yrs (+$${sim.annualProrationAdded.toFixed(2)}M/yr future proration)`,
+        capDelta2026: sim.currentYearCapSavings,
+      }));
+
+      const nextTx = [...transactions, ...addedTxs];
+      set({
+        transactions: nextTx,
+        derivedState: recompute(baseTeam, nextTx, capGrowthRate),
+      });
+    },
     setScenarioDrawerOpen: (open) => set({ isScenarioDrawerOpen: open }),
     setFreeAgencyModalOpen: (open) => set({ isFreeAgencyModalOpen: open }),
     setPositionFilter: (pos) => set({ positionFilter: pos }),

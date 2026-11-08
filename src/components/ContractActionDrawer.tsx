@@ -6,6 +6,7 @@ import {
   applyPlayerExtension,
   ContractStructureTemplate,
   evaluatePlayerLongevity,
+  evaluateRosterPlayerFate,
   getContractYearCapHit,
   getPlayerTagCost,
   getProjectedFifthYearOption,
@@ -25,6 +26,7 @@ export function ContractActionDrawer() {
   const {
     derivedState,
     selectedPlayerId,
+    initialDrawerTab,
     selectPlayer,
     addCutTransaction,
     addRestructureTransaction,
@@ -69,23 +71,20 @@ export function ContractActionDrawer() {
       if (!dialog.open) {
         dialog.showModal();
       }
-      const cy2026 = player.contractYears[2026];
-      if (cy2026 && cy2026.baseSalary > 4.0) {
-        setActiveTab('restructure');
-      } else if (!player.contractYears[2027]) {
-        setActiveTab('extend');
-      } else {
-        setActiveTab('cut');
-      }
-      const estimatedMarketApy = Math.max(
-        4.5,
-        Math.round((player.overallRating - 68) * 1.15 * 10) / 10
+      const forecast = evaluateRosterPlayerFate(
+        player,
+        derivedState.years[2026].effectiveCapSpace
       );
-      setExtApy(estimatedMarketApy);
+      if (initialDrawerTab) {
+        setActiveTab(initialDrawerTab);
+      } else {
+        setActiveTab(forecast.recommendedActionTab);
+      }
+      setExtApy(forecast.projectedMarketApy);
     } else if (dialog.open) {
       dialog.close();
     }
-  }, [player]);
+  }, [player, initialDrawerTab, derivedState.years]);
 
   if (!player) {
     return (
@@ -99,6 +98,10 @@ export function ContractActionDrawer() {
   }
 
   const longevity = evaluatePlayerLongevity(player);
+  const fateForecast = evaluateRosterPlayerFate(
+    player,
+    derivedState.years[2026].effectiveCapSpace
+  );
   const preJuneCut = simulateCutOrTrade(player, actionYear, 'PRE_JUNE_1_CUT');
   const postJuneCut = simulateCutOrTrade(player, actionYear, 'POST_JUNE_1_CUT');
   const restructureSim = simulateRestructure(
@@ -197,8 +200,22 @@ export function ContractActionDrawer() {
             <h2 id={titleId} className="font-editorial mt-1 text-2xl text-[#1c1917]">
               {player.name}
             </h2>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={`font-semibold ${
+                  fateForecast.fate === 'CAP_CASUALTY_RISK' ||
+                  fateForecast.fate === 'WALK_CANDIDATE'
+                    ? 'text-[#b84a27]'
+                    : 'text-[#2d5a43]'
+                }`}
+              >
+                Forecast: {fateForecast.badgeLabel}
+              </span>
+              <span className="text-[#8a8379]">·</span>
+              <span className="text-[#57534e]">{fateForecast.rationale}</span>
+            </div>
             {player.notes && (
-              <p className="mt-1 text-xs text-[#57534e]">{player.notes}</p>
+              <p className="mt-1 text-xs text-[#8a8379]">{player.notes}</p>
             )}
           </div>
         </div>

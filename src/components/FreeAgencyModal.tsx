@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import {
   buildStructuredContract,
   ContractStructureTemplate,
@@ -9,10 +9,15 @@ import {
   evaluatePlayerLongevity,
   FreeAgentTarget,
   LEAGUE_YEARS,
+  POSITION_GROUPS,
   POSITIONAL_AGING_CURVES,
   POSITIONAL_MARKET_COMPS,
+  PositionGroup,
 } from '@/engine';
-import { SEED_FREE_AGENTS } from '@/data/seed/freeAgents';
+import {
+  getLeagueWideFreeAgentPool,
+  SEED_FREE_AGENTS,
+} from '@/data/seed/freeAgents';
 import { useGMStore } from '@/store/useGMStore';
 import { PlayerAvatar } from './PlayerAvatar';
 
@@ -23,11 +28,22 @@ export function FreeAgencySimulatorView({
 }) {
   const {
     derivedState,
+    preselectedFreeAgentId,
+    freeAgencyPositionFilter,
     addSignFATransaction,
     selectPlayer,
     setActiveTab,
   } = useGMStore();
 
+  const fullPool = useMemo(
+    () => getLeagueWideFreeAgentPool(derivedState.teamId),
+    [derivedState.teamId]
+  );
+
+  const [posFilter, setPosFilter] = useState<PositionGroup | 'ALL'>(
+    freeAgencyPositionFilter
+  );
+  const [faSearch, setFaSearch] = useState<string>('');
   const [selectedFA, setSelectedFA] = useState<FreeAgentTarget>(
     SEED_FREE_AGENTS[0]
   );
@@ -47,6 +63,39 @@ export function FreeAgencySimulatorView({
     setApy(fa.marketApy);
     setGuaranteedPct(fa.marketGuaranteedPct);
   };
+
+  useEffect(() => {
+    setPosFilter(freeAgencyPositionFilter);
+    if (preselectedFreeAgentId) {
+      const match = fullPool.find((f) => f.id === preselectedFreeAgentId);
+      if (match) {
+        handleSelectFA(match);
+        return;
+      }
+    }
+    if (freeAgencyPositionFilter !== 'ALL') {
+      const firstAtPos = fullPool.find(
+        (f) => f.position === freeAgencyPositionFilter
+      );
+      if (firstAtPos) {
+        handleSelectFA(firstAtPos);
+      }
+    }
+  }, [preselectedFreeAgentId, freeAgencyPositionFilter, fullPool]);
+
+  const filteredPool = useMemo(() => {
+    return fullPool.filter((fa) => {
+      if (posFilter !== 'ALL' && fa.position !== posFilter) return false;
+      if (
+        faSearch.trim() !== '' &&
+        !fa.name.toLowerCase().includes(faSearch.toLowerCase()) &&
+        !fa.previousTeam.toLowerCase().includes(faSearch.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [fullPool, posFilter, faSearch]);
 
   const offer = useMemo(
     () =>
@@ -83,17 +132,60 @@ export function FreeAgencySimulatorView({
         {/* Left 5 Cols: Open Market Index */}
         <div className="lg:col-span-5 lg:pr-8 space-y-8">
           <div>
-            <div className="flex items-baseline justify-between mb-3">
+            <div className="flex items-baseline justify-between mb-2">
               <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
-                Open Market & Street FA Pool (2026)
+                League-Wide Open Market &amp; Street FA Pool ({filteredPool.length})
               </h3>
               <span className="font-mono-ledger text-[10px] text-[#2d5a43]">
                 2027 Comp Picks: {derivedState.compPickSummary.netProjectedCompPicks.length}
               </span>
             </div>
 
-            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-[420px] overflow-y-auto">
-              {SEED_FREE_AGENTS.map((fa) => {
+            {/* Position Filter Strip + Search inside FA Pool */}
+            <div className="mb-3 space-y-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8a8379]" />
+                <input
+                  type="search"
+                  value={faSearch}
+                  onChange={(e) => setFaSearch(e.target.value)}
+                  placeholder="Search free agent or team..."
+                  aria-label="Search free agent or team"
+                  className="w-full border-b border-[#c7bfb0] bg-transparent py-1 pl-7 pr-2 text-xs text-[#1c1917] placeholder-[#8a8379] focus:border-[#1c1917] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setPosFilter('ALL')}
+                  className={`px-1.5 py-0.5 cursor-pointer ${
+                    posFilter === 'ALL'
+                      ? 'bg-[#1c1917] text-[#f6f3ec] font-medium'
+                      : 'text-[#57534e] hover:text-[#1c1917]'
+                  }`}
+                >
+                  All
+                </button>
+                {POSITION_GROUPS.map((pos) => (
+                  <button
+                    key={pos}
+                    type="button"
+                    onClick={() => setPosFilter(pos)}
+                    className={`px-1.5 py-0.5 cursor-pointer ${
+                      posFilter === pos
+                        ? 'bg-[#1c1917] text-[#f6f3ec] font-medium'
+                        : 'text-[#57534e] hover:text-[#1c1917]'
+                    }`}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-[380px] overflow-y-auto">
+              {filteredPool.map((fa) => {
                 const isSelected = selectedFA.id === fa.id;
                 const pred = evaluateFreeAgentTarget(fa);
                 return (
@@ -173,7 +265,7 @@ export function FreeAgencySimulatorView({
                     </div>
                     <button
                       type="button"
-                      onClick={() => selectPlayer(p.id)}
+                      onClick={() => selectPlayer(p.id, 'extend')}
                       className="underline decoration-[#c7bfb0] underline-offset-4 text-[#1c1917] hover:text-[#2d5a43] cursor-pointer"
                     >
                       Extend / Tag →

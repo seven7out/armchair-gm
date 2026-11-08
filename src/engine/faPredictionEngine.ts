@@ -1,13 +1,18 @@
 import { POSITIONAL_AGING_CURVES, roundCap } from './constants';
-import { getContractYearCapHit, simulateCutOrTrade } from './contractEngine';
+import { evaluatePlayerLongevity } from './agingEngine';
 import {
+  getContractYearCapHit,
+  simulateCutOrTrade,
+  simulateRestructure,
+} from './contractEngine';
+import {
+  DerivedTeamCapState,
   FreeAgentOriginType,
   FreeAgentTarget,
   LeagueYear,
   Player,
   PositionGroup,
   PredictedMarketClassification,
-  TeamSeedData,
 } from './types';
 
 /**
@@ -316,4 +321,305 @@ export function scanRosterForCapCasualties(
       b.prediction.availabilityProbability - a.prediction.availabilityProbability ||
       b.postJuneSavings - a.postJuneSavings
   );
+}
+
+// ============================================================================
+// Player Fate Forecast ("Will my favorite player get extended, restructured, or let go?")
+// ============================================================================
+
+export type PlayerFateCategory =
+  | 'CORNERSTONE_LOCK'
+  | 'RESTRUCTURE_PILLAR'
+  | 'PRIME_EXTENSION'
+  | 'TAG_OR_TENDER'
+  | 'CAP_CASUALTY_RISK'
+  | 'WALK_CANDIDATE';
+
+export interface PlayerFateForecast {
+  fate: PlayerFateCategory;
+  badgeLabel: string;
+  shortActionLabel: string;
+  recommendedActionTab: 'restructure' | 'cut' | 'extend' | 'trade';
+  stayProbability: number; // 0-100% chance player remains on the team
+  maxRestructureSavings2026: number;
+  bestCutSavings2026: number;
+  bestCutSavings2027: number;
+  projectedMarketApy: number;
+  rationale: string;
+}
+
+export function evaluateRosterPlayerFate(
+  player: Player,
+  teamCapSpace2026: number = 15.0
+): PlayerFateForecast {
+  const longevity = evaluatePlayerLongevity(player);
+  const curve = POSITIONAL_AGING_CURVES[player.position];
+  const cy2026 = player.contractYears[2026];
+  const cy2027 = player.contractYears[2027];
+  const hit2026 = getContractYearCapHit(cy2026);
+  const hit2027 = getContractYearCapHit(cy2027);
+
+  const restructure2026 = simulateRestructure(player, 2026, 1.0, 1);
+  const preCut2026 = simulateCutOrTrade(player, 2026, 'PRE_JUNE_1_CUT');
+  const postCut2026 = simulateCutOrTrade(player, 2026, 'POST_JUNE_1_CUT');
+  const bestCutSavings2026 = roundCap(
+    Math.max(preCut2026.currentYearCapSavings, postCut2026.currentYearCapSavings)
+  );
+
+  const preCut2027 = simulateCutOrTrade(player, 2027, 'PRE_JUNE_1_CUT');
+  const postCut2027 = simulateCutOrTrade(player, 2027, 'POST_JUNE_1_CUT');
+  const bestCutSavings2027 = roundCap(
+    Math.max(preCut2027.currentYearCapSavings, postCut2027.currentYearCapSavings)
+  );
+
+  const isExpiringAfter2026 = !cy2027 || cy2027.isVoidYear;
+  const isExpiringAfter2027 =
+    !isExpiringAfter2026 &&
+    (!player.contractYears[2028] || player.contractYears[2028]?.isVoidYear);
+
+  const projectedMarketApy = roundCap(
+    Math.max(4.5, Math.max(hit2026 * 0.9, (player.overallRating - 68) * 1.15))
+  );
+
+  // 1. Check for high Cap Casualty / Release Risk in 2026
+  const yearsFromCliff = player.ageIn2026 - curve.cliffAge;
+  if (
+    bestCutSavings2026 >= 5.5 &&
+    ((yearsFromCliff >= 0 && preCut2026.currentYearCapSavings >= 4.0) ||
+      (bestCutSavings2026 >= 10.0 && player.overallRating <= 85) ||
+      (teamCapSpace2026 < 8.0 && bestCutSavings2026 >= 7.5 && player.overallRating < 89))
+  ) {
+    const stayProb = Math.max(18, Math.min(48, 55 - Math.round(bestCutSavings2026 * 1.5)));
+    return {
+      fate: 'CAP_CASUALTY_RISK',
+      badgeLabel: `Cut Watch (${100 - stayProb}% Let Go)`,
+      shortActionLabel: `Cut Saves +$${bestCutSavings2026.toFixed(1)}M`,
+      recommendedActionTab: 'cut',
+      stayProbability: stayProb,
+      maxRestructureSavings2026: restructure2026.currentYearCapSavings,
+      bestCutSavings2026,
+      bestCutSavings2027,
+      projectedMarketApy,
+      rationale: `Carries a $${hit2026.toFixed(1)}M cap hit at Age ${player.ageIn2026} (cliff @${curve.cliffAge}); releasing unlocks +$${bestCutSavings2026.toFixed(1)}M in 2026 cap space.`,
+    };
+  }
+
+  // 2. Expiring after 2026: Extension Priority vs Tag vs Walk Candidate
+  if (isExpiringAfter2026) {
+    if (yearsFromCliff >= 0 || longevity.postContractViableYears === 0) {
+      return {
+        fate: 'WALK_CANDIDATE',
+        badgeLabel: 'UFA Walk Risk (72% Let Go)',
+        shortActionLabel: 'Expiring @ Age Cliff',
+        recommendedActionTab: 'extend',
+        stayProbability: 28,
+        maxRestructureSavings2026: restructure2026.currentYearCapSavings,
+        bestCutSavings2026,
+        bestCutSavings2027,
+        projectedMarketApy,
+        rationale: `Contract expires after 2026 at Age ${player.ageIn2026 + 1} (${player.position} cliff @${curve.cliffAge}) — front office likely lets contract expire for Comp Pick value.`,
+      };
+    }
+
+    if (player.overallRating >= 84 || longevity.postContractViableYears >= 2) {
+      return {
+        fate: 'PRIME_EXTENSION',
+        badgeLabel: 'Prime Extension (86% Re-Sign)',
+        shortActionLabel: `Extend (~$${projectedMarketApy.toFixed(1)}M/yr)`,
+        recommendedActionTab: 'extend',
+        stayProbability: 86,
+        maxRestructureSavings2026: restructure2026.currentYearCapSavings,
+        bestCutSavings2026,
+        bestCutSavings2027,
+        projectedMarketApy,
+        rationale: `Entering final contract year with +${longevity.postContractViableYears} prime starter seasons before Age-${curve.cliffAge} cliff; prime candidate for a multi-year extension (~$${projectedMarketApy.toFixed(1)}M/yr).`,
+      };
+    }
+
+    return {
+      fate: 'TAG_OR_TENDER',
+      badgeLabel: 'Expiring Starter (55% Re-Sign)',
+      shortActionLabel: `Extend (~$${projectedMarketApy.toFixed(1)}M/yr)`,
+      recommendedActionTab: 'extend',
+      stayProbability: 55,
+      maxRestructureSavings2026: restructure2026.currentYearCapSavings,
+      bestCutSavings2026,
+      bestCutSavings2027,
+      projectedMarketApy,
+      rationale: `Unsigned for 2027; candidate for a short-term bridge extension or open-market test depending on draft replacements.`,
+    };
+  }
+
+  // 3. Under contract through 2027+ with high 2026 base salary: Prime Restructure Lever
+  if (restructure2026.currentYearCapSavings >= 4.0) {
+    return {
+      fate: 'RESTRUCTURE_PILLAR',
+      badgeLabel: 'Restructure Lever (94% Stay)',
+      shortActionLabel: `Restructure +$${restructure2026.currentYearCapSavings.toFixed(1)}M`,
+      recommendedActionTab: 'restructure',
+      stayProbability: 94,
+      maxRestructureSavings2026: restructure2026.currentYearCapSavings,
+      bestCutSavings2026,
+      bestCutSavings2027,
+      projectedMarketApy,
+      rationale: `Core pillar with $${(cy2026?.baseSalary ?? 0).toFixed(1)}M base salary in 2026; converting base to bonus immediately clears +$${restructure2026.currentYearCapSavings.toFixed(1)}M in 2026 cap room.`,
+    };
+  }
+
+  // 4. Expiring after 2027 & high-end young player: Early Extension Window
+  if (
+    isExpiringAfter2027 &&
+    longevity.postContractViableYears >= 2 &&
+    player.overallRating >= 85
+  ) {
+    return {
+      fate: 'PRIME_EXTENSION',
+      badgeLabel: 'Early Extension Window (90% Stay)',
+      shortActionLabel: `Extend (~$${projectedMarketApy.toFixed(1)}M/yr)`,
+      recommendedActionTab: 'extend',
+      stayProbability: 90,
+      maxRestructureSavings2026: restructure2026.currentYearCapSavings,
+      bestCutSavings2026,
+      bestCutSavings2027,
+      projectedMarketApy,
+      rationale: `Entering extension-eligible window with +${longevity.postContractViableYears} prime seasons ahead of Age-${curve.cliffAge} cliff; locking in now beats 2027 cap inflation.`,
+    };
+  }
+
+  // 5. Default: Protected Cornerstone / Cost-Controlled Lock
+  return {
+    fate: 'CORNERSTONE_LOCK',
+    badgeLabel: player.isRookieContract
+      ? 'Rookie Deal Lock (98% Stay)'
+      : 'Roster Lock (92% Stay)',
+    shortActionLabel:
+      bestCutSavings2027 >= 8.0
+        ? `'27 Cut Watch (+$${bestCutSavings2027.toFixed(1)}M)`
+        : 'Protected Deal',
+    recommendedActionTab:
+      restructure2026.currentYearCapSavings >= 1.5 ? 'restructure' : 'extend',
+    stayProbability: player.isRookieContract ? 98 : 92,
+    maxRestructureSavings2026: restructure2026.currentYearCapSavings,
+    bestCutSavings2026,
+    bestCutSavings2027,
+    projectedMarketApy,
+    rationale: player.isRookieContract
+      ? `Cost-controlled rookie contract ($${hit2026.toFixed(2)}M hit in 2026) providing elite surplus value.`
+      : `Protected multi-year deal ($${preCut2026.currentYearDeadCap.toFixed(1)}M dead cap if cut in 2026 vs $${hit2026.toFixed(1)}M cap hit).`,
+  };
+}
+
+// ============================================================================
+// Team Cap Health & Offseason Executive Brief
+// ("Is my team in a cap crunch or do they have lots of space?")
+// ============================================================================
+
+export type TeamCapHealthTier =
+  | 'SEVERE_CRUNCH'
+  | 'TIGHT_SQUEEZE'
+  | 'HEALTHY_FLEXIBLE'
+  | 'CAP_WARCHEST';
+
+export interface TeamCapHealthDiagnostic {
+  tier: TeamCapHealthTier;
+  tierLabel: string;
+  headlineAnswer: string;
+  subheadlineAnswer: string;
+  maxTop3RestructurePower: number;
+  maxTop3CutRelief: number;
+  topRestructureLevers: { player: Player; forecast: PlayerFateForecast }[];
+  topExtensionCandidates: { player: Player; forecast: PlayerFateForecast }[];
+  topCutWatchCandidates: { player: Player; forecast: PlayerFateForecast }[];
+}
+
+export function evaluateTeamCapHealth(
+  derivedState: DerivedTeamCapState
+): TeamCapHealthDiagnostic {
+  const space2026 = derivedState.years[2026].effectiveCapSpace;
+  const space2027 = derivedState.years[2027].effectiveCapSpace;
+
+  const evaluated = derivedState.roster.map((player) => ({
+    player,
+    forecast: evaluateRosterPlayerFate(player, space2026),
+  }));
+
+  const topRestructureLevers = [...evaluated]
+    .filter((x) => x.forecast.maxRestructureSavings2026 >= 2.0)
+    .sort(
+      (a, b) =>
+        b.forecast.maxRestructureSavings2026 - a.forecast.maxRestructureSavings2026
+    )
+    .slice(0, 3);
+
+  const maxTop3RestructurePower = roundCap(
+    topRestructureLevers.reduce(
+      (acc, x) => acc + x.forecast.maxRestructureSavings2026,
+      0
+    )
+  );
+
+  const topExtensionCandidates = [...evaluated]
+    .filter(
+      (x) =>
+        x.forecast.fate === 'PRIME_EXTENSION' ||
+        x.forecast.fate === 'TAG_OR_TENDER'
+    )
+    .sort((a, b) => b.player.overallRating - a.player.overallRating)
+    .slice(0, 3);
+
+  const topCutWatchCandidates = [...evaluated]
+    .filter(
+      (x) =>
+        x.forecast.fate === 'CAP_CASUALTY_RISK' ||
+        x.forecast.fate === 'WALK_CANDIDATE' ||
+        x.forecast.bestCutSavings2026 >= 4.5
+    )
+    .sort((a, b) => b.forecast.bestCutSavings2026 - a.forecast.bestCutSavings2026)
+    .slice(0, 3);
+
+  const maxTop3CutRelief = roundCap(
+    topCutWatchCandidates.reduce(
+      (acc, x) => acc + Math.max(0, x.forecast.bestCutSavings2026),
+      0
+    )
+  );
+
+  let tier: TeamCapHealthTier = 'HEALTHY_FLEXIBLE';
+  let tierLabel = 'Healthy Cap Flexibility';
+  let headlineAnswer = '';
+
+  if (space2026 < 5.0 || space2027 < 0) {
+    tier = 'SEVERE_CRUNCH';
+    tierLabel = 'Cap Crunch — Restructuring Required';
+    headlineAnswer =
+      space2026 < 0
+        ? `${derivedState.teamName} are $${Math.abs(space2026).toFixed(1)}M OVER the 2026 cap.`
+        : `${derivedState.teamName} are in a tight cap crunch ($${space2026.toFixed(1)}M space in '26, ${space2027 < 0 ? `-$${Math.abs(space2027).toFixed(1)}M` : `+$${space2027.toFixed(1)}M`} in '27).`;
+  } else if (space2026 < 18.0) {
+    tier = 'TIGHT_SQUEEZE';
+    tierLabel = 'Tight Contender Window';
+    headlineAnswer = `${derivedState.teamName} have limited baseline room ($${space2026.toFixed(1)}M in 2026), but hold +$${maxTop3RestructurePower.toFixed(1)}M in restructure power.`;
+  } else if (space2026 >= 38.0) {
+    tier = 'CAP_WARCHEST';
+    tierLabel = 'Open Cap Warchest';
+    headlineAnswer = `${derivedState.teamName} hold a massive $${space2026.toFixed(1)}M warchest in 2026 (+$${space2027.toFixed(1)}M projected in 2027).`;
+  } else {
+    tier = 'HEALTHY_FLEXIBLE';
+    tierLabel = 'Balanced Cap Space';
+    headlineAnswer = `${derivedState.teamName} have a healthy $${space2026.toFixed(1)}M in 2026 cap space with +$${maxTop3RestructurePower.toFixed(1)}M in optional restructure levers.`;
+  }
+
+  const subheadlineAnswer = `You can immediately unlock +$${maxTop3RestructurePower.toFixed(1)}M via Top-3 Simple Restructures or clear +$${maxTop3CutRelief.toFixed(1)}M via veteran releases.`;
+
+  return {
+    tier,
+    tierLabel,
+    headlineAnswer,
+    subheadlineAnswer,
+    maxTop3RestructurePower,
+    maxTop3CutRelief,
+    topRestructureLevers,
+    topExtensionCandidates,
+    topCutWatchCandidates,
+  };
 }
