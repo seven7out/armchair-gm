@@ -202,6 +202,7 @@ export function createSignedFreeAgentPlayer(
     tier: fa.tier,
     overallRating: fa.overallRating,
     accruedSeasons: fa.accruedSeasons,
+    headshotUrl: fa.headshotUrl,
     notes: `Signed in FA (${years} yr, $${offer.totalValue.toFixed(1)}M)`,
     contractYears: offer.contractYears,
   };

@@ -17,6 +17,7 @@ import {
 } from '@/engine';
 import { TRADE_PARTNER_TEAMS } from '@/data/seed/draftPicks';
 import { useGMStore } from '@/store/useGMStore';
+import { PlayerAvatar } from './PlayerAvatar';
 
 type ActionTab = 'cut' | 'restructure' | 'extend' | 'trade';
 
@@ -173,17 +174,24 @@ export function ContractActionDrawer() {
     >
       {/* Editorial Header */}
       <div className="flex items-start justify-between border-b border-[#dfd9cc] px-7 py-5">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
-            {player.position} · Age {player.ageIn2026} · OVR {player.overallRating}{' '}
-            · {player.accruedSeasons} Accrued Seasons
+        <div className="flex items-center gap-4">
+          <PlayerAvatar
+            name={player.name}
+            headshotUrl={player.headshotUrl}
+            size="lg"
+          />
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
+              {player.position} · Age {player.ageIn2026} · OVR {player.overallRating}{' '}
+              · {player.accruedSeasons} Accrued Seasons
+            </div>
+            <h2 id={titleId} className="font-editorial mt-1 text-2xl text-[#1c1917]">
+              {player.name}
+            </h2>
+            {player.notes && (
+              <p className="mt-1 text-xs text-[#57534e]">{player.notes}</p>
+            )}
           </div>
-          <h2 id={titleId} className="font-editorial mt-1 text-2xl text-[#1c1917]">
-            {player.name}
-          </h2>
-          {player.notes && (
-            <p className="mt-1 text-xs text-[#57534e]">{player.notes}</p>
-          )}
         </div>
 
         <button

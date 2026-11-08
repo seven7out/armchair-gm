@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:data": "python3 scripts/sync-live-nfl-data.py",
+    "verify": "npx tsx scripts/verify-engine.ts"
   },
   "dependencies": {
     "@tailwindcss/turbopack": "^4",

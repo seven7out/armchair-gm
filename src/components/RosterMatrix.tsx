@@ -13,6 +13,7 @@ import {
   PositionGroup,
 } from '@/engine';
 import { useGMStore } from '@/store/useGMStore';
+import { PlayerAvatar } from './PlayerAvatar';
 
 export function RosterMatrix() {
   const {
@@ -62,17 +63,26 @@ export function RosterMatrix() {
     <section className="mx-auto max-w-[1440px] px-6 py-8">
       {/* Editorial Intro & Position Index Strip */}
       <div className="mb-8 flex flex-col gap-6 border-b border-[#dfd9cc] pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
-            {baseTeam.archetypeLabel}
-          </p>
-          <h2 className="font-editorial mt-1 text-3xl font-normal text-[#1c1917]">
-            Multi-Year Contract Ledger (2026–2029)
-          </h2>
-          <p className="mt-1.5 max-w-2xl text-sm text-[#57534e] leading-relaxed">
-            {baseTeam.archetypeDescription} Select any player row to model a
-            restructure, Pre/Post-June 1 release, extension, or trade.
-          </p>
+        <div className="flex items-start gap-4">
+          {baseTeam.logoUrl && (
+            <img
+              src={baseTeam.logoUrl}
+              alt={`${baseTeam.city} ${baseTeam.name}`}
+              className="mt-1 h-12 w-12 shrink-0 object-contain"
+            />
+          )}
+          <div>
+            <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
+              {baseTeam.archetypeLabel} · Synced with Over The Cap &amp; ESPN API
+            </p>
+            <h2 className="font-editorial mt-1 text-3xl font-normal text-[#1c1917]">
+              {baseTeam.city} {baseTeam.name} Multi-Year Contract Ledger (2026–2029)
+            </h2>
+            <p className="mt-1.5 max-w-2xl text-sm text-[#57534e] leading-relaxed">
+              {baseTeam.archetypeDescription} Select any player row to model a
+              restructure, Pre/Post-June 1 release, extension, or trade.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -237,7 +247,12 @@ export function RosterMatrix() {
                           scope="row"
                           className="sticky left-0 z-10 bg-[#f6f3ec] group-hover:bg-[#fcfaf6] py-3.5 pr-4 font-normal transition-colors"
                         >
-                          <div className="flex items-baseline justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            <PlayerAvatar
+                              name={player.name}
+                              headshotUrl={player.headshotUrl}
+                              size="sm"
+                            />
                             <div>
                               <div className="flex items-baseline gap-2">
                                 <span className="font-medium text-sm text-[#1c1917] group-hover:underline">

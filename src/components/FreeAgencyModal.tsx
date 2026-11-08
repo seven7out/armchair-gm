@@ -14,6 +14,7 @@ import {
 } from '@/engine';
 import { SEED_FREE_AGENTS } from '@/data/seed/freeAgents';
 import { useGMStore } from '@/store/useGMStore';
+import { PlayerAvatar } from './PlayerAvatar';
 
 export function FreeAgencySimulatorView({
   isModal = false,
@@ -100,39 +101,46 @@ export function FreeAgencySimulatorView({
                     key={fa.id}
                     type="button"
                     onClick={() => handleSelectFA(fa)}
-                    className={`w-full py-3 px-2.5 text-left transition-colors cursor-pointer ${
+                    className={`w-full py-3 px-2.5 text-left transition-colors cursor-pointer flex items-center gap-3 ${
                       isSelected ? 'bg-[#ede8dd]' : 'hover:bg-[#fcfaf6]'
                     }`}
                   >
-                    <div className="flex items-baseline justify-between">
-                      <div>
-                        <span className="font-medium text-sm text-[#1c1917]">
-                          {fa.name}
-                        </span>{' '}
-                        <span className="text-xs text-[#8a8379]">
-                          ({fa.position} · Age {fa.ageIn2026})
+                    <PlayerAvatar
+                      name={fa.name}
+                      headshotUrl={fa.headshotUrl}
+                      size="sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between">
+                        <div>
+                          <span className="font-medium text-sm text-[#1c1917]">
+                            {fa.name}
+                          </span>{' '}
+                          <span className="text-xs text-[#8a8379]">
+                            ({fa.position} · Age {fa.ageIn2026})
+                          </span>
+                        </div>
+                        <span className="font-mono-ledger text-xs font-semibold text-[#1c1917]">
+                          ~${fa.marketApy.toFixed(1)}M/yr
                         </span>
                       </div>
-                      <span className="font-mono-ledger text-xs font-semibold text-[#1c1917]">
-                        ~${fa.marketApy.toFixed(1)}M/yr
-                      </span>
-                    </div>
 
-                    <div className="mt-0.5 flex items-center justify-between text-[11px]">
-                      <span
-                        className={
-                          pred.classification === 'TAG_OR_EXTEND_TRAP'
-                            ? 'text-[#b84a27] font-medium'
-                            : !pred.countsTowardCompFormula
-                            ? 'text-[#2d5a43] font-medium'
-                            : 'text-[#57534e]'
-                        }
-                      >
-                        {pred.classificationBadge} ({pred.availabilityProbability}% Prob)
-                      </span>
-                      <span className="font-mono-ledger text-[10px] text-[#8a8379]">
-                        {!pred.countsTowardCompFormula ? 'Comp-Pick Safe' : 'CFA Qualifying'}
-                      </span>
+                      <div className="mt-0.5 flex items-center justify-between text-[11px]">
+                        <span
+                          className={
+                            pred.classification === 'TAG_OR_EXTEND_TRAP'
+                              ? 'text-[#b84a27] font-medium'
+                              : !pred.countsTowardCompFormula
+                              ? 'text-[#2d5a43] font-medium'
+                              : 'text-[#57534e]'
+                          }
+                        >
+                          {pred.classificationBadge} ({pred.availabilityProbability}% Prob)
+                        </span>
+                        <span className="font-mono-ledger text-[10px] text-[#8a8379]">
+                          {!pred.countsTowardCompFormula ? 'Comp-Pick Safe' : 'CFA Qualifying'}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 );
@@ -179,41 +187,48 @@ export function FreeAgencySimulatorView({
 
         {/* Right 7 Cols: Contract Term Sheet */}
         <div className="lg:col-span-7 pt-8 lg:pt-0 lg:pl-8 space-y-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-[#dfd9cc] pb-5">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
-                Contract Offer Sheet · {selectedFA.position} · Age{' '}
-                {selectedFA.ageIn2026} · {selectedFA.previousTeam}
-              </div>
-              <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
-                {selectedFA.name}
-              </h2>
-              <p className="mt-1 text-xs text-[#57534e]">
-                {selectedFA.scoutingNote}
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-                <span
-                  className={`font-semibold ${
-                    selectedPrediction.classification === 'TAG_OR_EXTEND_TRAP'
-                      ? 'text-[#b84a27]'
-                      : !selectedPrediction.countsTowardCompFormula
-                      ? 'text-[#2d5a43]'
-                      : 'text-[#1c1917]'
-                  }`}
-                >
-                  Predictor: {selectedPrediction.classificationBadge} (
-                  {selectedPrediction.availabilityProbability}% Market Availability)
-                </span>
-                <span>·</span>
-                <span
-                  className={
-                    !selectedPrediction.countsTowardCompFormula
-                      ? 'text-[#2d5a43] font-medium'
-                      : 'text-[#b84a27]'
-                  }
-                >
-                  {selectedPrediction.compPickImpactLabel}
-                </span>
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#dfd9cc] pb-5">
+            <div className="flex items-start gap-4 flex-1">
+              <PlayerAvatar
+                name={selectedFA.name}
+                headshotUrl={selectedFA.headshotUrl}
+                size="lg"
+              />
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
+                  Contract Offer Sheet · {selectedFA.position} · Age{' '}
+                  {selectedFA.ageIn2026} · {selectedFA.previousTeam}
+                </div>
+                <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
+                  {selectedFA.name}
+                </h2>
+                <p className="mt-1 text-xs text-[#57534e]">
+                  {selectedFA.scoutingNote}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                  <span
+                    className={`font-semibold ${
+                      selectedPrediction.classification === 'TAG_OR_EXTEND_TRAP'
+                        ? 'text-[#b84a27]'
+                        : !selectedPrediction.countsTowardCompFormula
+                        ? 'text-[#2d5a43]'
+                        : 'text-[#1c1917]'
+                    }`}
+                  >
+                    Predictor: {selectedPrediction.classificationBadge} (
+                    {selectedPrediction.availabilityProbability}% Market Availability)
+                  </span>
+                  <span>·</span>
+                  <span
+                    className={
+                      !selectedPrediction.countsTowardCompFormula
+                        ? 'text-[#2d5a43] font-medium'
+                        : 'text-[#b84a27]'
+                    }
+                  >
+                    {selectedPrediction.compPickImpactLabel}
+                  </span>
+                </div>
               </div>
             </div>
 

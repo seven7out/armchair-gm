@@ -9,6 +9,7 @@ import {
 import { SEED_FREE_AGENTS } from '@/data/seed/freeAgents';
 import { runHistoricalBacktestSuite } from '@/data/seed/historicalBacktest2026';
 import { useGMStore } from '@/store/useGMStore';
+import { PlayerAvatar } from './PlayerAvatar';
 
 export function PredictorBacktestLab() {
   const {
@@ -250,45 +251,52 @@ export function PredictorBacktestLab() {
                   key={fa.id}
                   className="py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-baseline gap-2.5">
-                      <span className="font-medium text-sm text-[#1c1917]">
-                        {fa.name}
-                      </span>
-                      <span className="font-mono-ledger text-xs text-[#8a8379]">
-                        {fa.position} · Age {fa.ageIn2026} (Cliff @{curve.cliffAge}) ·{' '}
-                        {fa.previousTeam}
-                      </span>
-                    </div>
+                  <div className="flex items-start gap-3">
+                    <PlayerAvatar
+                      name={fa.name}
+                      headshotUrl={fa.headshotUrl}
+                      size="md"
+                    />
+                    <div className="space-y-1">
+                      <div className="flex items-baseline gap-2.5">
+                        <span className="font-medium text-sm text-[#1c1917]">
+                          {fa.name}
+                        </span>
+                        <span className="font-mono-ledger text-xs text-[#8a8379]">
+                          {fa.position} · Age {fa.ageIn2026} (Cliff @{curve.cliffAge}) ·{' '}
+                          {fa.previousTeam}
+                        </span>
+                      </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                      <span
-                        className={`font-semibold ${
-                          prediction.classification === 'TAG_OR_EXTEND_TRAP'
-                            ? 'text-[#b84a27]'
-                            : !prediction.countsTowardCompFormula
-                            ? 'text-[#2d5a43]'
-                            : 'text-[#1c1917]'
-                        }`}
-                      >
-                        {prediction.classificationBadge} (
-                        {prediction.availabilityProbability}% Prob)
-                      </span>
-                      <span className="text-[#8a8379]">·</span>
-                      <span
-                        className={
-                          !prediction.countsTowardCompFormula
-                            ? 'font-medium text-[#2d5a43]'
-                            : 'text-[#57534e]'
-                        }
-                      >
-                        {prediction.compPickImpactLabel}
-                      </span>
-                    </div>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <span
+                          className={`font-semibold ${
+                            prediction.classification === 'TAG_OR_EXTEND_TRAP'
+                              ? 'text-[#b84a27]'
+                              : !prediction.countsTowardCompFormula
+                              ? 'text-[#2d5a43]'
+                              : 'text-[#1c1917]'
+                          }`}
+                        >
+                          {prediction.classificationBadge} (
+                          {prediction.availabilityProbability}% Prob)
+                        </span>
+                        <span className="text-[#8a8379]">·</span>
+                        <span
+                          className={
+                            !prediction.countsTowardCompFormula
+                              ? 'font-medium text-[#2d5a43]'
+                              : 'text-[#57534e]'
+                          }
+                        >
+                          {prediction.compPickImpactLabel}
+                        </span>
+                      </div>
 
-                    <p className="text-xs text-[#57534e]">
-                      {prediction.primaryDrivers[0]}
-                    </p>
+                      <p className="text-xs text-[#57534e]">
+                        {prediction.primaryDrivers[0]}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-4 shrink-0">
@@ -329,29 +337,36 @@ export function PredictorBacktestLab() {
             {rosterScan.map((item) => (
               <div
                 key={item.player.id}
-                className="py-3.5 flex items-baseline justify-between gap-4"
+                className="py-3.5 flex items-center justify-between gap-4"
               >
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-medium text-sm text-[#1c1917]">
-                      {item.player.name}
-                    </span>
-                    <span className="font-mono-ledger text-xs text-[#8a8379]">
-                      ({item.player.position} · Age {item.player.ageIn2026})
-                    </span>
-                  </div>
-                  <div className="mt-0.5 font-mono-ledger text-[11px] text-[#57534e]">
-                    2026 Hit: ${item.scheduledCapHit.toFixed(2)}M · Pre-6/1 Saves:{' '}
-                    <span className="text-[#2d5a43] font-semibold">
-                      +${item.preJuneSavings.toFixed(2)}M
-                    </span>{' '}
-                    · Post-6/1 Saves:{' '}
-                    <span className="text-[#2d5a43] font-semibold">
-                      +${item.postJuneSavings.toFixed(2)}M
-                    </span>
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-[#8a8379]">
-                    {item.prediction.primaryDrivers[0]}
+                <div className="flex items-center gap-3">
+                  <PlayerAvatar
+                    name={item.player.name}
+                    headshotUrl={item.player.headshotUrl}
+                    size="sm"
+                  />
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-medium text-sm text-[#1c1917]">
+                        {item.player.name}
+                      </span>
+                      <span className="font-mono-ledger text-xs text-[#8a8379]">
+                        ({item.player.position} · Age {item.player.ageIn2026})
+                      </span>
+                    </div>
+                    <div className="mt-0.5 font-mono-ledger text-[11px] text-[#57534e]">
+                      2026 Hit: ${item.scheduledCapHit.toFixed(2)}M · Pre-6/1 Saves:{' '}
+                      <span className="text-[#2d5a43] font-semibold">
+                        +${item.preJuneSavings.toFixed(2)}M
+                      </span>{' '}
+                      · Post-6/1 Saves:{' '}
+                      <span className="text-[#2d5a43] font-semibold">
+                        +${item.postJuneSavings.toFixed(2)}M
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-[#8a8379]">
+                      {item.prediction.primaryDrivers[0]}
+                    </div>
                   </div>
                 </div>
 

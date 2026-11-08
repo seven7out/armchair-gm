@@ -62,8 +62,9 @@ export interface Player {
   tier: PlayerTier;
   overallRating: number;        // 60-99 scale
   accruedSeasons: number;       // Used to compute exact CBA Veteran Minimum floor
-  draftRound?: number;
-  draftPick?: number;
+  headshotUrl?: string | null;  // Official ESPN / NFL.com player headshot URL
+  draftRound?: number | null;
+  draftPick?: number | null;
   isRookieContract?: boolean;
   fifthYearOptionExercised?: boolean;
   priorTagsCount?: number;      // Number of prior Franchise Tags (triggers 120% or 144% escalation)
@@ -125,6 +126,7 @@ export interface FreeAgentTarget {
   overallRating: number;
   accruedSeasons: number;
   previousTeam: string;
+  headshotUrl?: string | null;
   marketApy: number;            // Expected Annual Value ($M)
   marketYears: number;          // Expected Contract Length (1-4)
   marketGuaranteedPct: number;  // Expected % of total deal guaranteed (0-1)
@@ -292,13 +294,14 @@ export interface TeamSeedData {
   name: string;
   city: string;
   abbreviation: string;
+  logoUrl?: string;
   archetypeLabel: string;
   archetypeDescription: string;
   primaryColor: string;
   secondaryColor: string;
   initialRollover2026: number;
   priorDeadMoney: DeadCapEntry[];
-   departingCfaLosses?: { name: string; position: PositionGroup; estApy: number; projectedRound: number }[];
+  departingCfaLosses?: { name: string; position: PositionGroup; estApy: number; projectedRound: number }[];
   roster: Player[];
   draftPicks: DraftPick[];
 }

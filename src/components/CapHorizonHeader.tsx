@@ -31,15 +31,24 @@ export function CapHorizonHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-[#dfd9cc] bg-[#f6f3ec]/95 backdrop-blur-sm">
       {/* Masthead Row */}
-      <div className="mx-auto flex max-w-[1440px] flex-wrap items-baseline justify-between gap-4 px-6 py-4 border-b border-[#dfd9cc]">
-        <div className="flex flex-wrap items-baseline gap-6">
-          <div>
-            <span className="font-editorial text-2xl font-normal tracking-tight text-[#1c1917]">
-              Armchair GM
-            </span>
-            <span className="ml-3 text-xs uppercase tracking-[0.14em] text-[#8a8379]">
-              Front Office Ledger • {baseTeam.city} {baseTeam.name}
-            </span>
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#dfd9cc]">
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-3">
+            {baseTeam.logoUrl && (
+              <img
+                src={baseTeam.logoUrl}
+                alt={`${baseTeam.city} ${baseTeam.name} logo`}
+                className="h-8 w-8 object-contain"
+              />
+            )}
+            <div>
+              <span className="font-editorial text-2xl font-normal tracking-tight text-[#1c1917]">
+                Armchair GM
+              </span>
+              <span className="ml-3 text-xs uppercase tracking-[0.14em] text-[#8a8379]">
+                {baseTeam.city} {baseTeam.name} · OTC Live Ledger
+              </span>
+            </div>
           </div>
 
           {/* Minimalist Editorial Franchise Switcher */}
@@ -54,14 +63,21 @@ export function CapHorizonHeader() {
                   key={team.id}
                   type="button"
                   onClick={() => selectTeam(team.id)}
-                  className={`pb-0.5 transition-colors cursor-pointer ${
+                  className={`flex items-center gap-1.5 pb-0.5 transition-colors cursor-pointer ${
                     isSelected
                       ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
                       : 'text-[#8a8379] hover:text-[#1c1917]'
                   }`}
                   title={team.archetypeDescription}
                 >
-                  {team.city}{' '}
+                  {team.logoUrl && (
+                    <img
+                      src={team.logoUrl}
+                      alt=""
+                      className="h-4 w-4 object-contain"
+                    />
+                  )}
+                  <span>{team.city}</span>
                   <span className="font-mono-ledger text-[11px] opacity-75">
                     ({team.abbreviation})
                   </span>
