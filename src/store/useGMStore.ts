@@ -2,26 +2,27 @@
 
 import { create } from 'zustand';
 import {
+  applyPlayerExtension,
   computeDerivedTeamCapState,
   ContractStructureTemplate,
+  createSignedFreeAgentPlayer,
   DEFAULT_CAP_GROWTH_RATE,
   DerivedTeamCapState,
+  evaluateFreeAgentTarget,
   FreeAgentTarget,
+  getContractYearCapHit,
   LeagueYear,
   Player,
   PositionGroup,
+  roundCap,
   simulateCutOrTrade,
   simulateRestructure,
   TeamSeedData,
   Transaction,
-  applyPlayerExtension,
-  createSignedFreeAgentPlayer,
-  getContractYearCapHit,
-  roundCap,
 } from '@/engine';
 import { SEED_TEAMS } from '@/data/seed/teams';
 
-export type ActiveTab = 'matrix' | 'draft' | 'free-agency';
+export type ActiveTab = 'matrix' | 'draft' | 'free-agency' | 'predictor';
 
 interface GMStoreState {
   selectedTeamId: string;
@@ -32,6 +33,7 @@ interface GMStoreState {
 
   // UI Navigation & Drawers
   activeTab: ActiveTab;
+  ledgerMode: 'CAP' | 'CASH';
   selectedPlayerId: string | null;
   isScenarioDrawerOpen: boolean;
   isFreeAgencyModalOpen: boolean;
@@ -42,6 +44,7 @@ interface GMStoreState {
   selectTeam: (teamId: string) => void;
   setCapGrowthRate: (rate: number) => void;
   setActiveTab: (tab: ActiveTab) => void;
+  setLedgerMode: (mode: 'CAP' | 'CASH') => void;
   selectPlayer: (playerId: string | null) => void;
   setScenarioDrawerOpen: (open: boolean) => void;
   setFreeAgencyModalOpen: (open: boolean) => void;
@@ -67,6 +70,12 @@ interface GMStoreState {
     guaranteedPct: number,
     structure: ContractStructureTemplate,
     actionYear?: LeagueYear
+  ) => void;
+  addFranchiseTagTransaction: (
+    player: Player,
+    tagType: 'NON_EXCLUSIVE_FRANCHISE' | 'TRANSITION',
+    tagSalary: number,
+    targetYear?: LeagueYear
   ) => void;
   addSignFATransaction: (
     freeAgent: FreeAgentTarget,
@@ -127,6 +136,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     derivedState: initialDerived,
 
     activeTab: 'matrix',
+    ledgerMode: 'CAP',
     selectedPlayerId: null,
     isScenarioDrawerOpen: false,
     isFreeAgencyModalOpen: false,
@@ -154,6 +164,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     },
 
     setActiveTab: (tab) => set({ activeTab: tab }),
+    setLedgerMode: (mode) => set({ ledgerMode: mode }),
     selectPlayer: (playerId) => set({ selectedPlayerId: playerId }),
     setScenarioDrawerOpen: (open) => set({ isScenarioDrawerOpen: open }),
     setFreeAgencyModalOpen: (open) => set({ isFreeAgencyModalOpen: open }),
@@ -262,6 +273,36 @@ export const useGMStore = create<GMStoreState>((set, get) => {
       });
     },
 
+    addFranchiseTagTransaction: (
+      player,
+      tagType,
+      tagSalary,
+      targetYear = 2027
+    ) => {
+      const tx: Transaction = {
+        id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'FRANCHISE_TAG',
+        timestamp: Date.now(),
+        enabled: true,
+        actionYear: targetYear,
+        playerId: player.id,
+        playerName: player.name,
+        position: player.position,
+        tagType,
+        tagSalary,
+        label: `${tagType === 'TRANSITION' ? 'Transition' : 'Franchise'} Tag: ${player.name} (${targetYear})`,
+        sublabel: `1-yr fully guaranteed tender @ $${tagSalary.toFixed(2)}M in ${targetYear}`,
+        capDelta2026: targetYear === 2026 ? roundCap(-tagSalary) : 0,
+      };
+
+      const nextTx = [...get().transactions, tx];
+      set({
+        transactions: nextTx,
+        selectedPlayerId: null,
+        derivedState: recompute(get().baseTeam, nextTx, get().capGrowthRate),
+      });
+    },
+
     addSignFATransaction: (freeAgent, years, apy, guaranteedPct, structure) => {
       const signed = createSignedFreeAgentPlayer(
         freeAgent,
@@ -274,6 +315,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
       const hit2026 = getContractYearCapHit(signed.contractYears[2026]);
       const cutoff = get().derivedState.years[2026].replacementLevelCutoff;
       const netImpact2026 = roundCap(Math.max(0, hit2026 - cutoff));
+      const pred = evaluateFreeAgentTarget(freeAgent);
 
       const tx: Transaction = {
         id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -286,8 +328,9 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         apy,
         guaranteedPct,
         structure,
-        label: `Signed FA ${freeAgent.name} (${freeAgent.position})`,
-        sublabel: `${years} yrs, $${(years * apy).toFixed(1)}M ($${apy.toFixed(1)}M APY) | 2026 Hit: $${hit2026.toFixed(2)}M (Net -$${netImpact2026.toFixed(2)}M)`,
+        countsTowardCompPickFormula: pred.countsTowardCompFormula,
+        label: `Signed ${pred.countsTowardCompFormula ? 'UFA' : 'Street FA'} ${freeAgent.name} (${freeAgent.position})`,
+        sublabel: `${years} yrs, $${(years * apy).toFixed(1)}M | 2026 Net: -$${netImpact2026.toFixed(2)}M | ${pred.countsTowardCompFormula ? 'Counts vs Comp Pick' : 'Comp-Pick Safe'}`,
         capDelta2026: roundCap(-netImpact2026),
       };
 

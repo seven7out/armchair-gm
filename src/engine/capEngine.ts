@@ -7,11 +7,13 @@ import {
 import {
   applyPlayerReleaseOrTrade,
   getContractYearCapHit,
+  getContractYearCash,
   simulateRestructure,
 } from './contractEngine';
 import { createDraftedPlayer, generateRookieContract } from './draftEngine';
 import { applyPlayerExtension, createSignedFreeAgentPlayer } from './freeAgencyEngine';
 import {
+  CompPickTrackerSummary,
   DeadCapEntry,
   DerivedTeamCapState,
   DraftPick,
@@ -26,20 +28,16 @@ import {
 } from './types';
 
 /**
- * Multi-Year Salary Cap, Top-51 Rule, Void Acceleration & Rollover Engine (`capEngine.ts`).
- *
- * Pure deterministic reducer:
- * Given a `TeamSeedData` base state and an ordered array of `Transaction` objects
- * (each of which may be enabled or toggled off in the Scenario Stack), computes the exact
- * 4-year `DerivedTeamCapState` for 2026, 2027, 2028, and 2029.
+ * Multi-Year Salary Cap, Cash Spend, Top-51 Rule, Void Acceleration,
+ * Compensatory Pick Cancellation & Rollover Engine (`capEngine.ts`).
  */
 export function computeDerivedTeamCapState(
   baseTeam: TeamSeedData,
   transactions: Transaction[],
   capGrowthRate: number = DEFAULT_CAP_GROWTH_RATE
 ): DerivedTeamCapState {
-  // 1. Deep-clone roster, dead money ledger, and draft picks so base seed is never mutated
-  let roster: Player[] = baseTeam.roster.map((p) => ({
+  // 1. Deep-clone roster, dead money ledger, and draft picks
+  const roster: Player[] = baseTeam.roster.map((p) => ({
     ...p,
     contractYears: {
       2026: p.contractYears[2026] ? { ...p.contractYears[2026]! } : null,
@@ -56,6 +54,15 @@ export function computeDerivedTeamCapState(
 
   let draftPicks: DraftPick[] = baseTeam.draftPicks.map((pk) => ({ ...pk }));
 
+  // Track Comp Pick formula & Post-June 1 designation limit (max 2 per offseason)
+  const cfaLosses = [...(baseTeam.departingCfaLosses ?? [
+    { name: 'Carlton Davis III', position: 'CB' as PositionGroup, estApy: 18.0, projectedRound: 3 },
+    { name: 'Kevin Zeitler', position: 'OL' as PositionGroup, estApy: 9.0, projectedRound: 5 },
+  ])];
+  const cfaQualifyingSignings: { name: string; position: PositionGroup; apy: number }[] = [];
+  let streetFASigningsCount = 0;
+  let postJune1DesignationsUsed = 0;
+
   // 2. Apply all enabled transactions in chronological order
   const enabledMoves = transactions.filter((t) => t.enabled);
 
@@ -63,6 +70,9 @@ export function computeDerivedTeamCapState(
     switch (tx.type) {
       case 'PRE_JUNE_1_CUT':
       case 'POST_JUNE_1_CUT': {
+        if (tx.type === 'POST_JUNE_1_CUT') {
+          postJune1DesignationsUsed++;
+        }
         const idx = roster.findIndex((p) => p.id === tx.playerId);
         if (idx !== -1) {
           const targetPlayer = roster[idx];
@@ -74,7 +84,6 @@ export function computeDerivedTeamCapState(
           );
           deadCapLedger.push(deadEntry);
 
-          // If cut in 2026, remove from active roster; if cut in a future year (>2026), clear contract years >= actionYear
           if (tx.actionYear === 2026) {
             roster.splice(idx, 1);
           } else {
@@ -120,6 +129,30 @@ export function computeDerivedTeamCapState(
         break;
       }
 
+      case 'FRANCHISE_TAG': {
+        const idx = roster.findIndex((p) => p.id === tx.playerId);
+        if (idx !== -1) {
+          const p = roster[idx];
+          const updatedYears = { ...p.contractYears };
+          updatedYears[tx.actionYear] = {
+            year: tx.actionYear,
+            baseSalary: tx.tagSalary,
+            guaranteedSalary: tx.tagSalary,
+            proratedBonus: updatedYears[tx.actionYear]?.proratedBonus ?? 0,
+            rosterBonus: 0,
+            workoutBonus: 0,
+            isVoidYear: false,
+            isFranchiseTag: true,
+          };
+          roster[idx] = {
+            ...p,
+            notes: `Applied ${tx.tagType === 'TRANSITION' ? 'Transition' : 'Franchise'} Tag ($${tx.tagSalary.toFixed(2)}M in ${tx.actionYear})`,
+            contractYears: updatedYears,
+          };
+        }
+        break;
+      }
+
       case 'SIGN_FA': {
         const newPlayer = createSignedFreeAgentPlayer(
           tx.freeAgent,
@@ -133,11 +166,20 @@ export function computeDerivedTeamCapState(
           ...newPlayer,
           id: `fa-${tx.id}-${tx.freeAgent.id}`,
         });
+
+        if (tx.countsTowardCompPickFormula) {
+          cfaQualifyingSignings.push({
+            name: tx.freeAgent.name,
+            position: tx.freeAgent.position,
+            apy: tx.apy,
+          });
+        } else {
+          streetFASigningsCount++;
+        }
         break;
       }
 
       case 'TRADE': {
-        // Process outgoing players
         for (const outPlayerId of tx.outgoingPlayerIds) {
           const idx = roster.findIndex((p) => p.id === outPlayerId);
           if (idx !== -1) {
@@ -154,7 +196,6 @@ export function computeDerivedTeamCapState(
           }
         }
 
-        // Process incoming players (acquiring team inherits baseSalary + roster/workout bonuses, zero prior signing bonus proration)
         for (const inc of tx.incomingPlayers) {
           const strippedYears = {
             2026: inc.contractYears[2026]
@@ -177,10 +218,8 @@ export function computeDerivedTeamCapState(
           });
         }
 
-        // Remove outgoing draft picks
         draftPicks = draftPicks.filter((pk) => !tx.outgoingPickIds.includes(pk.id));
 
-        // Add incoming draft picks
         for (const incPick of tx.incomingPicks) {
           draftPicks.push({
             ...incPick,
@@ -232,14 +271,11 @@ export function computeDerivedTeamCapState(
     }
   }
 
-  // 3. Automatic Void-Year Acceleration Check:
-  // When a player's active contract expires in year Y-1 and year Y is a Void Year, all remaining void-year
-  // prorated bonuses from Y..2029 accelerate into year Y's Dead Money ledger.
+  // 3. Automatic Void-Year Acceleration Check
   for (const player of roster) {
     for (const y of LEAGUE_YEARS) {
       const cy = player.contractYears[y];
       if (cy && cy.isVoidYear) {
-        // Accelerate this void year and all subsequent void years into the first void year `y`
         let acceleratedVoidTotal = 0;
         for (const futureY of LEAGUE_YEARS) {
           if (futureY >= y && player.contractYears[futureY]?.isVoidYear) {
@@ -258,13 +294,33 @@ export function computeDerivedTeamCapState(
             amountsByYear: amounts,
           });
         }
-        // Break so we only accelerate at the FIRST void year when the contract voids
         break;
       }
     }
   }
 
-  // 4. Compute 4-year Top-51 Cap, Dead Money, Rookie Pool Displacement, and Rollover Cascade
+  // 4. Compute Compensatory Pick Cancellation Formula
+  // Each CFA-qualifying signing cancels the closest equal-or-lower CFA loss
+  const remainingLosses = [...cfaLosses].sort((a, b) => b.estApy - a.estApy);
+  const sortedSignings = [...cfaQualifyingSignings].sort((a, b) => b.apy - a.apy);
+  for (const signing of sortedSignings) {
+    if (remainingLosses.length > 0) {
+      remainingLosses.shift();
+    }
+  }
+  const netProjectedCompPicks = remainingLosses.map(
+    (loss) => `2027 Rd ${loss.projectedRound} Comp (for ${loss.name})`
+  );
+
+  const compPickSummary: CompPickTrackerSummary = {
+    cfaQualifyingLosses: cfaLosses,
+    cfaQualifyingSignings,
+    streetFASigningsCount,
+    netProjectedCompPicks,
+    postJune1DesignationsUsed,
+  };
+
+  // 5. Compute 4-year Top-51 Cap, Cash Spend, Dead Money, Rookie Pool Displacement, and Rollover Cascade
   const years = {} as Record<LeagueYear, YearCapBreakdown>;
   let currentRollover = baseTeam.initialRollover2026;
 
@@ -273,25 +329,28 @@ export function computeDerivedTeamCapState(
     const rolloverFromPriorYear = roundCap(currentRollover);
     const adjustedCapCeiling = roundCap(baseLeagueCap + rolloverFromPriorYear);
 
-    // Gather all active (non-void) player cap hits in year `y`
-    const activePlayerHits: { player: Player; hit: number }[] = [];
+    const activePlayerHits: { player: Player; hit: number; cash: number }[] = [];
     for (const p of roster) {
       const cy = p.contractYears[y];
       if (cy && !cy.isVoidYear) {
-        activePlayerHits.push({ player: p, hit: getContractYearCapHit(cy) });
+        activePlayerHits.push({
+          player: p,
+          hit: getContractYearCapHit(cy),
+          cash: getContractYearCash(cy),
+        });
       }
     }
 
-    // Sort descending for Top-51 Rule
     activePlayerHits.sort((a, b) => b.hit - a.hit);
     const activeRosterCount = activePlayerHits.length;
 
     const allRosterCap = roundCap(
       activePlayerHits.reduce((acc, item) => acc + item.hit, 0)
     );
+    const totalCashSpend = roundCap(
+      activePlayerHits.reduce((acc, item) => acc + item.cash, 0)
+    );
 
-    // Top-51 Rule: take top 51 contracts; if fewer than 51 signed for future years, pad with replacement min
-    // so adding a Free Agent or Draft Pick always displaces a minimum slot (true marginal cap accounting).
     const minBaseline = REPLACEMENT_MIN_SALARY_BY_YEAR[y];
     const top51List = activePlayerHits.slice(0, 51).map((x) => x.hit);
     while (top51List.length < 51) {
@@ -301,12 +360,10 @@ export function computeDerivedTeamCapState(
     const activeTop51Cap = roundCap(top51List.reduce((acc, h) => acc + h, 0));
     const replacementLevelCutoff = roundCap(top51List[50] ?? minBaseline);
 
-    // Sum Dead Money for year `y`
     const deadMoneyTotal = roundCap(
       deadCapLedger.reduce((acc, entry) => acc + (entry.amountsByYear[y] ?? 0), 0)
     );
 
-    // Unsigned Draft Picks Rookie Pool Reserve & Net Displacement
     const unsignedPicksForYear = draftPicks.filter(
       (pk) => pk.year === y && !pk.selectedPlayerName
     );
@@ -326,7 +383,6 @@ export function computeDerivedTeamCapState(
     );
     const effectiveCapSpace = roundCap(adjustedCapCeiling - totalCapCommitments);
 
-    // Position Group Spend Allocation
     const posTotals: Record<PositionGroup, number> = {
       QB: 0,
       RB: 0,
@@ -359,6 +415,7 @@ export function computeDerivedTeamCapState(
       adjustedCapCeiling,
       activeTop51Cap,
       allRosterCap,
+      totalCashSpend,
       deadMoneyTotal,
       rookiePoolReserve,
       netRookiePoolImpact,
@@ -369,8 +426,6 @@ export function computeDerivedTeamCapState(
       topPositionAllocation,
     };
 
-    // Rollover cascade: Unused positive cap space carries forward to next league year
-    // (If a team is over the cap in year Y, they cannot roll over negative space, though deficit is highlighted)
     currentRollover = Math.max(0, effectiveCapSpace);
   }
 
@@ -381,6 +436,7 @@ export function computeDerivedTeamCapState(
     roster,
     deadCapLedger,
     draftPicks,
+    compPickSummary,
     years,
   };
 }

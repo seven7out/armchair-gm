@@ -10,6 +10,7 @@ import {
   FreeAgencySimulatorView,
 } from '@/components/FreeAgencyModal';
 import { ScenarioStackDrawer } from '@/components/ScenarioStackDrawer';
+import { PredictorBacktestLab } from '@/components/PredictorBacktestLab';
 import { useGMStore } from '@/store/useGMStore';
 
 export default function ArmchairGMApp() {
@@ -23,6 +24,7 @@ export default function ArmchairGMApp() {
       {/* 2. Main Workspace View */}
       <main className="flex-1 pb-24">
         {activeTab === 'matrix' && <RosterMatrix />}
+        {activeTab === 'predictor' && <PredictorBacktestLab />}
         {activeTab === 'draft' && <DraftTradeSandbox />}
         {activeTab === 'free-agency' && <FreeAgencySimulatorView />}
       </main>

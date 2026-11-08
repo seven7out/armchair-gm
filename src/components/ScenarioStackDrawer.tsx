@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useId, useRef } from 'react';
-import { CheckSquare, RotateCcw, Square, Trash2, X } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { Check, CheckSquare, Copy, RotateCcw, Square, Trash2, X } from 'lucide-react';
 import { LEAGUE_YEARS } from '@/engine';
 import { useGMStore } from '@/store/useGMStore';
 
@@ -18,6 +18,7 @@ export function ScenarioStackDrawer() {
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const [copiedReceipt, setCopiedReceipt] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -28,6 +29,26 @@ export function ScenarioStackDrawer() {
       dialog.close();
     }
   }, [isScenarioDrawerOpen]);
+
+  const handleCopyOffseasonReceipt = () => {
+    const enabled = transactions.filter((t) => t.enabled);
+    const lines = [
+      `ARMCHAIR GM — ${derivedState.teamName.toUpperCase()} OFFSEASON LEDGER`,
+      `====================================================`,
+      ...LEAGUE_YEARS.map((yr) => {
+        const s = derivedState.years[yr].effectiveCapSpace;
+        return `${yr} Effective Cap Space: ${s >= 0 ? '+$' : '-$'}${Math.abs(s).toFixed(2)}M (Active: $${derivedState.years[yr].activeTop51Cap.toFixed(1)}M | Dead: $${derivedState.years[yr].deadMoneyTotal.toFixed(1)}M)`;
+      }),
+      `----------------------------------------------------`,
+      `Moves Recorded (${enabled.length}):`,
+      ...enabled.map((tx, i) => `${i + 1}. ${tx.label} — ${tx.sublabel}`),
+      `----------------------------------------------------`,
+      `2027 Projected Comp Picks: ${derivedState.compPickSummary.netProjectedCompPicks.join(', ') || 'None'}`,
+    ];
+    navigator.clipboard?.writeText(lines.join('\n'));
+    setCopiedReceipt(true);
+    setTimeout(() => setCopiedReceipt(false), 2500);
+  };
 
   return (
     <dialog
@@ -84,6 +105,20 @@ export function ScenarioStackDrawer() {
           })}
         </div>
 
+        {/* Comp Pick & Post-June 1 Status Bar */}
+        <div className="border-b border-[#dfd9cc] bg-[#fcfaf6] px-6 py-2.5 text-[11px] font-mono-ledger flex items-center justify-between text-[#57534e]">
+          <span>
+            2027 Comp Picks:{' '}
+            <strong className="text-[#2d5a43]">
+              {derivedState.compPickSummary.netProjectedCompPicks.length}
+            </strong>{' '}
+            ({derivedState.compPickSummary.streetFASigningsCount} Street FAs signed)
+          </span>
+          <span>
+            Post-6/1 Used: {derivedState.compPickSummary.postJune1DesignationsUsed}/2
+          </span>
+        </div>
+
         {/* Transaction Entries */}
         <div className="flex-1 overflow-y-auto divide-y divide-[#dfd9cc] px-6">
           {transactions.length === 0 ? (
@@ -93,7 +128,7 @@ export function ScenarioStackDrawer() {
               </p>
               <p className="mt-1 text-xs text-[#8a8379]">
                 Select any player in the ledger to record a restructure, cut,
-                extension, or trade.
+                extension, tag, or trade.
               </p>
             </div>
           ) : (
@@ -156,17 +191,29 @@ export function ScenarioStackDrawer() {
         {/* Footer */}
         {transactions.length > 0 && (
           <div className="border-t border-[#dfd9cc] px-6 py-4 flex items-center justify-between text-xs">
-            <span className="font-mono-ledger text-[#8a8379]">
-              {transactions.filter((t) => t.enabled).length}/
-              {transactions.length} active
-            </span>
+            <button
+              type="button"
+              onClick={handleCopyOffseasonReceipt}
+              className="flex items-center gap-1.5 border border-[#1c1917] px-3 py-1.5 font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+            >
+              {copiedReceipt ? (
+                <>
+                  <Check className="h-3.5 w-3.5" /> Copied Offseason Receipt
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" /> Copy Shareable Receipt
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={resetScenarioStack}
               className="flex items-center gap-1.5 text-[#b84a27] hover:underline cursor-pointer"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Clear Notebook
+              Clear All
             </button>
           </div>
         )}

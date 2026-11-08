@@ -7,9 +7,11 @@ import {
   ContractStructureTemplate,
   evaluatePlayerLongevity,
   getContractYearCapHit,
+  getPlayerTagCost,
   getProjectedFifthYearOption,
   LEAGUE_YEARS,
   LeagueYear,
+  POSITIONAL_MARKET_COMPS,
   simulateCutOrTrade,
   simulateRestructure,
 } from '@/engine';
@@ -26,6 +28,7 @@ export function ContractActionDrawer() {
     addCutTransaction,
     addRestructureTransaction,
     addExtensionTransaction,
+    addFranchiseTagTransaction,
     addTradeTransaction,
     addFifthYearOptionTransaction,
   } = useGMStore();
@@ -132,6 +135,31 @@ export function ContractActionDrawer() {
       ? getProjectedFifthYearOption(player.draftPick, player.position)
       : null;
 
+  // Franchise & Transition Tag Calculations for Expiring Year
+  const nextUncoveredYear: LeagueYear = !player.contractYears[2027] || player.contractYears[2027]?.isVoidYear
+    ? 2027
+    : 2028;
+  const priorCapHit = getContractYearCapHit(
+    player.contractYears[(nextUncoveredYear - 1) as LeagueYear]
+  );
+  const franchiseTagAmount = getPlayerTagCost(
+    player.position,
+    priorCapHit,
+    player.priorTagsCount ?? 0,
+    'NON_EXCLUSIVE_FRANCHISE',
+    nextUncoveredYear
+  );
+  const transitionTagAmount = getPlayerTagCost(
+    player.position,
+    priorCapHit,
+    player.priorTagsCount ?? 0,
+    'TRANSITION',
+    nextUncoveredYear
+  );
+
+  const marketComps = POSITIONAL_MARKET_COMPS[player.position] ?? [];
+  const postJune1Used = derivedState.compPickSummary.postJune1DesignationsUsed;
+
   return (
     <dialog
       ref={dialogRef}
@@ -231,7 +259,7 @@ export function ContractActionDrawer() {
           [
             { id: 'restructure', label: 'Restructure' },
             { id: 'cut', label: 'Release (Pre / Post-June 1)' },
-            { id: 'extend', label: 'Extend Contract' },
+            { id: 'extend', label: 'Extend / Tag' },
             { id: 'trade', label: 'Trade' },
           ] as const
         ).map((tab) => (
@@ -382,7 +410,7 @@ export function ContractActionDrawer() {
 
         {activeTab === 'cut' && (
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#dfd9cc]">
-            <div className=" flex flex-col justify-between sm:pr-4">
+            <div className="flex flex-col justify-between sm:pr-4">
               <div>
                 <h3 className="font-editorial text-lg text-[#1c1917]">
                   Pre-June 1 Release
@@ -432,9 +460,14 @@ export function ContractActionDrawer() {
 
             <div className="flex flex-col justify-between pt-6 sm:pt-0 sm:pl-6">
               <div>
-                <h3 className="font-editorial text-lg text-[#1c1917]">
-                  Post-June 1 Designation
-                </h3>
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-editorial text-lg text-[#1c1917]">
+                    Post-June 1 Designation
+                  </h3>
+                  <span className="font-mono-ledger text-[10px] text-[#8a8379]">
+                    Slots used: {postJune1Used}/2
+                  </span>
+                </div>
                 <p className="mt-1 text-xs text-[#57534e]">
                   Keeps only {actionYear}&apos;s scheduled proration on{' '}
                   {actionYear} cap and defers remaining bonus to {actionYear + 1}.
@@ -486,30 +519,94 @@ export function ContractActionDrawer() {
 
         {activeTab === 'extend' && (
           <div className="space-y-5">
-            {fifthYearOptionAmount !== null && (
-              <div className="flex items-center justify-between border border-[#2d5a43] bg-[#2d5a43]/5 px-4 py-3 text-xs">
-                <div>
-                  <div className="font-semibold text-[#2d5a43]">
-                    Eligible for Round 1 Fifth-Year Option (2027)
-                  </div>
-                  <div className="text-[#57534e]">
-                    Projected fully guaranteed salary: $
-                    {fifthYearOptionAmount.toFixed(2)}M
-                  </div>
+            {/* Franchise / Transition Tag & 5th-Yr Option Row */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dfd9cc] pb-4 text-xs">
+              <div>
+                <div className="font-medium text-[#1c1917]">
+                  CBA Tender Options ({nextUncoveredYear})
                 </div>
+                <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                  Franchise Tag: ${franchiseTagAmount.toFixed(1)}M · Transition
+                  Tag: ${transitionTagAmount.toFixed(1)}M (120% Rule Applied)
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {fifthYearOptionAmount !== null && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addFifthYearOptionTransaction(
+                        player,
+                        2027,
+                        fifthYearOptionAmount
+                      )
+                    }
+                    className="border border-[#2d5a43] px-2.5 py-1 text-xs font-medium text-[#2d5a43] hover:bg-[#2d5a43] hover:text-[#f6f3ec] cursor-pointer"
+                  >
+                    5th-Yr Option (${fifthYearOptionAmount.toFixed(1)}M)
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() =>
-                    addFifthYearOptionTransaction(
+                    addFranchiseTagTransaction(
                       player,
-                      2027,
-                      fifthYearOptionAmount
+                      'NON_EXCLUSIVE_FRANCHISE',
+                      franchiseTagAmount,
+                      nextUncoveredYear
                     )
                   }
-                  className="bg-[#2d5a43] px-3 py-1.5 text-xs font-medium text-[#f6f3ec] cursor-pointer"
+                  className="border border-[#1c1917] px-2.5 py-1 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] cursor-pointer"
                 >
-                  Exercise Option
+                  Franchise Tag (${franchiseTagAmount.toFixed(1)}M)
                 </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    addFranchiseTagTransaction(
+                      player,
+                      'TRANSITION',
+                      transitionTagAmount,
+                      nextUncoveredYear
+                    )
+                  }
+                  className="border border-[#c7bfb0] px-2.5 py-1 text-xs text-[#57534e] hover:border-[#1c1917] hover:text-[#1c1917] cursor-pointer"
+                >
+                  Transition Tag (${transitionTagAmount.toFixed(1)}M)
+                </button>
+              </div>
+            </div>
+
+            {/* Real-World Positional Market Comps (% of Cap at Signing) */}
+            {marketComps.length > 0 && (
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.12em] text-[#8a8379] mb-2">
+                  Real-World {player.position} Market Comps (Adjusted to $301.2M Cap)
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {marketComps.map((comp) => (
+                    <button
+                      key={comp.playerName}
+                      type="button"
+                      onClick={() => {
+                        setExtApy(comp.equivalent2026Apy);
+                        setExtYears(Math.min(3, comp.years));
+                        setExtGuaranteedPct(comp.guaranteedPct);
+                      }}
+                      className="border border-[#dfd9cc] p-2 text-left hover:border-[#1c1917] transition-colors cursor-pointer"
+                    >
+                      <div className="text-[11px] font-semibold text-[#1c1917]">
+                        {comp.tierLabel}
+                      </div>
+                      <div className="text-[10px] text-[#8a8379] truncate">
+                        {comp.playerName}
+                      </div>
+                      <div className="mt-1 font-mono-ledger text-xs font-semibold text-[#2d5a43]">
+                        ${comp.equivalent2026Apy.toFixed(1)}M/yr ({comp.pctOfCapAtSigning}% cap)
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -543,7 +640,7 @@ export function ContractActionDrawer() {
                 <input
                   type="range"
                   min={2}
-                  max={60}
+                  max={65}
                   step={0.5}
                   value={extApy}
                   onChange={(e) => setExtApy(parseFloat(e.target.value))}

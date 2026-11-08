@@ -1,7 +1,8 @@
 /**
- * Pure TypeScript Domain Types for Armchair GM
- * Structured to map cleanly to nflverse (Over The Cap + draft picks) schemas.
- * All dollar figures are expressed in Millions ($M), e.g., 301.2 = $301,200,000.
+ * Pure TypeScript Domain Types for Armchair GM (v2)
+ * Includes Free Agent Availability & Cap Casualty Prediction schemas,
+ * Compensatory Pick Cancellation tracking, Franchise/Transition Tags,
+ * and Positional Market Comps.
  */
 
 export type LeagueYear = 2026 | 2027 | 2028 | 2029;
@@ -50,6 +51,7 @@ export interface ContractYear {
   workoutBonus: number;         // Workout bonus ($M)
   isVoidYear: boolean;          // True if contract year exists only to hold bonus proration
   isFifthYearOption?: boolean;  // True for Round 1 5th-year option
+  isFranchiseTag?: boolean;     // True if playing on Franchise or Transition Tag
 }
 
 export interface Player {
@@ -64,6 +66,7 @@ export interface Player {
   draftPick?: number;
   isRookieContract?: boolean;
   fifthYearOptionExercised?: boolean;
+  priorTagsCount?: number;      // Number of prior Franchise Tags (triggers 120% or 144% escalation)
   notes?: string;
   contractYears: Record<LeagueYear, ContractYear | null>;
 }
@@ -73,7 +76,7 @@ export interface DeadCapEntry {
   playerId: string;
   playerName: string;
   position: PositionGroup;
-  reason: string;               // e.g., 'Pre-June 1 Cut', 'Post-June 1 Cut', 'Trade', 'Void Acceleration', 'Prior Dead Money'
+  reason: string;
   amountsByYear: Record<LeagueYear, number>;
 }
 
@@ -86,6 +89,31 @@ export interface DraftPick {
   currentTeamId: string;
   selectedPlayerName?: string;
   selectedPosition?: PositionGroup;
+}
+
+// ============================================================================
+// v2 Free Agent Availability & Cap Casualty Predictor Types
+// ============================================================================
+
+export type FreeAgentOriginType =
+  | 'EXPIRING_CONTRACT'         // Standard UFA whose contract expires
+  | 'UNDER_CONTRACT_VETERAN';   // Currently under contract; evaluated for Cap Casualty / Street FA release
+
+export type PredictedMarketClassification =
+  | 'LIKELY_UFA'                // >= 60% probability of hitting open market as standard UFA
+  | 'CAP_CASUALTY_STREET_FA'    // High probability of being cut (Street FA — does NOT cost a Comp Pick!)
+  | 'TAG_OR_EXTEND_TRAP'        // < 45% market availability (likely Franchise Tagged or Extended in-house)
+  | 'TRADE_OR_RELEASE_BRIDGE';  // Productive starter on unguaranteed high base salary; prime March trade/cut target
+
+export interface FreeAgentPredictionFeatures {
+  originType: FreeAgentOriginType;
+  incumbentTeamCapSpace: number;        // Incumbent team's effective cap space ($M)
+  scheduledCapHit: number;              // Scheduled cap hit if under contract, or prior cap hit ($M)
+  netCutSavings: number;                // Cap savings if released by incumbent team ($M)
+  deadCapOnCut: number;                 // Dead cap left behind if released ($M)
+  franchiseTagCost: number;             // Projected 1-year Franchise Tag cost ($M)
+  priorTagsCount: number;               // 0, 1 (120% escalator), or 2 (144% prohibitive escalator)
+  hasPositionalSuccessorOrBlock: boolean;// True if incumbent team already paid another star at this position
 }
 
 export interface FreeAgentTarget {
@@ -101,6 +129,7 @@ export interface FreeAgentTarget {
   marketYears: number;          // Expected Contract Length (1-4)
   marketGuaranteedPct: number;  // Expected % of total deal guaranteed (0-1)
   scoutingNote: string;
+  predictionFeatures: FreeAgentPredictionFeatures;
 }
 
 export interface TradePartnerTeam {
@@ -124,7 +153,8 @@ export type TransactionType =
   | 'SIGN_FA'
   | 'TRADE'
   | 'DRAFT_SIGNING'
-  | 'FIFTH_YEAR_OPTION';
+  | 'FIFTH_YEAR_OPTION'
+  | 'FRANCHISE_TAG';
 
 export interface BaseTransaction {
   id: string;
@@ -134,7 +164,7 @@ export interface BaseTransaction {
   actionYear: LeagueYear;
   label: string;
   sublabel: string;
-  capDelta2026: number;         // Quick summary of 2026 impact for Scenario Stack badge
+  capDelta2026: number;
 }
 
 export interface CutTransaction extends BaseTransaction {
@@ -149,8 +179,8 @@ export interface RestructureTransaction extends BaseTransaction {
   playerId: string;
   playerName: string;
   position: PositionGroup;
-  convertPercentage: number;    // 0.10 to 1.00 of restructurable salary
-  addVoidYears: number;         // 0 to 2 additional void years within 2026-2029 horizon
+  convertPercentage: number;
+  addVoidYears: number;
 }
 
 export interface ExtensionTransaction extends BaseTransaction {
@@ -158,19 +188,20 @@ export interface ExtensionTransaction extends BaseTransaction {
   playerId: string;
   playerName: string;
   position: PositionGroup;
-  newYearsAdded: number;        // 1 to 3 years added
-  apy: number;                  // New money APY ($M)
-  guaranteedPct: number;        // 0 to 0.85
+  newYearsAdded: number;
+  apy: number;
+  guaranteedPct: number;
   structure: ContractStructureTemplate;
 }
 
 export interface SignFATransaction extends BaseTransaction {
   type: 'SIGN_FA';
   freeAgent: FreeAgentTarget;
-  years: number;                // 1 to 4 years
-  apy: number;                  // Annual average value ($M)
-  guaranteedPct: number;        // 0 to 0.85
+  years: number;
+  apy: number;
+  guaranteedPct: number;
   structure: ContractStructureTemplate;
+  countsTowardCompPickFormula: boolean;
 }
 
 export interface TradeTransaction extends BaseTransaction {
@@ -203,6 +234,15 @@ export interface FifthYearOptionTransaction extends BaseTransaction {
   optionAmount: number;
 }
 
+export interface FranchiseTagTransaction extends BaseTransaction {
+  type: 'FRANCHISE_TAG';
+  playerId: string;
+  playerName: string;
+  position: PositionGroup;
+  tagType: 'NON_EXCLUSIVE_FRANCHISE' | 'TRANSITION';
+  tagSalary: number;
+}
+
 export type Transaction =
   | CutTransaction
   | RestructureTransaction
@@ -210,26 +250,36 @@ export type Transaction =
   | SignFATransaction
   | TradeTransaction
   | DraftSigningTransaction
-  | FifthYearOptionTransaction;
+  | FifthYearOptionTransaction
+  | FranchiseTagTransaction;
 
 // ============================================================================
 // Derived Cap State Interfaces
 // ============================================================================
 
+export interface CompPickTrackerSummary {
+  cfaQualifyingLosses: { name: string; position: PositionGroup; estApy: number; projectedRound: number }[];
+  cfaQualifyingSignings: { name: string; position: PositionGroup; apy: number }[];
+  streetFASigningsCount: number;        // Cap casualties signed (Comp-Pick Safe!)
+  netProjectedCompPicks: string[];      // e.g. ['2027 Rd 4 Comp', '2027 Rd 5 Comp']
+  postJune1DesignationsUsed: number;    // CBA max 2 per offseason
+}
+
 export interface YearCapBreakdown {
   year: LeagueYear;
-  baseLeagueCap: number;        // e.g. $301.2M in 2026, growing ~7.5%/yr
-  rolloverFromPriorYear: number;// Carryover cap space
-  adjustedCapCeiling: number;   // baseLeagueCap + rolloverFromPriorYear
-  activeTop51Cap: number;       // Sum of top 51 non-void cap hits (padded with min contracts if < 51)
-  allRosterCap: number;         // Sum of all active contracts
-  deadMoneyTotal: number;       // Pre-existing dead cap + cut/trade/void accelerations
-  rookiePoolReserve: number;    // Gross cost of unsigned draft picks; net displacement cost
-  netRookiePoolImpact: number;  // Rookie pool after displacing 51st minimum slots
-  totalCapCommitments: number;  // activeTop51Cap + deadMoneyTotal + netRookiePoolImpact
-  effectiveCapSpace: number;    // adjustedCapCeiling - totalCapCommitments
-  replacementLevelCutoff: number;// Cap hit of the 51st player (used for net marginal FA/Draft math)
-  activeRosterCount: number;    // Count of players with non-void contract in this year
+  baseLeagueCap: number;
+  rolloverFromPriorYear: number;
+  adjustedCapCeiling: number;
+  activeTop51Cap: number;
+  allRosterCap: number;
+  totalCashSpend: number;               // Owner's actual cash outlay in this year ($M)
+  deadMoneyTotal: number;
+  rookiePoolReserve: number;
+  netRookiePoolImpact: number;
+  totalCapCommitments: number;
+  effectiveCapSpace: number;
+  replacementLevelCutoff: number;
+  activeRosterCount: number;
   topPositionAllocation: {
     position: PositionGroup;
     capSpend: number;
@@ -246,8 +296,9 @@ export interface TeamSeedData {
   archetypeDescription: string;
   primaryColor: string;
   secondaryColor: string;
-  initialRollover2026: number;  // Rollover carried from 2025 into 2026 ($M)
+  initialRollover2026: number;
   priorDeadMoney: DeadCapEntry[];
+   departingCfaLosses?: { name: string; position: PositionGroup; estApy: number; projectedRound: number }[];
   roster: Player[];
   draftPicks: DraftPick[];
 }
@@ -255,9 +306,10 @@ export interface TeamSeedData {
 export interface DerivedTeamCapState {
   teamId: string;
   teamName: string;
-  capGrowthRate: number;        // Default 0.075 (7.5% annual cap growth)
+  capGrowthRate: number;
   roster: Player[];
   deadCapLedger: DeadCapEntry[];
   draftPicks: DraftPick[];
+  compPickSummary: CompPickTrackerSummary;
   years: Record<LeagueYear, YearCapBreakdown>;
 }

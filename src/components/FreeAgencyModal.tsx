@@ -5,10 +5,12 @@ import { X } from 'lucide-react';
 import {
   buildStructuredContract,
   ContractStructureTemplate,
+  evaluateFreeAgentTarget,
   evaluatePlayerLongevity,
   FreeAgentTarget,
   LEAGUE_YEARS,
   POSITIONAL_AGING_CURVES,
+  POSITIONAL_MARKET_COMPS,
 } from '@/engine';
 import { SEED_FREE_AGENTS } from '@/data/seed/freeAgents';
 import { useGMStore } from '@/store/useGMStore';
@@ -71,6 +73,8 @@ export function FreeAgencySimulatorView({
   const replacementCutoff = derivedState.years[2026].replacementLevelCutoff;
   const net2026Impact = Math.max(0, offer.capHitsByYear[2026] - replacementCutoff);
   const curve = POSITIONAL_AGING_CURVES[selectedFA.position];
+  const selectedPrediction = evaluateFreeAgentTarget(selectedFA);
+  const marketComps = POSITIONAL_MARKET_COMPS[selectedFA.position] ?? [];
 
   return (
     <div className={isModal ? 'p-7' : 'mx-auto max-w-[1440px] px-6 py-8'}>
@@ -78,23 +82,26 @@ export function FreeAgencySimulatorView({
         {/* Left 5 Cols: Open Market Index */}
         <div className="lg:col-span-5 lg:pr-8 space-y-8">
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379] mb-3">
-              Open Market Free Agents (2026)
-            </h3>
+            <div className="flex items-baseline justify-between mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+                Open Market & Street FA Pool (2026)
+              </h3>
+              <span className="font-mono-ledger text-[10px] text-[#2d5a43]">
+                2027 Comp Picks: {derivedState.compPickSummary.netProjectedCompPicks.length}
+              </span>
+            </div>
 
-            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-[380px] overflow-y-auto">
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-[420px] overflow-y-auto">
               {SEED_FREE_AGENTS.map((fa) => {
                 const isSelected = selectedFA.id === fa.id;
-                const faCurve = POSITIONAL_AGING_CURVES[fa.position];
+                const pred = evaluateFreeAgentTarget(fa);
                 return (
                   <button
                     key={fa.id}
                     type="button"
                     onClick={() => handleSelectFA(fa)}
                     className={`w-full py-3 px-2.5 text-left transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#ede8dd]'
-                        : 'hover:bg-[#fcfaf6]'
+                      isSelected ? 'bg-[#ede8dd]' : 'hover:bg-[#fcfaf6]'
                     }`}
                   >
                     <div className="flex items-baseline justify-between">
@@ -103,16 +110,30 @@ export function FreeAgencySimulatorView({
                           {fa.name}
                         </span>{' '}
                         <span className="text-xs text-[#8a8379]">
-                          ({fa.position} · Age {fa.ageIn2026} · Cliff @{faCurve.cliffAge})
+                          ({fa.position} · Age {fa.ageIn2026})
                         </span>
                       </div>
                       <span className="font-mono-ledger text-xs font-semibold text-[#1c1917]">
                         ~${fa.marketApy.toFixed(1)}M/yr
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-[#57534e] line-clamp-1">
-                      {fa.scoutingNote}
-                    </p>
+
+                    <div className="mt-0.5 flex items-center justify-between text-[11px]">
+                      <span
+                        className={
+                          pred.classification === 'TAG_OR_EXTEND_TRAP'
+                            ? 'text-[#b84a27] font-medium'
+                            : !pred.countsTowardCompFormula
+                            ? 'text-[#2d5a43] font-medium'
+                            : 'text-[#57534e]'
+                        }
+                      >
+                        {pred.classificationBadge} ({pred.availabilityProbability}% Prob)
+                      </span>
+                      <span className="font-mono-ledger text-[10px] text-[#8a8379]">
+                        {!pred.countsTowardCompFormula ? 'Comp-Pick Safe' : 'CFA Qualifying'}
+                      </span>
+                    </div>
                   </button>
                 );
               })}
@@ -147,7 +168,7 @@ export function FreeAgencySimulatorView({
                       onClick={() => selectPlayer(p.id)}
                       className="underline decoration-[#c7bfb0] underline-offset-4 text-[#1c1917] hover:text-[#2d5a43] cursor-pointer"
                     >
-                      Extend →
+                      Extend / Tag →
                     </button>
                   </div>
                 );
@@ -162,7 +183,7 @@ export function FreeAgencySimulatorView({
             <div>
               <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
                 Contract Offer Sheet · {selectedFA.position} · Age{' '}
-                {selectedFA.ageIn2026}
+                {selectedFA.ageIn2026} · {selectedFA.previousTeam}
               </div>
               <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
                 {selectedFA.name}
@@ -170,6 +191,30 @@ export function FreeAgencySimulatorView({
               <p className="mt-1 text-xs text-[#57534e]">
                 {selectedFA.scoutingNote}
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                <span
+                  className={`font-semibold ${
+                    selectedPrediction.classification === 'TAG_OR_EXTEND_TRAP'
+                      ? 'text-[#b84a27]'
+                      : !selectedPrediction.countsTowardCompFormula
+                      ? 'text-[#2d5a43]'
+                      : 'text-[#1c1917]'
+                  }`}
+                >
+                  Predictor: {selectedPrediction.classificationBadge} (
+                  {selectedPrediction.availabilityProbability}% Market Availability)
+                </span>
+                <span>·</span>
+                <span
+                  className={
+                    !selectedPrediction.countsTowardCompFormula
+                      ? 'text-[#2d5a43] font-medium'
+                      : 'text-[#b84a27]'
+                  }
+                >
+                  {selectedPrediction.compPickImpactLabel}
+                </span>
+              </div>
             </div>
 
             <div className="text-right font-mono-ledger">
@@ -184,6 +229,39 @@ export function FreeAgencySimulatorView({
               </div>
             </div>
           </div>
+
+          {/* Positional Market Comps */}
+          {marketComps.length > 0 && (
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[#8a8379] mb-2">
+                {selectedFA.position} Market Benchmarks (% of $301.2M Cap)
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                {marketComps.map((comp) => (
+                  <button
+                    key={comp.playerName}
+                    type="button"
+                    onClick={() => {
+                      setApy(comp.equivalent2026Apy);
+                      setYears(comp.years);
+                      setGuaranteedPct(comp.guaranteedPct);
+                    }}
+                    className="border border-[#dfd9cc] p-2.5 text-left hover:border-[#1c1917] transition-colors cursor-pointer"
+                  >
+                    <div className="text-xs font-semibold text-[#1c1917]">
+                      {comp.tierLabel}
+                    </div>
+                    <div className="text-[10px] text-[#8a8379] truncate">
+                      {comp.playerName}
+                    </div>
+                    <div className="mt-1 font-mono-ledger text-xs font-semibold text-[#2d5a43]">
+                      ${comp.equivalent2026Apy.toFixed(1)}M/yr ({comp.pctOfCapAtSigning}%)
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Sliders */}
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">

@@ -116,6 +116,7 @@ const scenarioMoves: Transaction[] = [
     apy: 30.5,
     guaranteedPct: 0.62,
     structure: 'Backloaded',
+    countsTowardCompPickFormula: true,
     label: 'Sign FA Trey Hendrickson',
     sublabel: '',
     capDelta2026: -16.0,
