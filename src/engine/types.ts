@@ -294,6 +294,7 @@ export interface TeamSeedData {
   name: string;
   city: string;
   abbreviation: string;
+  division?: string;
   logoUrl?: string;
   archetypeLabel: string;
   archetypeDescription: string;

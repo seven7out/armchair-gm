@@ -15,7 +15,7 @@ import {
   simulateCutOrTrade,
   simulateRestructure,
 } from '@/engine';
-import { TRADE_PARTNER_TEAMS } from '@/data/seed/draftPicks';
+import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
 import { PlayerAvatar } from './PlayerAvatar';
 
@@ -116,9 +116,18 @@ export function ContractActionDrawer() {
     extStructure
   );
 
+  const partnerTeams = Object.values(SEED_TEAMS)
+    .filter((t) => t.id !== derivedState.teamId)
+    .map((t) => ({
+      id: t.id,
+      name: `${t.city} ${t.name}`,
+      abbreviation: t.abbreviation,
+      availablePicks: t.draftPicks.slice(0, 5),
+    }));
+
   const partnerTeam =
-    TRADE_PARTNER_TEAMS.find((t) => t.id === partnerTeamId) ??
-    TRADE_PARTNER_TEAMS[0];
+    partnerTeams.find((t) => t.id === partnerTeamId) ??
+    partnerTeams[0];
   const incomingPick =
     partnerTeam.availablePicks.find((pk) => pk.id === selectedIncomingPickId) ??
     partnerTeam.availablePicks[0];
@@ -732,14 +741,14 @@ export function ContractActionDrawer() {
                   onChange={(e) => {
                     const nextId = e.target.value;
                     setPartnerTeamId(nextId);
-                    const found = TRADE_PARTNER_TEAMS.find((t) => t.id === nextId);
+                    const found = partnerTeams.find((t) => t.id === nextId);
                     if (found && found.availablePicks[0]) {
                       setSelectedIncomingPickId(found.availablePicks[0].id);
                     }
                   }}
                   className="mt-2 w-full border-b border-[#1c1917] bg-transparent py-1.5 text-xs font-medium text-[#1c1917]"
                 >
-                  {TRADE_PARTNER_TEAMS.map((t) => (
+                  {partnerTeams.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name} ({t.abbreviation})
                     </option>

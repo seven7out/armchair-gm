@@ -10,9 +10,10 @@ import {
 } from '@/engine';
 import {
   TOP_DRAFT_PROSPECTS,
-  TRADE_PARTNER_TEAMS,
 } from '@/data/seed/draftPicks';
+import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
+import { PlayerAvatar } from './PlayerAvatar';
 
 export function DraftTradeSandbox() {
   const { derivedState, addDraftSigningTransaction, addTradeTransaction } =
@@ -41,11 +42,26 @@ export function DraftTradeSandbox() {
     Record<string, string>
   >({});
 
+  const partnerTeams = useMemo(
+    () =>
+      Object.values(SEED_TEAMS)
+        .filter((t) => t.id !== derivedState.teamId)
+        .map((t) => ({
+          id: t.id,
+          name: `${t.city} ${t.name}`,
+          abbreviation: t.abbreviation,
+          logoUrl: t.logoUrl,
+          availablePicks: t.draftPicks.slice(0, 5),
+          availablePlayers: t.roster.slice(0, 10),
+        })),
+    [derivedState.teamId]
+  );
+
   const partnerTeam = useMemo(
     () =>
-      TRADE_PARTNER_TEAMS.find((t) => t.id === partnerTeamId) ??
-      TRADE_PARTNER_TEAMS[0],
-    [partnerTeamId]
+      partnerTeams.find((t) => t.id === partnerTeamId) ??
+      partnerTeams[0],
+    [partnerTeams, partnerTeamId]
   );
 
   const replacementCutoff2026 =
@@ -344,7 +360,7 @@ export function DraftTradeSandbox() {
               }}
               className="border-b border-[#1c1917] bg-transparent py-1 text-xs font-semibold text-[#1c1917] cursor-pointer"
             >
-              {TRADE_PARTNER_TEAMS.map((t) => (
+              {partnerTeams.map((t) => (
                 <option key={t.id} value={t.id}>
                   Partner: {t.name} ({t.abbreviation})
                 </option>
@@ -455,8 +471,15 @@ export function DraftTradeSandbox() {
 
           {/* Right: Incoming */}
           <div className="pt-8 lg:pt-0 lg:pl-8">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#57534e] mb-3">
-              {partnerTeam.name} Assets
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#57534e] mb-3">
+              {partnerTeam.logoUrl && (
+                <img
+                  src={partnerTeam.logoUrl}
+                  alt=""
+                  className="h-4 w-4 object-contain"
+                />
+              )}
+              <span>{partnerTeam.name} Assets</span>
             </h3>
 
             <div className="flex flex-wrap gap-2 mb-6">
@@ -502,19 +525,26 @@ export function DraftTradeSandbox() {
                         p.id
                       )
                     }
-                    className={`flex w-full items-baseline justify-between py-3 px-2 text-left text-xs transition-colors cursor-pointer ${
+                    className={`flex w-full items-center justify-between py-2.5 px-2 text-left text-xs transition-colors cursor-pointer ${
                       selected ? 'bg-[#ede8dd] font-semibold' : 'hover:bg-[#fcfaf6]'
                     }`}
                   >
-                    <div>
-                      <div className="text-sm font-medium text-[#1c1917]">
-                        {p.name}{' '}
-                        <span className="text-xs font-normal text-[#8a8379]">
-                          ({p.position} · OVR {p.overallRating})
-                        </span>
-                      </div>
-                      <div className="font-mono-ledger text-[11px] text-[#8a8379]">
-                        2026 Acquiring Base: ${acquiringHit.toFixed(2)}M
+                    <div className="flex items-center gap-3">
+                      <PlayerAvatar
+                        name={p.name}
+                        headshotUrl={p.headshotUrl}
+                        size="sm"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-[#1c1917]">
+                          {p.name}{' '}
+                          <span className="text-xs font-normal text-[#8a8379]">
+                            ({p.position} · OVR {p.overallRating})
+                          </span>
+                        </div>
+                        <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                          2026 Acquiring Base: ${acquiringHit.toFixed(2)}M
+                        </div>
                       </div>
                     </div>
                     <span className="font-mono-ledger text-[#2d5a43]">

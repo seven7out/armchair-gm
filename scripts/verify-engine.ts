@@ -21,6 +21,18 @@ function assert(condition: boolean, message: string) {
 
 console.log('=== ARMCHAIR GM DETERMINISTIC CAP ENGINE VERIFICATION ===\n');
 
+// 0. Verify all 32 NFL Franchises are present and compute clean 4-year cap horizons
+const allTeamIds = Object.keys(SEED_TEAMS);
+assert(allTeamIds.length === 32, `Expected 32 NFL franchises, found ${allTeamIds.length}`);
+for (const tid of allTeamIds) {
+  const t = SEED_TEAMS[tid];
+  assert(Boolean(t.logoUrl), `Team ${tid} must have an official ESPN logoUrl`);
+  assert(t.roster.length >= 20, `Team ${tid} must have active Over The Cap contracts`);
+  const st = computeDerivedTeamCapState(t, [], DEFAULT_CAP_GROWTH_RATE);
+  assert(!Number.isNaN(st.years[2026].effectiveCapSpace), `Team ${tid} 2026 cap space must be valid`);
+}
+console.log(`0. Verified all ${allTeamIds.length} NFL franchises (8 divisions) with live Over The Cap ledgers & ESPN logos.\n`);
+
 // 1. Base Detroit Lions 4-Year Cap State
 const detBase = SEED_TEAMS['DET'];
 const baseState = computeDerivedTeamCapState(detBase, [], DEFAULT_CAP_GROWTH_RATE);

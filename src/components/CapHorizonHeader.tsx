@@ -1,11 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw } from 'lucide-react';
+import { ChevronDown, RotateCcw } from 'lucide-react';
 import { LEAGUE_YEARS } from '@/engine';
 import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
+
+const NFL_DIVISIONS = [
+  'NFC North',
+  'NFC East',
+  'NFC West',
+  'NFC South',
+  'AFC North',
+  'AFC East',
+  'AFC West',
+  'AFC South',
+] as const;
 
 export function CapHorizonHeader() {
   const {
@@ -25,14 +36,24 @@ export function CapHorizonHeader() {
     resetScenarioStack,
   } = useGMStore();
 
+  const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
+
   const enabledCount = transactions.filter((t) => t.enabled).length;
   const compSummary = derivedState.compPickSummary;
+
+  const teamsByDivision = useMemo(() => {
+    const allTeams = Object.values(SEED_TEAMS);
+    return NFL_DIVISIONS.map((div) => ({
+      division: div,
+      teams: allTeams.filter((t) => t.division === div),
+    }));
+  }, []);
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#dfd9cc] bg-[#f6f3ec]/95 backdrop-blur-sm">
       {/* Masthead Row */}
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#dfd9cc]">
-        <div className="flex flex-wrap items-center gap-6">
+        <div className="flex flex-wrap items-center gap-5">
           <div className="flex items-center gap-3">
             {baseTeam.logoUrl && (
               <img
@@ -51,39 +72,33 @@ export function CapHorizonHeader() {
             </div>
           </div>
 
-          {/* Minimalist Editorial Franchise Switcher */}
-          <div className="flex items-center gap-4 text-xs">
-            <span className="uppercase tracking-[0.12em] text-[#8a8379]">
-              Book:
-            </span>
-            {Object.values(SEED_TEAMS).map((team) => {
-              const isSelected = team.id === selectedTeamId;
-              return (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => selectTeam(team.id)}
-                  className={`flex items-center gap-1.5 pb-0.5 transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
-                      : 'text-[#8a8379] hover:text-[#1c1917]'
-                  }`}
-                  title={team.archetypeDescription}
-                >
-                  {team.logoUrl && (
-                    <img
-                      src={team.logoUrl}
-                      alt=""
-                      className="h-4 w-4 object-contain"
-                    />
-                  )}
-                  <span>{team.city}</span>
-                  <span className="font-mono-ledger text-[11px] opacity-75">
-                    ({team.abbreviation})
-                  </span>
-                </button>
-              );
-            })}
+          {/* All-32 NFL Franchise Directory Toggle */}
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setIsDirectoryOpen((prev) => !prev)}
+              aria-expanded={isDirectoryOpen}
+              className="flex items-center gap-2 border border-[#1c1917] bg-[#fcfaf6] px-3 py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#ede8dd] transition-colors cursor-pointer"
+            >
+              {baseTeam.logoUrl && (
+                <img
+                  src={baseTeam.logoUrl}
+                  alt=""
+                  className="h-4 w-4 object-contain"
+                />
+              )}
+              <span>
+                {baseTeam.city} {baseTeam.name} ({baseTeam.abbreviation})
+              </span>
+              <span className="text-[10px] text-[#8a8379]">
+                · All 32 Clubs
+              </span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${
+                  isDirectoryOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
           </div>
         </div>
 
@@ -207,6 +222,68 @@ export function CapHorizonHeader() {
           )}
         </div>
       </div>
+
+      {/* Expandable All-32 NFL Club Directory (Grouped by Division) */}
+      {isDirectoryOpen && (
+        <div className="border-b-2 border-[#1c1917] bg-[#fcfaf6] shadow-lg">
+          <div className="mx-auto max-w-[1440px] px-6 py-5">
+            <div className="mb-3 flex items-baseline justify-between border-b border-[#dfd9cc] pb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#57534e]">
+                All 32 NFL Franchises · Live Over The Cap 2026–2029 Books
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsDirectoryOpen(false)}
+                className="text-xs text-[#8a8379] hover:text-[#1c1917] cursor-pointer"
+              >
+                Close Directory ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-8">
+              {teamsByDivision.map((group) => (
+                <div key={group.division} className="space-y-1.5">
+                  <div className="border-b border-[#dfd9cc] pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8379]">
+                    {group.division}
+                  </div>
+                  <div className="space-y-1">
+                    {group.teams.map((team) => {
+                      const isSelected = team.id === selectedTeamId;
+                      return (
+                        <button
+                          key={team.id}
+                          type="button"
+                          onClick={() => {
+                            selectTeam(team.id);
+                            setIsDirectoryOpen(false);
+                          }}
+                          className={`flex w-full items-center gap-2 px-1.5 py-1 text-left text-xs transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#1c1917] font-semibold text-[#f6f3ec]'
+                              : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                          }`}
+                        >
+                          {team.logoUrl && (
+                            <img
+                              src={team.logoUrl}
+                              alt=""
+                              className="h-4 w-4 shrink-0 object-contain"
+                            />
+                          )}
+                          <span className="truncate">{team.name}</span>
+                          <span className="ml-auto font-mono-ledger text-[10px] opacity-70">
+                            {team.abbreviation}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4-Year Cap Horizon Strip — Open Newspaper Column Dividers */}
       <div className="mx-auto max-w-[1440px] px-6">
