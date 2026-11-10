@@ -4,10 +4,13 @@ import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import {
   buildStructuredContract,
+  computeRealContractXRay,
   ContractStructureTemplate,
+  createSignedFreeAgentPlayer,
   evaluateFreeAgentTarget,
   evaluatePlayerLongevity,
   FreeAgentTarget,
+  getContractYearCash,
   LEAGUE_YEARS,
   POSITION_GROUPS,
   POSITIONAL_AGING_CURVES,
@@ -19,6 +22,7 @@ import {
   SEED_FREE_AGENTS,
 } from '@/data/seed/freeAgents';
 import { useGMStore } from '@/store/useGMStore';
+import { JargonTip } from './JargonTooltip';
 import { PlayerAvatar } from './PlayerAvatar';
 
 export function FreeAgencySimulatorView({
@@ -125,19 +129,52 @@ export function FreeAgencySimulatorView({
   const curve = POSITIONAL_AGING_CURVES[selectedFA.position];
   const selectedPrediction = evaluateFreeAgentTarget(selectedFA);
   const marketComps = POSITIONAL_MARKET_COMPS[selectedFA.position] ?? [];
+  const compSummary = derivedState.compPickSummary;
+
+  const offerXRay = useMemo(() => {
+    const tempPlayer = createSignedFreeAgentPlayer(
+      selectedFA,
+      2026,
+      years,
+      apy,
+      guaranteedPct,
+      structure
+    );
+    return computeRealContractXRay(tempPlayer);
+  }, [selectedFA, years, apy, guaranteedPct, structure]);
+
+  // Determine exact Comp Pick Cancellation pairing & what signing `selectedFA` would cancel
+  const compCancellationPairs = useMemo(() => {
+    const losses = [...compSummary.cfaQualifyingLosses].sort(
+      (a, b) => b.estApy - a.estApy
+    );
+    const signings = [...compSummary.cfaQualifyingSignings].sort(
+      (a, b) => b.apy - a.apy
+    );
+    return losses.map((loss, idx) => ({
+      loss,
+      canceledBy: signings[idx] ?? null,
+    }));
+  }, [compSummary]);
+
+  const nextUncanceledLoss = compCancellationPairs.find(
+    (p) => p.canceledBy === null
+  )?.loss;
 
   return (
     <div className={isModal ? 'p-7' : 'mx-auto max-w-[1440px] px-6 py-8'}>
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#dfd9cc]">
-        {/* Left 5 Cols: Open Market Index */}
-        <div className="lg:col-span-5 lg:pr-8 space-y-8">
+        {/* Left 5 Cols: Open Market Index + Comp Pick Cancellation Ledger */}
+        <div className="lg:col-span-5 lg:pr-8 space-y-6">
           <div>
             <div className="flex items-baseline justify-between mb-2">
               <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
                 League-Wide Open Market &amp; Street FA Pool ({filteredPool.length})
               </h3>
               <span className="font-mono-ledger text-[10px] text-[#2d5a43]">
-                2027 Comp Picks: {derivedState.compPickSummary.netProjectedCompPicks.length}
+                <JargonTip term="COMP_PICK">
+                  2027 Comp Picks: {compSummary.netProjectedCompPicks.length}
+                </JargonTip>
               </span>
             </div>
 
@@ -184,7 +221,7 @@ export function FreeAgencySimulatorView({
               </div>
             </div>
 
-            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-[380px] overflow-y-auto">
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-[320px] overflow-y-auto">
               {filteredPool.map((fa) => {
                 const isSelected = selectedFA.id === fa.id;
                 const pred = evaluateFreeAgentTarget(fa);
@@ -229,8 +266,16 @@ export function FreeAgencySimulatorView({
                         >
                           {pred.classificationBadge} ({pred.availabilityProbability}% Prob)
                         </span>
-                        <span className="font-mono-ledger text-[10px] text-[#8a8379]">
-                          {!pred.countsTowardCompFormula ? 'Comp-Pick Safe' : 'CFA Qualifying'}
+                        <span
+                          className={`font-mono-ledger text-[10px] ${
+                            !pred.countsTowardCompFormula
+                              ? 'text-[#2d5a43] font-semibold'
+                              : 'text-[#b84a27]'
+                          }`}
+                        >
+                          {!pred.countsTowardCompFormula
+                            ? '✓ Comp-Pick Safe (Cut)'
+                            : '⚠ Cancels Comp Pick'}
                         </span>
                       </div>
                     </div>
@@ -240,11 +285,76 @@ export function FreeAgencySimulatorView({
             </div>
           </div>
 
+          {/* LIVE COMPENSATORY PICK CANCELLATION LEDGER */}
+          <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-3.5 space-y-2.5 text-xs">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+                <JargonTip term="CFA_CANCELLATION">
+                  2027 Comp Pick Cancellation Chart
+                </JargonTip>
+              </span>
+              <span className="font-mono-ledger text-[10px] text-[#2d5a43]">
+                {compSummary.streetFASigningsCount} Safe Street FA
+                {compSummary.streetFASigningsCount === 1 ? '' : 's'} Signed
+              </span>
+            </div>
+
+            <div className="divide-y divide-[#dfd9cc] border-y border-[#dfd9cc] font-mono-ledger text-[11px]">
+              {compCancellationPairs.map(({ loss, canceledBy }, idx) => (
+                <div
+                  key={`${loss.name}-${idx}`}
+                  className="flex items-center justify-between py-1.5"
+                >
+                  <div>
+                    <span className="text-[#1c1917]">
+                      Lost: {loss.name} ({loss.position})
+                    </span>{' '}
+                    <span className="text-[10px] text-[#8a8379]">
+                      ~${loss.estApy.toFixed(1)}M → Rd {loss.projectedRound}
+                    </span>
+                  </div>
+                  {canceledBy ? (
+                    <span className="text-[#b84a27] line-through">
+                      Erased by {canceledBy.name}
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-[#2d5a43]">
+                      Active: 2027 Rd {loss.projectedRound} Pick
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Live Pre-Commit Warning for Selected FA */}
+            {!selectedPrediction.countsTowardCompFormula ? (
+              <div className="text-[11px] text-[#2d5a43]">
+                <strong>✓ Safe Signing Stamp:</strong> {selectedFA.name} is a
+                projected Cap Casualty (<JargonTip term="STREET_FREE_AGENT">Street FA</JargonTip>
+                ). Signing him will <strong>NOT</strong> cancel any of your{' '}
+                {compSummary.netProjectedCompPicks.length} projected comp picks.
+              </div>
+            ) : nextUncanceledLoss ? (
+              <div className="text-[11px] text-[#b84a27]">
+                <strong>⚠ CFA Cancellation Warning:</strong> Signing{' '}
+                {selectedFA.name} (qualifying UFA) will pair with{' '}
+                <strong>{nextUncanceledLoss.name}</strong> and erase your
+                projected <strong>2027 Round {nextUncanceledLoss.projectedRound}</strong>{' '}
+                compensatory pick.
+              </div>
+            ) : (
+              <div className="text-[11px] text-[#57534e]">
+                All departing CFA comp picks are already canceled out, so signing{' '}
+                {selectedFA.name} costs no additional comp picks.
+              </div>
+            )}
+          </div>
+
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379] mb-3">
-              In-House Expiring Contracts (After 2026)
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379] mb-2">
+              In-House Expiring Contracts (Re-Signings Never Cancel Comp Picks)
             </h3>
-            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-48 overflow-y-auto">
+            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-40 overflow-y-auto">
               {inHouseExpiringPlayers.map((p) => {
                 const lon = evaluatePlayerLongevity(p);
                 return (
@@ -326,15 +436,39 @@ export function FreeAgencySimulatorView({
 
             <div className="text-right font-mono-ledger">
               <div className="text-[10px] uppercase tracking-[0.1em] text-[#8a8379]">
-                Total Value
+                <JargonTip term="APY">Headline Total</JargonTip>
               </div>
               <div className="text-xl font-semibold text-[#1c1917]">
                 ${offer.totalValue.toFixed(1)}M
               </div>
               <div className="text-[11px] text-[#57534e]">
-                ${offer.totalGuaranteed.toFixed(1)}M Guaranteed
+                <JargonTip term="PRACTICAL_GUARANTEE">
+                  ${offer.totalGuaranteed.toFixed(1)}M Guaranteed
+                </JargonTip>
               </div>
             </div>
+          </div>
+
+          {/* "Real Contract" X-Ray Box on Offer Sheet */}
+          <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-3.5 text-xs flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="bg-[#1c1917] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#f6f3ec]">
+                Real Contract X-Ray
+              </span>{' '}
+              <span className="ml-2 font-mono-ledger text-[#57534e]">
+                Agent Headline: {years} yr / ${offer.totalValue.toFixed(1)}M ($
+                {apy.toFixed(1)}M/yr)
+              </span>{' '}
+              <span className="mx-1 text-[#8a8379]">→</span>
+              <strong className="font-mono-ledger text-[#2d5a43]">
+                {offerXRay.verdictLabel}
+              </strong>
+            </div>
+            {offerXRay.voidYearsCount > 0 && (
+              <span className="font-mono-ledger text-[11px] text-[#b84a27]">
+                Ghost Bill: ${offerXRay.voidGhostBillTotal.toFixed(2)}M in Void Yrs
+              </span>
+            )}
           </div>
 
           {/* Positional Market Comps */}
@@ -468,13 +602,19 @@ export function FreeAgencySimulatorView({
             </div>
           </div>
 
-          {/* 4-Year Schedule Breakdown */}
+          {/* 4-Year Schedule Breakdown (Cap Hit vs Cash Paid) */}
           <div className="grid grid-cols-4 divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
             {LEAGUE_YEARS.map((yr, idx) => {
               const cy = offer.contractYears[yr];
               const hit = offer.capHitsByYear[yr];
               const playerAge = selectedFA.ageIn2026 + (yr - 2026);
               const isPastCliff = playerAge >= curve.cliffAge;
+              const isExitYr = offerXRay.firstCleanExitYear === yr;
+              const yearCash =
+                cy && !cy.isVoidYear
+                  ? getContractYearCash(cy) +
+                    (yr === 2026 ? offer.signingBonusTotal : 0)
+                  : 0;
 
               return (
                 <div
@@ -483,9 +623,15 @@ export function FreeAgencySimulatorView({
                 >
                   <div className="flex items-baseline justify-between font-mono-ledger text-[11px] text-[#8a8379]">
                     <span>{yr}</span>
-                    <span className={isPastCliff ? 'text-[#b84a27]' : ''}>
-                      Age {playerAge}
-                    </span>
+                    {isExitYr ? (
+                      <span className="text-[9px] font-semibold uppercase text-[#2d5a43]">
+                        Team Exit
+                      </span>
+                    ) : (
+                      <span className={isPastCliff ? 'text-[#b84a27]' : ''}>
+                        Age {playerAge}
+                      </span>
+                    )}
                   </div>
                   {cy ? (
                     <>
@@ -494,9 +640,14 @@ export function FreeAgencySimulatorView({
                       </div>
                       <div className="font-mono-ledger text-[10px] text-[#8a8379]">
                         {cy.isVoidYear
-                          ? 'Void Proration'
+                          ? 'Ghost Yr (Void Proration)'
                           : `B $${cy.baseSalary.toFixed(1)}M · P $${cy.proratedBonus.toFixed(1)}M`}
                       </div>
+                      {!cy.isVoidYear && (
+                        <div className="mt-0.5 font-mono-ledger text-[10px] text-[#2d5a43]">
+                          Cash Paid: ${yearCash.toFixed(1)}M
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="py-2 font-mono-ledger text-xs text-[#8a8379]/50">

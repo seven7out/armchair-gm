@@ -212,14 +212,15 @@ export function createDraftedPlayer(
 }
 
 // ============================================================================
-// Trade Value Calculator (Rich Hill & Fitzgerald-Spielberger Charts)
+// Trade Value Calculator (Rich Hill, Jimmy Johnson & Fitzgerald-Spielberger Charts)
 // ============================================================================
 
-export type TradeChartModel = 'RichHill' | 'FitzgeraldSpielberger';
+export type TradeChartModel = 'RichHill' | 'JimmyJohnson' | 'FitzgeraldSpielberger';
 
 /**
- * Compute Draft Pick Trade Value on either the Rich Hill (1000 pt max) or
- * Fitzgerald-Spielberger (3000 pt max analytical curve) scale.
+ * Compute Draft Pick Trade Value on the Rich Hill (1000 pt max consensus),
+ * Jimmy Johnson (classic 3000 pt steep top-end), or
+ * Fitzgerald-Spielberger (3000 pt analytical second-contract surplus curve) scale.
  */
 export function getDraftPickTradeValue(
   overallPick: number,
@@ -240,6 +241,20 @@ export function getDraftPickTradeValue(
       rawValue = 180 * Math.pow(0.976, p - 32);
     } else {
       rawValue = Math.max(1, 35 * Math.pow(0.978, p - 100));
+    }
+  } else if (chart === 'JimmyJohnson') {
+    // Classic Jimmy Johnson Chart: #1 = 3000, #2 = 2600, #3 = 2200, #10 = 1300, #32 = 590, #64 = 270, #100 = 100
+    if (p === 1) rawValue = 3000;
+    else if (p === 2) rawValue = 2600;
+    else if (p === 3) rawValue = 2200;
+    else if (p === 4) rawValue = 1800;
+    else if (p === 5) rawValue = 1700;
+    else if (p <= 32) {
+      rawValue = 1600 * Math.pow(0.963, p - 6);
+    } else if (p <= 100) {
+      rawValue = 580 * Math.pow(0.974, p - 32);
+    } else {
+      rawValue = Math.max(2, 96 * Math.pow(0.976, p - 100));
     }
   } else {
     // Fitzgerald-Spielberger Chart: Flatter top end, higher Round 2/3 surplus value
@@ -291,6 +306,9 @@ export function getPlayerTradeValue(
     Math.round(talentPoints * posMultiplier[player.position] * ageFactor * surplusMultiplier)
   );
 
+  if (chart === 'JimmyJohnson') {
+    return Math.round(richHillEquivalent * 3.0);
+  }
   if (chart === 'FitzgeraldSpielberger') {
     return Math.round(richHillEquivalent * 3.2);
   }

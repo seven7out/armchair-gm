@@ -4,6 +4,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import {
   applyPlayerExtension,
+  computeRealContractXRay,
   ContractStructureTemplate,
   evaluatePlayerLongevity,
   evaluateRosterPlayerFate,
@@ -18,6 +19,7 @@ import {
 } from '@/engine';
 import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
+import { JargonTip } from './JargonTooltip';
 import { PlayerAvatar } from './PlayerAvatar';
 
 type ActionTab = 'cut' | 'restructure' | 'extend' | 'trade';
@@ -98,12 +100,15 @@ export function ContractActionDrawer() {
   }
 
   const longevity = evaluatePlayerLongevity(player);
+  const xray = computeRealContractXRay(player);
   const fateForecast = evaluateRosterPlayerFate(
     player,
     derivedState.years[2026].effectiveCapSpace
   );
   const preJuneCut = simulateCutOrTrade(player, actionYear, 'PRE_JUNE_1_CUT');
   const postJuneCut = simulateCutOrTrade(player, actionYear, 'POST_JUNE_1_CUT');
+  const preJuneTrade = simulateCutOrTrade(player, actionYear, 'PRE_JUNE_1_TRADE');
+  const postJuneTrade = simulateCutOrTrade(player, actionYear, 'POST_JUNE_1_TRADE');
   const restructureSim = simulateRestructure(
     player,
     actionYear,
@@ -134,11 +139,8 @@ export function ContractActionDrawer() {
   const incomingPick =
     partnerTeam.availablePicks.find((pk) => pk.id === selectedIncomingPickId) ??
     partnerTeam.availablePicks[0];
-  const tradeSim = simulateCutOrTrade(
-    player,
-    actionYear,
-    tradeDesignation === 'POST_JUNE_1' ? 'POST_JUNE_1_TRADE' : 'PRE_JUNE_1_TRADE'
-  );
+  const tradeSim =
+    tradeDesignation === 'POST_JUNE_1' ? postJuneTrade : preJuneTrade;
 
   const fifthYearOptionAmount =
     player.draftRound === 1 &&
@@ -172,6 +174,11 @@ export function ContractActionDrawer() {
 
   const marketComps = POSITIONAL_MARKET_COMPS[player.position] ?? [];
   const postJune1Used = derivedState.compPickSummary.postJune1DesignationsUsed;
+  const bestCut =
+    postJuneCut.currentYearCapSavings > preJuneCut.currentYearCapSavings
+      ? postJuneCut
+      : preJuneCut;
+  const extCapDeltaThisYear = extensionSim.capDeltaByYear[actionYear] ?? 0;
 
   return (
     <dialog
@@ -182,7 +189,7 @@ export function ContractActionDrawer() {
       onClick={(e) => {
         if (e.target === dialogRef.current) selectPlayer(null);
       }}
-      className="m-auto w-full max-w-2xl border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-xl backdrop:bg-[#1c1917]/30"
+      className="m-auto w-full max-w-3xl border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-xl backdrop:bg-[#1c1917]/30"
     >
       {/* Editorial Header */}
       <div className="flex items-start justify-between border-b border-[#dfd9cc] px-7 py-5">
@@ -230,9 +237,34 @@ export function ContractActionDrawer() {
         </button>
       </div>
 
-      {/* Current 4-Year Ledger Strip */}
-      <div className="border-b border-[#dfd9cc] bg-[#ede8dd]/50 px-7 py-4">
-        <div className="mb-2.5 flex items-baseline justify-between text-xs">
+      {/* Current 4-Year Ledger Strip + "Real Contract" X-Ray */}
+      <div className="border-b border-[#dfd9cc] bg-[#ede8dd]/50 px-7 py-4 space-y-3">
+        {/* Real Contract X-Ray Banner */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#dfd9cc] pb-2.5 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="bg-[#1c1917] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#f6f3ec]">
+              Real Contract X-Ray
+            </span>
+            <span className="font-mono-ledger text-[#57534e]">
+              <JargonTip term="APY">Headline</JargonTip>: {xray.headlineYears} yr / $
+              {xray.headlineTotalCap.toFixed(1)}M (${xray.headlineApy.toFixed(1)}M/yr)
+            </span>
+            <span className="text-[#8a8379]">→</span>
+            <span className="font-mono-ledger font-semibold text-[#2d5a43]">
+              {xray.verdictLabel}
+            </span>
+          </div>
+          {xray.voidYearsCount > 0 && (
+            <span className="font-mono-ledger text-[11px] text-[#b84a27]">
+              <JargonTip term="VOID_YEAR_DEAD_CAP">
+                Ghost Bill: ${xray.voidGhostBillTotal.toFixed(2)}M ({xray.voidYearsCount}{' '}
+                Void Yr{xray.voidYearsCount > 1 ? 's' : ''})
+              </JargonTip>
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-baseline justify-between text-xs">
           <span className="uppercase tracking-[0.12em] text-[10px] text-[#8a8379]">
             Current Contract Schedule
           </span>
@@ -259,18 +291,24 @@ export function ContractActionDrawer() {
           {LEAGUE_YEARS.map((yr, idx) => {
             const cy = player.contractYears[yr];
             const hit = getContractYearCapHit(cy);
+            const isCleanExit = xray.firstCleanExitYear === yr;
             return (
               <div
                 key={yr}
                 className={`${idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}`}
               >
-                <div className="font-mono-ledger text-[11px] text-[#8a8379]">
-                  {yr}
+                <div className="flex items-center justify-between font-mono-ledger text-[11px] text-[#8a8379]">
+                  <span>{yr}</span>
+                  {isCleanExit && (
+                    <span className="text-[9px] font-semibold uppercase text-[#2d5a43]">
+                      Team Exit
+                    </span>
+                  )}
                 </div>
                 {cy ? (
                   <>
                     <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
-                      ${hit.toFixed(2)}M{cy.isVoidYear ? ' (Void)' : ''}
+                      ${hit.toFixed(2)}M{cy.isVoidYear ? ' (Ghost)' : ''}
                     </div>
                     <div className="font-mono-ledger text-[10px] text-[#8a8379]">
                       B ${cy.baseSalary.toFixed(1)}M · P ${cy.proratedBonus.toFixed(1)}M
@@ -284,6 +322,143 @@ export function ContractActionDrawer() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* THE "FOUR DOORS" SIDE-BY-SIDE COMPARISON CARD (Cut vs Trade vs Restructure vs Extend + Baseline) */}
+      <div className="border-b border-[#dfd9cc] bg-[#fcfaf6] px-7 py-4">
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+            The &ldquo;Four Doors&rdquo; Side-by-Side Comparison ({actionYear} Impact vs.{' '}
+            {actionYear + 1} Bill)
+          </span>
+          <span className="text-[10px] text-[#8a8379]">
+            Click any option to inspect or execute
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5 text-xs">
+          {/* Door 0: Do Nothing Baseline */}
+          <div className="border border-[#dfd9cc] bg-[#f6f3ec]/70 p-2.5">
+            <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
+              Baseline
+            </div>
+            <div className="font-semibold text-[#1c1917]">Keep As-Is</div>
+            <div className="mt-1 font-mono-ledger text-xs text-[#1c1917]">
+              {actionYear}: ${preJuneCut.currentYearOriginalCapHit.toFixed(1)}M hit
+            </div>
+            <div className="font-mono-ledger text-[10px] text-[#8a8379]">
+              {actionYear + 1}: ${preJuneCut.nextYearOriginalCapHit.toFixed(1)}M hit
+            </div>
+          </div>
+
+          {/* Door 1: Restructure */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('restructure')}
+            className={`border p-2.5 text-left transition-colors cursor-pointer ${
+              activeTab === 'restructure'
+                ? 'border-[#1c1917] bg-[#ede8dd]'
+                : 'border-[#dfd9cc] hover:border-[#1c1917]'
+            }`}
+          >
+            <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
+              Door 1 · Stay
+            </div>
+            <div className="font-semibold text-[#1c1917]">Restructure</div>
+            <div className="mt-1 font-mono-ledger text-xs font-semibold text-[#2d5a43]">
+              Saves +${restructureSim.currentYearCapSavings.toFixed(1)}M
+            </div>
+            <div className="font-mono-ledger text-[10px] text-[#b84a27]">
+              Adds +${restructureSim.annualProrationAdded.toFixed(1)}M/yr later
+            </div>
+          </button>
+
+          {/* Door 2: Release (Best of Pre/Post June 1) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('cut')}
+            className={`border p-2.5 text-left transition-colors cursor-pointer ${
+              activeTab === 'cut'
+                ? 'border-[#1c1917] bg-[#ede8dd]'
+                : 'border-[#dfd9cc] hover:border-[#1c1917]'
+            }`}
+          >
+            <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
+              Door 2 · Release
+            </div>
+            <div className="font-semibold text-[#1c1917]">Cut (Best)</div>
+            <div
+              className={`mt-1 font-mono-ledger text-xs font-semibold ${
+                bestCut.currentYearCapSavings >= 0
+                  ? 'text-[#2d5a43]'
+                  : 'text-[#b84a27]'
+              }`}
+            >
+              {bestCut.currentYearCapSavings >= 0 ? 'Saves +$' : 'Costs −$'}
+              {Math.abs(bestCut.currentYearCapSavings).toFixed(1)}M
+            </div>
+            <div className="font-mono-ledger text-[10px] text-[#8a8379]">
+              Dead: ${preJuneCut.currentYearDeadCap.toFixed(1)}M total
+            </div>
+          </button>
+
+          {/* Door 3: Trade */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('trade')}
+            className={`border p-2.5 text-left transition-colors cursor-pointer ${
+              activeTab === 'trade'
+                ? 'border-[#1c1917] bg-[#ede8dd]'
+                : 'border-[#dfd9cc] hover:border-[#1c1917]'
+            }`}
+          >
+            <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
+              Door 3 · Trade
+            </div>
+            <div className="font-semibold text-[#1c1917]">Trade Away</div>
+            <div
+              className={`mt-1 font-mono-ledger text-xs font-semibold ${
+                preJuneTrade.currentYearCapSavings >= 0
+                  ? 'text-[#2d5a43]'
+                  : 'text-[#b84a27]'
+              }`}
+            >
+              {preJuneTrade.currentYearCapSavings >= 0 ? 'Saves +$' : 'Costs −$'}
+              {Math.abs(preJuneTrade.currentYearCapSavings).toFixed(1)}M
+            </div>
+            <div className="font-mono-ledger text-[10px] text-[#8a8379]">
+              We eat ${preJuneTrade.currentYearDeadCap.toFixed(1)}M bonus
+            </div>
+          </button>
+
+          {/* Door 4: Extend */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('extend')}
+            className={`border p-2.5 text-left transition-colors cursor-pointer ${
+              activeTab === 'extend'
+                ? 'border-[#1c1917] bg-[#ede8dd]'
+                : 'border-[#dfd9cc] hover:border-[#1c1917]'
+            }`}
+          >
+            <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
+              Door 4 · Extend
+            </div>
+            <div className="font-semibold text-[#1c1917]">+{extYears} Yr Deal</div>
+            <div
+              className={`mt-1 font-mono-ledger text-xs font-semibold ${
+                extCapDeltaThisYear <= 0 ? 'text-[#2d5a43]' : 'text-[#1c1917]'
+              }`}
+            >
+              {extCapDeltaThisYear <= 0
+                ? `Saves +$${Math.abs(extCapDeltaThisYear).toFixed(1)}M`
+                : `+$${extCapDeltaThisYear.toFixed(1)}M in '${String(actionYear).slice(2)}`}
+            </div>
+            <div className="font-mono-ledger text-[10px] text-[#8a8379]">
+              ~${extApy.toFixed(1)}M/yr market
+            </div>
+          </button>
         </div>
       </div>
 
@@ -443,110 +618,170 @@ export function ContractActionDrawer() {
         )}
 
         {activeTab === 'cut' && (
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#dfd9cc]">
-            <div className="flex flex-col justify-between sm:pr-4">
-              <div>
-                <h3 className="font-editorial text-lg text-[#1c1917]">
-                  Pre-June 1 Release
-                </h3>
-                <p className="mt-1 text-xs text-[#57534e]">
-                  All remaining unamortized bonus accelerates immediately into{' '}
-                  {actionYear}; clears {actionYear + 1}–2029 books completely.
-                </p>
-
-                <div className="mt-4 space-y-2 border-t border-[#dfd9cc] pt-3 font-mono-ledger text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-[#8a8379]">{actionYear} Dead Cap:</span>
-                    <span className="text-[#b84a27]">
-                      ${preJuneCut.currentYearDeadCap.toFixed(2)}M
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#8a8379]">{actionYear + 1} Dead Cap:</span>
-                    <span>$0.00M</span>
-                  </div>
-                  <div className="flex justify-between border-t border-[#dfd9cc] pt-2 font-semibold">
-                    <span>{actionYear} Net Savings:</span>
-                    <span
-                      className={
-                        preJuneCut.currentYearCapSavings >= 0
-                          ? 'text-[#2d5a43]'
-                          : 'text-[#b84a27]'
-                      }
-                    >
-                      {preJuneCut.currentYearCapSavings >= 0 ? '+$' : '−$'}
-                      {Math.abs(preJuneCut.currentYearCapSavings).toFixed(2)}M
-                    </span>
-                  </div>
-                </div>
+          <div className="space-y-6">
+            {/* The "June 2 Slider" Visual Bar: Same Total Bill, Different Due Dates */}
+            <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 space-y-2.5 text-xs">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+                  The June 2 Rule · &ldquo;Same Dead-Money Bill, Different Due Dates&rdquo;
+                </span>
+                <span className="font-mono-ledger text-[11px] font-semibold text-[#b84a27]">
+                  Total Unamortized Dead Bill: ${preJuneCut.currentYearDeadCap.toFixed(2)}M
+                </span>
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  addCutTransaction(player, 'PRE_JUNE_1_CUT', actionYear)
-                }
-                className="mt-5 w-full border border-[#1c1917] py-2 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
-              >
-                Release Pre-June 1
-              </button>
+              {preJuneCut.currentYearDeadCap > 0 && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono-ledger">
+                    <span>
+                      March–June 1 (100% in {actionYear}: $
+                      {preJuneCut.currentYearDeadCap.toFixed(2)}M)
+                    </span>
+                    <span>
+                      Post-June 1 Split ({actionYear}: $
+                      {postJuneCut.currentYearDeadCap.toFixed(2)}M · {actionYear + 1}: $
+                      {postJuneCut.nextYearDeadCap.toFixed(2)}M)
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full bg-[#e5dfd3] flex overflow-hidden">
+                    <div
+                      className="bg-[#b84a27] h-full"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (postJuneCut.currentYearDeadCap /
+                            Math.max(0.01, preJuneCut.currentYearDeadCap)) *
+                            100
+                        )}%`,
+                      }}
+                      title={`${actionYear} Dead Cap Share`}
+                    />
+                    <div
+                      className="bg-[#b57c1e] h-full flex-1"
+                      title={`${actionYear + 1} Deferred Dead Cap Share`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-[#57534e]">
+                <strong>Timing Warning:</strong> Post-June 1 designations (max 2 per
+                offseason; {postJune1Used}/2 used) do <em>not</em> erase dead money—they
+                defer {actionYear + 1}–2029 bonus slices into {actionYear + 1}. You must
+                carry the player&apos;s full ${preJuneCut.currentYearOriginalCapHit.toFixed(2)}M
+                cap hit until <strong>June 2</strong> (after Wave 1 of Free Agency).
+              </p>
             </div>
 
-            <div className="flex flex-col justify-between pt-6 sm:pt-0 sm:pl-6">
-              <div>
-                <div className="flex items-baseline justify-between">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#dfd9cc]">
+              <div className="flex flex-col justify-between sm:pr-4">
+                <div>
                   <h3 className="font-editorial text-lg text-[#1c1917]">
-                    Post-June 1 Designation
+                    <JargonTip term="PRE_JUNE_1_RELEASE">
+                      Pre-June 1 Release (Full Bill Now)
+                    </JargonTip>
                   </h3>
-                  <span className="font-mono-ledger text-[10px] text-[#8a8379]">
-                    Slots used: {postJune1Used}/2
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-[#57534e]">
-                  Keeps only {actionYear}&apos;s scheduled proration on{' '}
-                  {actionYear} cap and defers remaining bonus to {actionYear + 1}.
-                </p>
+                  <p className="mt-1 text-xs text-[#57534e]">
+                    All remaining unamortized bonus accelerates immediately into{' '}
+                    {actionYear}; clears {actionYear + 1}–2029 books completely.
+                  </p>
 
-                <div className="mt-4 space-y-2 border-t border-[#dfd9cc] pt-3 font-mono-ledger text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-[#8a8379]">{actionYear} Dead Cap:</span>
-                    <span className="text-[#b84a27]">
-                      ${postJuneCut.currentYearDeadCap.toFixed(2)}M
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#8a8379]">
-                      {actionYear + 1} Deferred Dead:
-                    </span>
-                    <span className="text-[#b84a27]">
-                      ${postJuneCut.nextYearDeadCap.toFixed(2)}M
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-t border-[#dfd9cc] pt-2 font-semibold">
-                    <span>{actionYear} Net Savings:</span>
-                    <span
-                      className={
-                        postJuneCut.currentYearCapSavings >= 0
-                          ? 'text-[#2d5a43]'
-                          : 'text-[#b84a27]'
-                      }
-                    >
-                      {postJuneCut.currentYearCapSavings >= 0 ? '+$' : '−$'}
-                      {Math.abs(postJuneCut.currentYearCapSavings).toFixed(2)}M
-                    </span>
+                  <div className="mt-4 space-y-2 border-t border-[#dfd9cc] pt-3 font-mono-ledger text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[#8a8379]">{actionYear} Dead Cap:</span>
+                      <span className="text-[#b84a27]">
+                        ${preJuneCut.currentYearDeadCap.toFixed(2)}M
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#8a8379]">{actionYear + 1} Dead Cap:</span>
+                      <span>$0.00M (Clean Books)</span>
+                    </div>
+                    <div className="flex justify-between border-t border-[#dfd9cc] pt-2 font-semibold">
+                      <span>{actionYear} Net Savings (March):</span>
+                      <span
+                        className={
+                          preJuneCut.currentYearCapSavings >= 0
+                            ? 'text-[#2d5a43]'
+                            : 'text-[#b84a27]'
+                        }
+                      >
+                        {preJuneCut.currentYearCapSavings >= 0 ? '+$' : '−$'}
+                        {Math.abs(preJuneCut.currentYearCapSavings).toFixed(2)}M
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    addCutTransaction(player, 'PRE_JUNE_1_CUT', actionYear)
+                  }
+                  className="mt-5 w-full border border-[#1c1917] py-2 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+                >
+                  Release Pre-June 1
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  addCutTransaction(player, 'POST_JUNE_1_CUT', actionYear)
-                }
-                className="mt-5 w-full bg-[#1c1917] py-2 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
-              >
-                Designate Post-June 1
-              </button>
+              <div className="flex flex-col justify-between pt-6 sm:pt-0 sm:pl-6">
+                <div>
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="font-editorial text-lg text-[#1c1917]">
+                      <JargonTip term="POST_JUNE_1_DESIGNATION">
+                        Post-June 1 Designation (Split Bill)
+                      </JargonTip>
+                    </h3>
+                    <span className="font-mono-ledger text-[10px] text-[#8a8379]">
+                      Slots used: {postJune1Used}/2
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-[#57534e]">
+                    Keeps only {actionYear}&apos;s scheduled proration on{' '}
+                    {actionYear} cap and defers remaining bonus to {actionYear + 1}.
+                  </p>
+
+                  <div className="mt-4 space-y-2 border-t border-[#dfd9cc] pt-3 font-mono-ledger text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[#8a8379]">{actionYear} Dead Cap:</span>
+                      <span className="text-[#b84a27]">
+                        ${postJuneCut.currentYearDeadCap.toFixed(2)}M
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#8a8379]">
+                        {actionYear + 1} Deferred Dead:
+                      </span>
+                      <span className="text-[#b84a27]">
+                        ${postJuneCut.nextYearDeadCap.toFixed(2)}M
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-[#dfd9cc] pt-2 font-semibold">
+                      <span>{actionYear} Savings (Arrives June 2):</span>
+                      <span
+                        className={
+                          postJuneCut.currentYearCapSavings >= 0
+                            ? 'text-[#2d5a43]'
+                            : 'text-[#b84a27]'
+                        }
+                      >
+                        {postJuneCut.currentYearCapSavings >= 0 ? '+$' : '−$'}
+                        {Math.abs(postJuneCut.currentYearCapSavings).toFixed(2)}M
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    addCutTransaction(player, 'POST_JUNE_1_CUT', actionYear)
+                  }
+                  className="mt-5 w-full bg-[#1c1917] py-2 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
+                >
+                  Designate Post-June 1 ({2 - postJune1Used} left)
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -748,6 +983,32 @@ export function ContractActionDrawer() {
 
         {activeTab === 'trade' && (
           <div className="space-y-5">
+            {/* Trade Cap Math & June 2 Date Rule Box */}
+            <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 space-y-2 text-xs">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+                  Trade Cap Math · Who Pays What?
+                </span>
+                <span className="font-mono-ledger text-[11px] text-[#57534e]">
+                  Buyer ({partnerTeam.abbreviation}) Inherits:{' '}
+                  <strong className="text-[#1c1917]">
+                    ${(player.contractYears[actionYear]?.baseSalary ?? 0).toFixed(2)}M
+                  </strong>{' '}
+                  base salary
+                </span>
+              </div>
+              <p className="text-[11px] text-[#57534e]">
+                <strong>Seller Rule:</strong> Your team keeps all unpaid signing bonus
+                slices (${preJuneTrade.currentYearDeadCap.toFixed(2)}M total).{' '}
+                <strong>Trade Date Rule:</strong> Unlike releases, you{' '}
+                <em>cannot</em> apply a March Post-June 1 designation to a trade—to
+                split dead money across {actionYear} ($
+                {postJuneTrade.currentYearDeadCap.toFixed(2)}M) and {actionYear + 1} ($
+                {postJuneTrade.nextYearDeadCap.toFixed(2)}M), the trade must physically be
+                processed on or after <strong>June 2</strong>.
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
@@ -792,7 +1053,7 @@ export function ContractActionDrawer() {
 
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
-                  Timing
+                  Trade Processing Date
                 </label>
                 <div className="mt-2 flex gap-2">
                   <button
@@ -804,7 +1065,7 @@ export function ContractActionDrawer() {
                         : 'border border-[#c7bfb0] text-[#57534e]'
                     }`}
                   >
-                    Pre-June 1
+                    Before June 1
                   </button>
                   <button
                     type="button"
@@ -815,7 +1076,7 @@ export function ContractActionDrawer() {
                         : 'border border-[#c7bfb0] text-[#57534e]'
                     }`}
                   >
-                    Post-June 1
+                    On/After June 2
                   </button>
                 </div>
               </div>
@@ -828,7 +1089,9 @@ export function ContractActionDrawer() {
                   {tradeSim.currentYearCapSavings >= 0 ? '+$' : '−$'}
                   {Math.abs(tradeSim.currentYearCapSavings).toFixed(2)}M
                 </strong>{' '}
-                · Dead Cap: ${tradeSim.currentYearDeadCap.toFixed(2)}M
+                · {actionYear} Dead: ${tradeSim.currentYearDeadCap.toFixed(2)}M
+                {tradeDesignation === 'POST_JUNE_1' &&
+                  ` · ${actionYear + 1} Dead: $${tradeSim.nextYearDeadCap.toFixed(2)}M`}
               </div>
               <button
                 type="button"

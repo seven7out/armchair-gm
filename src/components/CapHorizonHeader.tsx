@@ -7,9 +7,11 @@ import {
   computeDerivedTeamCapState,
   DEFAULT_CAP_GROWTH_RATE,
   LEAGUE_YEARS,
+  LeagueYear,
 } from '@/engine';
 import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
+import { JargonDecoderButton, JargonTip } from './JargonTooltip';
 
 const NFL_DIVISIONS = [
   'NFC North',
@@ -41,6 +43,7 @@ export function CapHorizonHeader() {
   } = useGMStore();
 
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
+  const [receiptYear, setReceiptYear] = useState<LeagueYear | null>(null);
 
   const enabledCount = transactions.filter((t) => t.enabled).length;
   const compSummary = derivedState.compPickSummary;
@@ -165,6 +168,8 @@ export function CapHorizonHeader() {
 
         {/* Right Controls: Cap vs Cash Toggle, Growth & Scenario Notebook */}
         <div className="flex items-center gap-3 text-xs">
+          <JargonDecoderButton />
+
           {/* Cap vs Cash Accounting Toggle */}
           <div className="hidden md:flex items-center border border-[#c7bfb0] text-[11px]">
             <button
@@ -323,6 +328,7 @@ export function CapHorizonHeader() {
               100 - activePct,
               (yData.deadMoneyTotal / yData.adjustedCapCeiling) * 100
             );
+            const isReceiptOpen = receiptYear === year;
 
             return (
               <div
@@ -341,22 +347,36 @@ export function CapHorizonHeader() {
                       {year}
                     </span>
                     <span className="font-mono-ledger text-[11px] text-[#8a8379]">
-                      Cap ${yData.adjustedCapCeiling.toFixed(1)}M
+                      <JargonTip term="ADJUSTED_CAP">
+                        Limit ${yData.adjustedCapCeiling.toFixed(1)}M
+                      </JargonTip>
                     </span>
                   </div>
 
                   {ledgerMode === 'CAP' ? (
-                    <span
-                      className={`font-mono-ledger text-base font-semibold ${
-                        isOverCap ? 'text-[#b84a27]' : 'text-[#2d5a43]'
-                      }`}
-                    >
-                      {isOverCap ? '−$' : '+$'}
-                      {Math.abs(yData.effectiveCapSpace).toFixed(2)}M
-                    </span>
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setReceiptYear((prev) => (prev === year ? null : year))
+                        }
+                        title="Click to see exact Spendable Now math receipt & why sites disagree"
+                        className={`font-mono-ledger text-base font-semibold underline decoration-dotted underline-offset-4 cursor-pointer ${
+                          isOverCap ? 'text-[#b84a27]' : 'text-[#2d5a43]'
+                        }`}
+                      >
+                        {isOverCap ? '−$' : '+$'}
+                        {Math.abs(yData.effectiveCapSpace).toFixed(2)}M
+                      </button>
+                      <div className="text-[9px] uppercase tracking-[0.1em] text-[#8a8379]">
+                        {isReceiptOpen ? 'Hide Receipt ▲' : 'Spendable Now ▼'}
+                      </div>
+                    </div>
                   ) : (
                     <span className="font-mono-ledger text-base font-semibold text-[#1c1917]">
-                      Cash ${yData.totalCashSpend.toFixed(1)}M
+                      <JargonTip term="CASH_SPEND">
+                        Cash ${yData.totalCashSpend.toFixed(1)}M
+                      </JargonTip>
                     </span>
                   )}
                 </div>
@@ -381,25 +401,38 @@ export function CapHorizonHeader() {
 
                 <div className="mt-1.5 flex items-center justify-between font-mono-ledger text-[11px] text-[#57534e]">
                   <span>
-                    Active ${yData.activeTop51Cap.toFixed(1)}M · Dead $
-                    {yData.deadMoneyTotal.toFixed(1)}M
+                    <JargonTip term="TOP_51_RULE">
+                      Top-51 ${yData.activeTop51Cap.toFixed(1)}M
+                    </JargonTip>{' '}
+                    ·{' '}
+                    <JargonTip term="DEAD_MONEY">
+                      Dead ${yData.deadMoneyTotal.toFixed(1)}M
+                    </JargonTip>
                   </span>
                   {year === 2026 ? (
                     <span className="text-[10px] text-[#8a8379]">
-                      Comp Picks: {compSummary.netProjectedCompPicks.length} · Post-6/1:{' '}
-                      <strong
-                        className={
-                          compSummary.postJune1DesignationsUsed > 2
-                            ? 'text-[#b84a27]'
-                            : ''
-                        }
-                      >
-                        {compSummary.postJune1DesignationsUsed}/2
-                      </strong>
+                      <JargonTip term="COMP_PICK">
+                        Comp: {compSummary.netProjectedCompPicks.length}
+                      </JargonTip>{' '}
+                      ·{' '}
+                      <JargonTip term="POST_JUNE_1_DESIGNATION">
+                        Post-6/1:{' '}
+                        <strong
+                          className={
+                            compSummary.postJune1DesignationsUsed > 2
+                              ? 'text-[#b84a27]'
+                              : ''
+                          }
+                        >
+                          {compSummary.postJune1DesignationsUsed}/2
+                        </strong>
+                      </JargonTip>
                     </span>
                   ) : yData.rolloverFromPriorYear > 0 ? (
                     <span className="text-[#2d5a43]">
-                      +${yData.rolloverFromPriorYear.toFixed(1)}M roll
+                      <JargonTip term="ROLLOVER">
+                        +${yData.rolloverFromPriorYear.toFixed(1)}M roll
+                      </JargonTip>
                     </span>
                   ) : (
                     <span className="text-[#8a8379]">
@@ -411,6 +444,92 @@ export function CapHorizonHeader() {
             );
           })}
         </div>
+
+        {/* Expandable "Spendable Now" Math Receipt ("Why Cap Sites Disagree") */}
+        {receiptYear !== null && (
+          <div className="border-t border-[#dfd9cc] bg-[#fcfaf6] py-3.5 px-4 mb-2 text-xs">
+            {(() => {
+              const rData = derivedState.years[receiptYear];
+              const rawCapSpaceBeforeRookies =
+                rData.adjustedCapCeiling -
+                rData.activeTop51Cap -
+                rData.deadMoneyTotal;
+              return (
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+                      {receiptYear} Exact Cap Accounting Receipt · Why Sites Disagree
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-[#57534e]">
+                      Basic cap trackers show{' '}
+                      <strong className="font-mono-ledger text-[#1c1917]">
+                        {rawCapSpaceBeforeRookies >= 0 ? '+$' : '−$'}
+                        {Math.abs(rawCapSpaceBeforeRookies).toFixed(2)}M
+                      </strong>{' '}
+                      (Raw Top-51 Space). True{' '}
+                      <strong className="text-[#2d5a43]">Spendable Now</strong>{' '}
+                      subtracts the net rookie class reserve (gross rookie pool
+                      minus{' '}
+                      <span className="font-mono-ledger">
+                        ${rData.replacementLevelCutoff.toFixed(2)}M
+                      </span>{' '}
+                      displaced 51st contract per pick).
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 font-mono-ledger text-[11px] bg-[#ede8dd]/70 px-3 py-2 border border-[#dfd9cc]">
+                    <span>
+                      League Cap{' '}
+                      <strong>${rData.baseLeagueCap.toFixed(1)}M</strong>
+                    </span>
+                    <span>+</span>
+                    <span>
+                      Rollover{' '}
+                      <strong className="text-[#2d5a43]">
+                        ${rData.rolloverFromPriorYear.toFixed(1)}M
+                      </strong>
+                    </span>
+                    <span>−</span>
+                    <span>
+                      Top-51 Active{' '}
+                      <strong>${rData.activeTop51Cap.toFixed(1)}M</strong>
+                    </span>
+                    <span>−</span>
+                    <span>
+                      Dead{' '}
+                      <strong className="text-[#b84a27]">
+                        ${rData.deadMoneyTotal.toFixed(1)}M
+                      </strong>
+                    </span>
+                    <span>−</span>
+                    <span title={`Gross Rookie Pool: $${rData.rookiePoolReserve.toFixed(2)}M minus Top-51 displacement`}>
+                      Net Rookies{' '}
+                      <strong>${rData.netRookiePoolImpact.toFixed(2)}M</strong>
+                    </span>
+                    <span>=</span>
+                    <span
+                      className={`font-semibold ${
+                        rData.effectiveCapSpace < 0
+                          ? 'text-[#b84a27]'
+                          : 'text-[#2d5a43]'
+                      }`}
+                    >
+                      Spendable: {rData.effectiveCapSpace < 0 ? '−$' : '+$'}
+                      {Math.abs(rData.effectiveCapSpace).toFixed(2)}M
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setReceiptYear(null)}
+                      className="ml-2 text-[#8a8379] hover:text-[#1c1917] cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
     </header>
   );

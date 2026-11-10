@@ -527,6 +527,19 @@ export interface TeamCapHealthDiagnostic {
   subheadlineAnswer: string;
   maxTop3RestructurePower: number;
   maxTop3CutRelief: number;
+  cleanBooksYear: LeagueYear;
+  cleanBooksNote: string;
+  roomWeCouldCreate: {
+    restructuresOnly: number;
+    cutsOnly: number;
+    combinedMaxFlex: number;
+  };
+  secondContractWall: {
+    player: Player;
+    decisionYear: LeagueYear;
+    projectedMarketApy: number;
+    note: string;
+  }[];
   topRestructureLevers: { player: Player; forecast: PlayerFateForecast }[];
   topExtensionCandidates: { player: Player; forecast: PlayerFateForecast }[];
   topCutWatchCandidates: { player: Player; forecast: PlayerFateForecast }[];
@@ -543,19 +556,26 @@ export function evaluateTeamCapHealth(
     forecast: evaluateRosterPlayerFate(player, space2026),
   }));
 
-  const topRestructureLevers = [...evaluated]
-    .filter((x) => x.forecast.maxRestructureSavings2026 >= 2.0)
+  const allRestructurable = [...evaluated]
+    .filter((x) => x.forecast.maxRestructureSavings2026 >= 1.5)
     .sort(
       (a, b) =>
         b.forecast.maxRestructureSavings2026 - a.forecast.maxRestructureSavings2026
-    )
-    .slice(0, 3);
+    );
+
+  const topRestructureLevers = allRestructurable.slice(0, 3);
 
   const maxTop3RestructurePower = roundCap(
     topRestructureLevers.reduce(
       (acc, x) => acc + x.forecast.maxRestructureSavings2026,
       0
     )
+  );
+
+  const restructuresOnlyTotal = roundCap(
+    allRestructurable
+      .slice(0, 6)
+      .reduce((acc, x) => acc + x.forecast.maxRestructureSavings2026, 0)
   );
 
   const topExtensionCandidates = [...evaluated]
@@ -567,15 +587,16 @@ export function evaluateTeamCapHealth(
     .sort((a, b) => b.player.overallRating - a.player.overallRating)
     .slice(0, 3);
 
-  const topCutWatchCandidates = [...evaluated]
+  const allCutCandidates = [...evaluated]
     .filter(
       (x) =>
         x.forecast.fate === 'CAP_CASUALTY_RISK' ||
         x.forecast.fate === 'WALK_CANDIDATE' ||
-        x.forecast.bestCutSavings2026 >= 4.5
+        x.forecast.bestCutSavings2026 >= 4.0
     )
-    .sort((a, b) => b.forecast.bestCutSavings2026 - a.forecast.bestCutSavings2026)
-    .slice(0, 3);
+    .sort((a, b) => b.forecast.bestCutSavings2026 - a.forecast.bestCutSavings2026);
+
+  const topCutWatchCandidates = allCutCandidates.slice(0, 3);
 
   const maxTop3CutRelief = roundCap(
     topCutWatchCandidates.reduce(
@@ -583,6 +604,65 @@ export function evaluateTeamCapHealth(
       0
     )
   );
+
+  const cutsOnlyTotal = roundCap(
+    allCutCandidates
+      .slice(0, 5)
+      .reduce((acc, x) => acc + Math.max(0, x.forecast.bestCutSavings2026), 0)
+  );
+
+  // Avoid double-counting any player who is in both lists
+  const cutIds = new Set(allCutCandidates.slice(0, 4).map((x) => x.player.id));
+  const nonOverlappingRestructures = allRestructurable
+    .filter((x) => !cutIds.has(x.player.id))
+    .slice(0, 5)
+    .reduce((acc, x) => acc + x.forecast.maxRestructureSavings2026, 0);
+
+  const combinedMaxFlex = roundCap(cutsOnlyTotal + nonOverlappingRestructures);
+
+  // Determine "Clean Books Year" (first season dead money < 5% of cap & effective space >= $20M)
+  let cleanBooksYear: LeagueYear = 2028;
+  for (const yr of [2026, 2027, 2028, 2029] as LeagueYear[]) {
+    const yData = derivedState.years[yr];
+    const deadShare = yData.deadMoneyTotal / Math.max(1, yData.adjustedCapCeiling);
+    if (deadShare <= 0.05 && yData.effectiveCapSpace >= 20.0) {
+      cleanBooksYear = yr;
+      break;
+    }
+  }
+  const cleanYrData = derivedState.years[cleanBooksYear];
+  const cleanBooksNote =
+    cleanBooksYear === 2026
+      ? `Books are clean now ($${cleanYrData.deadMoneyTotal.toFixed(1)}M dead cap, +$${cleanYrData.effectiveCapSpace.toFixed(1)}M Spendable Now).`
+      : `Books clear in ${cleanBooksYear} (+$${cleanYrData.effectiveCapSpace.toFixed(1)}M projected space, $${cleanYrData.deadMoneyTotal.toFixed(1)}M dead money).`;
+
+  // Compute "Second-Contract Wall" (Young core / rookie deals hitting paydays in 2027–2028)
+  const secondContractWall = evaluated
+    .filter(({ player }) => {
+      const isYoungCore =
+        player.isRookieContract || (player.ageIn2026 <= 25 && player.overallRating >= 78);
+      if (!isYoungCore) return false;
+      const expAfter26 = !player.contractYears[2027] || player.contractYears[2027]?.isVoidYear;
+      const expAfter27 =
+        !expAfter26 &&
+        (!player.contractYears[2028] || player.contractYears[2028]?.isVoidYear);
+      return expAfter26 || expAfter27;
+    })
+    .sort((a, b) => b.player.overallRating - a.player.overallRating)
+    .slice(0, 3)
+    .map(({ player, forecast }) => {
+      const expAfter26 = !player.contractYears[2027] || player.contractYears[2027]?.isVoidYear;
+      const decisionYear: LeagueYear = expAfter26 ? 2027 : 2028;
+      return {
+        player,
+        decisionYear,
+        projectedMarketApy: forecast.projectedMarketApy,
+        note:
+          player.draftRound === 1 && !player.fifthYearOptionExercised
+            ? `5th-Yr Option or ~${forecast.projectedMarketApy.toFixed(1)}M/yr extension by ${decisionYear}`
+            : `Hits market in ${decisionYear} (~$${forecast.projectedMarketApy.toFixed(1)}M/yr)`,
+      };
+    });
 
   let tier: TeamCapHealthTier = 'HEALTHY_FLEXIBLE';
   let tierLabel = 'Healthy Cap Flexibility';
@@ -618,6 +698,14 @@ export function evaluateTeamCapHealth(
     subheadlineAnswer,
     maxTop3RestructurePower,
     maxTop3CutRelief,
+    cleanBooksYear,
+    cleanBooksNote,
+    roomWeCouldCreate: {
+      restructuresOnly: restructuresOnlyTotal,
+      cutsOnly: cutsOnlyTotal,
+      combinedMaxFlex,
+    },
+    secondContractWall,
     topRestructureLevers,
     topExtensionCandidates,
     topCutWatchCandidates,

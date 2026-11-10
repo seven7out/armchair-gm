@@ -328,3 +328,122 @@ export function simulateRestructure(
     capDeltaByYear,
   };
 }
+
+// ============================================================================
+// "Real Contract" X-Ray ("Headline Deal vs. Reality & Ghost Years")
+// ============================================================================
+
+export interface RealContractXRay {
+  headlineYears: number;
+  headlineTotalCap: number;
+  headlineApy: number;
+  realisticYears: number;
+  realisticPracticalMoney: number;
+  firstCleanExitYear: LeagueYear | null;
+  exitNetCapSavings: number;
+  exitDeadCap: number;
+  voidYearsCount: number;
+  voidGhostBillTotal: number;
+  hasFakeBackEnd: boolean;
+  verdictLabel: string;
+}
+
+/**
+ * Computes the "Real Contract" X-Ray for any player on a 2026–2029 ledger:
+ * Distinguishes agent-reported headline length/value from the realistic practical
+ * structure (where cutting the player saves substantial cap space over dead money)
+ * and totals any "Ghost Year" (Void Year) bonus bills.
+ */
+export function computeRealContractXRay(player: Player): RealContractXRay {
+  const activeYears: LeagueYear[] = [];
+  const voidYears: LeagueYear[] = [];
+  let headlineTotalCap = 0;
+  let voidGhostBillTotal = 0;
+
+  for (const y of LEAGUE_YEARS) {
+    const cy = player.contractYears[y];
+    if (cy) {
+      if (cy.isVoidYear) {
+        voidYears.push(y);
+        voidGhostBillTotal += cy.proratedBonus;
+      } else {
+        activeYears.push(y);
+        headlineTotalCap += getContractYearCapHit(cy);
+      }
+    }
+  }
+
+  headlineTotalCap = roundCap(headlineTotalCap);
+  voidGhostBillTotal = roundCap(voidGhostBillTotal);
+  const headlineYears = Math.max(1, activeYears.length);
+  const headlineApy = roundCap(headlineTotalCap / headlineYears);
+
+  // Determine the first year where the team can cleanly exit the deal
+  // (Pre-June 1 cut savings >= $4.0M and savings >= dead cap, or unguaranteed balloon year)
+  let firstCleanExitYear: LeagueYear | null = null;
+  let exitNetCapSavings = 0;
+  let exitDeadCap = 0;
+
+  for (const y of activeYears) {
+    const preCut = simulateCutOrTrade(player, y, 'PRE_JUNE_1_CUT');
+    const postCut = simulateCutOrTrade(player, y, 'POST_JUNE_1_CUT');
+    const cy = player.contractYears[y]!;
+
+    // A year is a realistic team exit window if guaranteedSalary == 0 and cutting saves >= $4M
+    if (
+      cy.guaranteedSalary === 0 &&
+      (preCut.currentYearCapSavings >= 4.0 ||
+        (y > 2026 && postCut.currentYearCapSavings >= 6.0))
+    ) {
+      firstCleanExitYear = y;
+      exitNetCapSavings = Math.max(
+        preCut.currentYearCapSavings,
+        postCut.currentYearCapSavings
+      );
+      exitDeadCap = preCut.currentYearDeadCap;
+      break;
+    }
+  }
+
+  const realisticActiveYears = firstCleanExitYear
+    ? activeYears.filter((y) => y < firstCleanExitYear)
+    : activeYears;
+
+  const realisticYears = Math.max(1, realisticActiveYears.length);
+  let realisticPracticalMoney = 0;
+
+  for (const y of realisticActiveYears) {
+    const cy = player.contractYears[y];
+    if (cy) {
+      realisticPracticalMoney += getContractYearCapHit(cy);
+    }
+  }
+  realisticPracticalMoney = roundCap(realisticPracticalMoney);
+
+  const hasFakeBackEnd =
+    firstCleanExitYear !== null && realisticYears < headlineYears;
+
+  let verdictLabel = '';
+  if (hasFakeBackEnd && firstCleanExitYear) {
+    verdictLabel = `Really a ${realisticYears}-yr, $${realisticPracticalMoney.toFixed(1)}M deal · Team exit in ${firstCleanExitYear} saves +$${exitNetCapSavings.toFixed(1)}M`;
+  } else if (voidYears.length > 0) {
+    verdictLabel = `${headlineYears}-yr locked deal + ${voidYears.length} Ghost Yr${voidYears.length > 1 ? 's' : ''} ($${voidGhostBillTotal.toFixed(1)}M deferred bill)`;
+  } else {
+    verdictLabel = `True ${headlineYears}-yr, $${headlineTotalCap.toFixed(1)}M structure (no fake back-end years)`;
+  }
+
+  return {
+    headlineYears,
+    headlineTotalCap,
+    headlineApy,
+    realisticYears,
+    realisticPracticalMoney,
+    firstCleanExitYear,
+    exitNetCapSavings: roundCap(exitNetCapSavings),
+    exitDeadCap: roundCap(exitDeadCap),
+    voidYearsCount: voidYears.length,
+    voidGhostBillTotal,
+    hasFakeBackEnd,
+    verdictLabel,
+  };
+}

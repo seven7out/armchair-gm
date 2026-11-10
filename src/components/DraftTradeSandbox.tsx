@@ -9,6 +9,7 @@ import {
   Player,
   roundCap,
   simulateCutOrTrade,
+  simulateRestructure,
   TradeChartModel,
 } from '@/engine';
 import {
@@ -16,13 +17,19 @@ import {
 } from '@/data/seed/draftPicks';
 import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
+import { JargonTip } from './JargonTooltip';
 import { PlayerAvatar } from './PlayerAvatar';
 
 export function DraftTradeSandbox() {
-  const { derivedState, addDraftSigningTransaction, addTradeTransaction } =
-    useGMStore();
+  const {
+    derivedState,
+    addDraftSigningTransaction,
+    addTradeTransaction,
+    addRestructureTransaction,
+  } = useGMStore();
 
   const [chartModel, setChartModel] = useState<TradeChartModel>('RichHill');
+  const [futurePickDiscount, setFuturePickDiscount] = useState<number>(1);
   const [partnerTeamId, setPartnerTeamId] = useState<string>('LV');
   const [tradeDesignation, setTradeDesignation] = useState<
     'PRE_JUNE_1' | 'POST_JUNE_1'
@@ -106,52 +113,104 @@ export function DraftTradeSandbox() {
       selectedIncomingPickIds.includes(pk.id)
     );
 
-    const sentPlayersVal = outgoingPlayers.reduce(
-      (acc, p) => acc + getPlayerTradeValue(p, chartModel, 2026),
-      0
-    );
-    const sentPicksVal = outgoingPicks.reduce(
-      (acc, pk) => acc + getDraftPickTradeValue(pk.overallPick, chartModel),
-      0
-    );
-    const recPlayersVal = incomingPlayers.reduce(
-      (acc, p) => acc + getPlayerTradeValue(p, chartModel, 2026),
-      0
-    );
-    const recPicksVal = incomingPicks.reduce(
-      (acc, pk) => acc + getDraftPickTradeValue(pk.overallPick, chartModel),
-      0
-    );
+    const calcForChart = (chart: TradeChartModel) => {
+      const sentPlayersVal = outgoingPlayers.reduce(
+        (acc, p) => acc + getPlayerTradeValue(p, chart, 2026),
+        0
+      );
+      const sentPicksVal = outgoingPicks.reduce(
+        (acc, pk) =>
+          acc +
+          getDraftPickTradeValue(
+            pk.overallPick,
+            chart,
+            pk.year > 2026 ? futurePickDiscount : 0
+          ),
+        0
+      );
+      const recPlayersVal = incomingPlayers.reduce(
+        (acc, p) => acc + getPlayerTradeValue(p, chart, 2026),
+        0
+      );
+      const recPicksVal = incomingPicks.reduce(
+        (acc, pk) =>
+          acc +
+          getDraftPickTradeValue(
+            pk.overallPick,
+            chart,
+            pk.year > 2026 ? futurePickDiscount : 0
+          ),
+        0
+      );
+      return {
+        sent: sentPlayersVal + sentPicksVal,
+        received: recPlayersVal + recPicksVal,
+      };
+    };
 
-    const totalSent = sentPlayersVal + sentPicksVal;
-    const totalReceived = recPlayersVal + recPicksVal;
+    const byChart: Record<TradeChartModel, { sent: number; received: number }> = {
+      RichHill: calcForChart('RichHill'),
+      JimmyJohnson: calcForChart('JimmyJohnson'),
+      FitzgeraldSpielberger: calcForChart('FitzgeraldSpielberger'),
+    };
+
+    const totalSent = byChart[chartModel].sent;
+    const totalReceived = byChart[chartModel].received;
     const parityRatio =
       totalSent + totalReceived > 0
         ? (totalReceived / Math.max(1, totalSent)) * 100
         : 100;
 
+    // Anti-Exploit AI GM Logic (prevents bundling many late picks for a Round 1 pick or Elite star)
+    const hasIncomingBlueChip =
+      incomingPlayers.some((p) => p.overallRating >= 88 || p.position === 'QB') ||
+      incomingPicks.some((pk) => pk.overallPick <= 20);
+    const hasOutgoingTopAsset =
+      outgoingPlayers.some((p) => p.overallRating >= 84) ||
+      outgoingPicks.some((pk) => pk.round <= 2);
+    const isQuantityForQualityExploit =
+      hasIncomingBlueChip &&
+      !hasOutgoingTopAsset &&
+      outgoingPicks.length + outgoingPlayers.length >= 3;
+
     let fairnessVerdict = 'Balanced Exchange';
+    let aiGmReason =
+      'Select players or draft picks on both sides to see the partner GM verdict.';
+
     if (totalSent === 0 && totalReceived === 0) {
       fairnessVerdict = 'Select assets on both sides to evaluate parity';
+    } else if (isQuantityForQualityExploit) {
+      fairnessVerdict = 'Rejected by AI GM (No Blue-Chip Anchor)';
+      aiGmReason = `${partnerTeam.name} refuse to trade a Round 1 / Elite asset for a bundle of Day-3 picks without a Round 1–2 cornerstone included.`;
+    } else if (hasIncomingBlueChip && parityRatio > 105) {
+      fairnessVerdict = 'Declined — Blue-Chip / QB Premium Required';
+      aiGmReason = `${partnerTeam.name} demand at least a 95–105% return when moving a franchise cornerstone or Top-20 pick.`;
     } else if (parityRatio >= 88 && parityRatio <= 115) {
       fairnessVerdict = 'Fair / Accepted by Partner Club';
+      aiGmReason = `${partnerTeam.name} accept (${Math.round(parityRatio)}% value parity on ${chartModel} chart).`;
     } else if (parityRatio > 115) {
-      fairnessVerdict = 'Surplus Value for You (Partner Likely Declines)';
+      fairnessVerdict = 'Surplus Value for You (Partner Declines)';
+      aiGmReason = `${partnerTeam.name} decline: package is ${Math.round(parityRatio - 100)}% short of market value.`;
     } else {
-      fairnessVerdict = 'Overpay by Your Front Office';
+      fairnessVerdict = 'Overpay by Your Front Office (Partner Accepts)';
+      aiGmReason = `${partnerTeam.name} immediately accept your ${Math.round(100 - parityRatio)}% overpay.`;
     }
 
-    // Compute live 2026 Cap Space Delta for both clubs
+    // Compute live 2026 Cap Space Delta, Seller Dead Cap, and Rookie Pool Cap Delta
     const mode =
       tradeDesignation === 'POST_JUNE_1'
         ? 'POST_JUNE_1_TRADE'
         : 'PRE_JUNE_1_TRADE';
     let ourCapDelta2026 = 0;
     let partnerCapDelta2026 = 0;
+    let ourDeadCapAdded2026 = 0;
+    let sellerDeadCapAdded2026 = 0;
+    let buyerDayOfTradeCapNeeded = 0;
 
     for (const outP of outgoingPlayers) {
       const sim = simulateCutOrTrade(outP, 2026, mode);
       ourCapDelta2026 += sim.currentYearCapSavings;
+      ourDeadCapAdded2026 += sim.currentYearDeadCap;
       const cy = outP.contractYears[2026];
       if (cy) {
         partnerCapDelta2026 -=
@@ -162,34 +221,95 @@ export function DraftTradeSandbox() {
     for (const inP of incomingPlayers) {
       const sim = simulateCutOrTrade(inP, 2026, mode);
       partnerCapDelta2026 += sim.currentYearCapSavings;
+      sellerDeadCapAdded2026 += sim.currentYearDeadCap;
       const cy = inP.contractYears[2026];
       if (cy) {
-        ourCapDelta2026 -= cy.baseSalary + cy.rosterBonus + cy.workoutBonus;
+        const inherited = cy.baseSalary + cy.rosterBonus + cy.workoutBonus;
+        ourCapDelta2026 -= inherited;
+        buyerDayOfTradeCapNeeded += inherited;
       }
     }
+
+    // Rookie Pool Net Cap Impact of Draft Picks Traded
+    let rookiePoolCapDelta2026 = 0;
+    for (const outPk of outgoingPicks) {
+      if (outPk.year === 2026) {
+        const slot = generateRookieContract(
+          outPk.overallPick,
+          2026,
+          'EDGE',
+          replacementCutoff2026
+        );
+        rookiePoolCapDelta2026 += slot.year1NetCapImpactAfterDisplacement; // Sending pick saves rookie cap space
+      }
+    }
+    for (const inPk of incomingPicks) {
+      if (inPk.year === 2026) {
+        const slot = generateRookieContract(
+          inPk.overallPick,
+          2026,
+          'EDGE',
+          replacementCutoff2026
+        );
+        rookiePoolCapDelta2026 -= slot.year1NetCapImpactAfterDisplacement; // Acquiring pick costs rookie cap space
+      }
+    }
+
+    ourCapDelta2026 = roundCap(ourCapDelta2026 + rookiePoolCapDelta2026);
+    const projectedOurSpaceAfterTrade = roundCap(
+      derivedState.years[2026].effectiveCapSpace + ourCapDelta2026
+    );
+    const capShortfallToFitToday = roundCap(
+      Math.max(0, -projectedOurSpaceAfterTrade)
+    );
+
+    // Suggested restructures on our roster to close any cap gap
+    const suggestedRestructures = derivedState.roster
+      .filter((p) => !selectedOutgoingPlayerIds.includes(p.id))
+      .map((p) => ({
+        player: p,
+        sim: simulateRestructure(p, 2026, 1.0, 1),
+      }))
+      .filter((x) => x.sim.currentYearCapSavings >= 2.0)
+      .sort(
+        (a, b) => b.sim.currentYearCapSavings - a.sim.currentYearCapSavings
+      )
+      .slice(0, 3);
 
     return {
       outgoingPlayers,
       outgoingPicks,
       incomingPlayers,
       incomingPicks,
+      byChart,
       totalSent,
       totalReceived,
       parityRatio,
       fairnessVerdict,
-      ourCapDelta2026: roundCap(ourCapDelta2026),
+      aiGmReason,
+      ourCapDelta2026,
       partnerCapDelta2026: roundCap(partnerCapDelta2026),
+      ourDeadCapAdded2026: roundCap(ourDeadCapAdded2026),
+      sellerDeadCapAdded2026: roundCap(sellerDeadCapAdded2026),
+      buyerDayOfTradeCapNeeded: roundCap(buyerDayOfTradeCapNeeded),
+      rookiePoolCapDelta2026: roundCap(rookiePoolCapDelta2026),
+      projectedOurSpaceAfterTrade,
+      capShortfallToFitToday,
+      suggestedRestructures,
     };
   }, [
     derivedState.roster,
     derivedState.draftPicks,
+    derivedState.years,
     partnerTeam,
     selectedOutgoingPlayerIds,
     selectedOutgoingPickIds,
     selectedIncomingPlayerIds,
     selectedIncomingPickIds,
     chartModel,
+    futurePickDiscount,
     tradeDesignation,
+    replacementCutoff2026,
   ]);
 
   const toggleId = (
@@ -369,17 +489,17 @@ export function DraftTradeSandbox() {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
-              Valuation Model
+              Valuation Model &amp; &ldquo;Can We Fit Him?&rdquo; Trade Wizard
             </p>
             <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
-              Multi-Asset Trade Desk
+              Multi-Asset Trade Desk (3-Chart Comparison)
             </h2>
           </div>
 
           <div className="flex flex-wrap items-center gap-6 text-xs">
             <div className="flex items-center gap-3">
               <span className="uppercase tracking-[0.1em] text-[#8a8379]">
-                Chart:
+                <JargonTip term="TRADE_VALUE_CHART">Chart</JargonTip>:
               </span>
               <button
                 type="button"
@@ -390,7 +510,18 @@ export function DraftTradeSandbox() {
                     : 'text-[#8a8379]'
                 }`}
               >
-                Rich Hill Consensus
+                Rich Hill
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartModel('JimmyJohnson')}
+                className={`pb-0.5 cursor-pointer ${
+                  chartModel === 'JimmyJohnson'
+                    ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
+                    : 'text-[#8a8379]'
+                }`}
+              >
+                Jimmy Johnson
               </button>
               <button
                 type="button"
@@ -404,6 +535,17 @@ export function DraftTradeSandbox() {
                 Fitzgerald-Spielberger
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setFuturePickDiscount((prev) => (prev === 1 ? 0 : 1))
+              }
+              className="border border-[#c7bfb0] px-2 py-0.5 font-mono-ledger text-[11px] text-[#57534e] hover:border-[#1c1917] cursor-pointer"
+              title="Discount future draft picks by ~1 round (~18% per year)"
+            >
+              Future Pick Discount: {futurePickDiscount === 1 ? '1 Rd (−18%)' : 'Off'}
+            </button>
 
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8a8379]" />
@@ -464,19 +606,27 @@ export function DraftTradeSandbox() {
           </div>
         </div>
 
-        {/* Minimalist Parity Scale + Dual-Team Live 2026 Cap Impact */}
-        <div className="mb-8 border-y border-[#dfd9cc] py-4 space-y-3">
-          <div className="flex items-baseline justify-between text-xs">
+        {/* Minimalist Parity Scale + 3-Chart Comparison + "Can We Fit Him?" Trade Wizard */}
+        <div className="mb-8 border-y border-[#dfd9cc] py-4 space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
             <span className="font-mono-ledger">
-              Outgoing Value: <strong>{tradeEvaluation.totalSent} pts</strong>
+              Outgoing Value ({chartModel}):{' '}
+              <strong>{tradeEvaluation.totalSent} pts</strong>
             </span>
-            <span className="font-editorial text-sm italic text-[#1c1917]">
-              {tradeEvaluation.fairnessVerdict}
-            </span>
+            <div className="text-center">
+              <div className="font-editorial text-sm italic text-[#1c1917]">
+                {tradeEvaluation.fairnessVerdict}
+              </div>
+              <div className="text-[11px] text-[#57534e]">
+                {tradeEvaluation.aiGmReason}
+              </div>
+            </div>
             <span className="font-mono-ledger">
-              Incoming Value: <strong>{tradeEvaluation.totalReceived} pts</strong>
+              Incoming Value ({chartModel}):{' '}
+              <strong>{tradeEvaluation.totalReceived} pts</strong>
             </span>
           </div>
+
           <div className="h-1.5 w-full bg-[#e5dfd3] flex overflow-hidden">
             <div
               className="bg-[#1c1917] h-full transition-all duration-300"
@@ -494,39 +644,119 @@ export function DraftTradeSandbox() {
             <div className="bg-[#2d5a43] h-full flex-1 transition-all duration-300" />
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-1 font-mono-ledger text-[11px] text-[#57534e]">
+          {/* All 3 Trade Charts Side-by-Side Comparison */}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 border-b border-[#dfd9cc] pb-3 font-mono-ledger text-[11px] text-[#57534e]">
             <div>
-              {derivedState.teamName} 2026 Cap Impact:{' '}
-              <strong
-                className={
-                  tradeEvaluation.ourCapDelta2026 >= 0
-                    ? 'text-[#2d5a43]'
-                    : 'text-[#b84a27]'
-                }
-              >
-                {tradeEvaluation.ourCapDelta2026 >= 0 ? '+$' : '−$'}
-                {Math.abs(tradeEvaluation.ourCapDelta2026).toFixed(2)}M
-              </strong>{' '}
-              (Projected Space: $
-              {(
-                derivedState.years[2026].effectiveCapSpace +
-                tradeEvaluation.ourCapDelta2026
-              ).toFixed(2)}
-              M)
+              <strong>Rich Hill (NFL Consensus):</strong> Sent{' '}
+              {tradeEvaluation.byChart.RichHill.sent} vs Rec{' '}
+              {tradeEvaluation.byChart.RichHill.received} pts
             </div>
             <div>
-              {partnerTeam.name} 2026 Cap Impact:{' '}
-              <strong
-                className={
-                  tradeEvaluation.partnerCapDelta2026 >= 0
-                    ? 'text-[#2d5a43]'
-                    : 'text-[#b84a27]'
-                }
-              >
-                {tradeEvaluation.partnerCapDelta2026 >= 0 ? '+$' : '−$'}
-                {Math.abs(tradeEvaluation.partnerCapDelta2026).toFixed(2)}M
-              </strong>
+              <strong>Jimmy Johnson (Classic):</strong> Sent{' '}
+              {tradeEvaluation.byChart.JimmyJohnson.sent} vs Rec{' '}
+              {tradeEvaluation.byChart.JimmyJohnson.received} pts
             </div>
+            <div>
+              <strong>Fitzgerald-Spielberger:</strong> Sent{' '}
+              {tradeEvaluation.byChart.FitzgeraldSpielberger.sent} vs Rec{' '}
+              {tradeEvaluation.byChart.FitzgeraldSpielberger.received} pts
+            </div>
+          </div>
+
+          {/* THE "CAN WE FIT HIM TODAY?" TRADE WIZARD */}
+          <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 space-y-3 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+                  &ldquo;Can We Fit Him Today?&rdquo; Trade Cap Wizard
+                </span>
+                {tradeEvaluation.capShortfallToFitToday <= 0 ? (
+                  <span className="bg-[#2d5a43] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#f6f3ec]">
+                    ✓ Fits Now (+$
+                    {tradeEvaluation.projectedOurSpaceAfterTrade.toFixed(2)}M Left
+                    After Trade)
+                  </span>
+                ) : (
+                  <span className="bg-[#b84a27] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#f6f3ec]">
+                    ⚠ Needs +${tradeEvaluation.capShortfallToFitToday.toFixed(2)}M
+                    More Room on Trade Day
+                  </span>
+                )}
+              </div>
+
+              <div className="font-mono-ledger text-[11px] text-[#57534e]">
+                {derivedState.teamName} 2026 Cap Delta:{' '}
+                <strong
+                  className={
+                    tradeEvaluation.ourCapDelta2026 >= 0
+                      ? 'text-[#2d5a43]'
+                      : 'text-[#b84a27]'
+                  }
+                >
+                  {tradeEvaluation.ourCapDelta2026 >= 0 ? '+$' : '−$'}
+                  {Math.abs(tradeEvaluation.ourCapDelta2026).toFixed(2)}M
+                </strong>
+                {tradeEvaluation.rookiePoolCapDelta2026 !== 0 && (
+                  <span className="ml-2 text-[#8a8379]">
+                    (Includes{' '}
+                    {tradeEvaluation.rookiePoolCapDelta2026 >= 0 ? '+$' : '−$'}
+                    {Math.abs(tradeEvaluation.rookiePoolCapDelta2026).toFixed(2)}M
+                    Rookie Pool shift)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Buyer vs Seller Cap Math Explanation */}
+            <div className="flex flex-wrap items-center justify-between gap-4 font-mono-ledger text-[11px] text-[#57534e]">
+              <div>
+                Buyer ({derivedState.teamName}) Must Fit Full Base on Trade Day:{' '}
+                <strong className="text-[#1c1917]">
+                  ${tradeEvaluation.buyerDayOfTradeCapNeeded.toFixed(2)}M
+                </strong>{' '}
+                (Even if restructuring afterward)
+              </div>
+              <div>
+                Seller ({partnerTeam.name}) 2026 Cap Delta:{' '}
+                <strong
+                  className={
+                    tradeEvaluation.partnerCapDelta2026 >= 0
+                      ? 'text-[#2d5a43]'
+                      : 'text-[#b84a27]'
+                  }
+                >
+                  {tradeEvaluation.partnerCapDelta2026 >= 0 ? '+$' : '−$'}
+                  {Math.abs(tradeEvaluation.partnerCapDelta2026).toFixed(2)}M
+                </strong>{' '}
+                (Seller eats ${tradeEvaluation.sellerDeadCapAdded2026.toFixed(2)}M
+                dead bonus)
+              </div>
+            </div>
+
+            {/* 1-Click Suggestions to Close the Cap Gap (or Create Trade Room) */}
+            {tradeEvaluation.suggestedRestructures.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#dfd9cc] pt-2.5">
+                <span className="text-[11px] text-[#57534e]">
+                  <strong>1-Click Cap Levers to Fit Target Today:</strong>
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {tradeEvaluation.suggestedRestructures.map(({ player, sim }) => (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() =>
+                        addRestructureTransaction(player, 1.0, 1, 2026)
+                      }
+                      className="border border-[#1c1917] bg-[#f6f3ec] px-2.5 py-1 font-mono-ledger text-[11px] text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+                    >
+                      Restructure {player.name} (+$
+                      {sim.currentYearCapSavings.toFixed(1)}M now, +$
+                      {sim.annualProrationAdded.toFixed(1)}M/yr later)
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
