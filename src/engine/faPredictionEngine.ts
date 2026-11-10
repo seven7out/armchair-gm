@@ -1,7 +1,13 @@
 import { POSITIONAL_AGING_CURVES, roundCap } from './constants';
-import { evaluatePlayerLongevity } from './agingEngine';
 import {
+  CareerLongevityProjection,
+  evaluatePlayerLongevity,
+  projectPlayerCareerHorizon,
+} from './agingEngine';
+import {
+  computeRealContractXRay,
   getContractYearCapHit,
+  RealContractXRay,
   simulateCutOrTrade,
   simulateRestructure,
 } from './contractEngine';
@@ -1065,4 +1071,298 @@ export function evaluateFutureSeasonRosterOutlook(
     },
   };
 }
+
+// ============================================================================
+// 6-Year Visual Contract & Extension Timeline Bar Model (2026–2031)
+// ("Each player in a row, going across all columns of years with a bar showing
+//  their contract, cut-risk years, and a shaded box for extension likelihood")
+// ============================================================================
+
+export const TIMELINE_HORIZON_YEARS = [
+  2026, 2027, 2028, 2029, 2030, 2031,
+] as const;
+
+export type TimelineHorizonYear = (typeof TIMELINE_HORIZON_YEARS)[number];
+
+export type TimelineBarSegmentType =
+  | 'LOCKED_CONTRACT'
+  | 'PAPER_CUT_RISK'
+  | 'EXTENSION_WINDOW'
+  | 'VOID_GHOST_BILL'
+  | 'CLIFF_OR_WALK';
+
+export interface TimelineYearCell {
+  year: TimelineHorizonYear;
+  age: number;
+  segmentType: TimelineBarSegmentType;
+  isStartOfSpan: boolean;
+  isEndOfSpan: boolean;
+  spanLength: number;
+  capHit: number | null;
+  baseSalary: number | null;
+  cutSavings: number | null;
+  deadCap: number | null;
+  voidBill: number | null;
+  projectedExtApy: number | null;
+  extLikelihoodPct: number | null;
+  primaryLabel: string;
+  secondaryLabel: string;
+  isAtOrPastCliff: boolean;
+}
+
+export interface PlayerContractTimelineRow {
+  player: Player;
+  forecast: PlayerFateForecast;
+  xray: RealContractXRay;
+  career: CareerLongevityProjection;
+  lastActiveContractYear: LeagueYear;
+  extensionLikelihoodPct: number;
+  extensionLikelihoodTier: 'HIGH' | 'MEDIUM' | 'LOW';
+  extensionWindowYears: TimelineHorizonYear[];
+  cells: TimelineYearCell[];
+}
+
+export function buildPlayerContractTimelineRow(
+  player: Player,
+  teamCapSpace2026: number
+): PlayerContractTimelineRow {
+  const forecast = evaluateRosterPlayerFate(player, teamCapSpace2026);
+  const xray = computeRealContractXRay(player);
+  const career = projectPlayerCareerHorizon(player);
+  const longevity = evaluatePlayerLongevity(player);
+  const curve = POSITIONAL_AGING_CURVES[player.position];
+
+  let lastActiveContractYear: LeagueYear = 2026;
+  for (const y of LEAGUE_YEARS) {
+    const cy = player.contractYears[y];
+    if (cy && !cy.isVoidYear) {
+      lastActiveContractYear = y;
+    }
+  }
+
+  // Compute Extension Likelihood % after current contract (or after realistic exit year)
+  const ageEnteringFA =
+    player.ageIn2026 + (lastActiveContractYear - 2026) + 1;
+  const yearsBeforeCliffAtFA = curve.cliffAge - ageEnteringFA;
+
+  let extensionLikelihoodPct = 30;
+  if (player.isRookieContract && player.overallRating >= 84) {
+    extensionLikelihoodPct = Math.min(
+      95,
+      78 + Math.round((player.overallRating - 80) * 1.4)
+    );
+  } else if (yearsBeforeCliffAtFA >= 2 && player.overallRating >= 82) {
+    extensionLikelihoodPct = Math.min(
+      92,
+      70 + Math.round((player.overallRating - 78) * 1.5)
+    );
+  } else if (yearsBeforeCliffAtFA >= 1 && player.overallRating >= 77) {
+    extensionLikelihoodPct = Math.min(
+      78,
+      52 + Math.round((player.overallRating - 75) * 1.8)
+    );
+  } else if (yearsBeforeCliffAtFA === 0 && player.overallRating >= 82) {
+    extensionLikelihoodPct = 48;
+  } else {
+    extensionLikelihoodPct = Math.max(
+      12,
+      Math.min(38, 25 + yearsBeforeCliffAtFA * 6)
+    );
+  }
+
+  const extensionLikelihoodTier: 'HIGH' | 'MEDIUM' | 'LOW' =
+    extensionLikelihoodPct >= 70
+      ? 'HIGH'
+      : extensionLikelihoodPct >= 45
+      ? 'MEDIUM'
+      : 'LOW';
+
+  // Determine how many post-contract years should be shaded as the Projected Extension Window
+  const maxExtYears =
+    extensionLikelihoodPct >= 70
+      ? Math.min(3, Math.max(2, longevity.postContractViableYears))
+      : extensionLikelihoodPct >= 45
+      ? Math.min(2, Math.max(1, longevity.postContractViableYears))
+      : 0;
+
+  const extensionWindowYears: TimelineHorizonYear[] = [];
+  for (const yr of TIMELINE_HORIZON_YEARS) {
+    if (
+      yr > lastActiveContractYear &&
+      extensionWindowYears.length < maxExtYears
+    ) {
+      const age = player.ageIn2026 + (yr - 2026);
+      if (age <= curve.cliffAge + (player.overallRating >= 88 ? 1 : 0)) {
+        extensionWindowYears.push(yr);
+      }
+    }
+  }
+
+  const rawCells: Omit<
+    TimelineYearCell,
+    'isStartOfSpan' | 'isEndOfSpan' | 'spanLength'
+  >[] = TIMELINE_HORIZON_YEARS.map((yr) => {
+    const age = player.ageIn2026 + (yr - 2026);
+    const isAtOrPastCliff = age >= curve.cliffAge;
+    const cy =
+      yr <= 2029 ? player.contractYears[yr as LeagueYear] ?? null : null;
+
+    // 1. Active Contract Year (2026–2029)
+    if (cy && !cy.isVoidYear) {
+      const hit = getContractYearCapHit(cy);
+      const cutSim = simulateCutOrTrade(
+        player,
+        yr as LeagueYear,
+        'PRE_JUNE_1_CUT'
+      );
+      const isPaperCutRisk =
+        (xray.hasFakeBackEnd &&
+          xray.firstCleanExitYear !== null &&
+          yr >= xray.firstCleanExitYear &&
+          cutSim.currentYearCapSavings >= 5.0) ||
+        (cy.guaranteedSalary === 0 &&
+          cutSim.currentYearCapSavings >= 6.5 &&
+          cutSim.currentYearCapSavings >= cutSim.currentYearDeadCap * 1.25 &&
+          player.overallRating < 89) ||
+        (isAtOrPastCliff &&
+          cutSim.currentYearCapSavings >= 4.5 &&
+          player.overallRating < 88);
+
+      if (isPaperCutRisk) {
+        return {
+          year: yr,
+          age,
+          segmentType: 'PAPER_CUT_RISK',
+          capHit: hit,
+          baseSalary: cy.baseSalary,
+          cutSavings: cutSim.currentYearCapSavings,
+          deadCap: cutSim.currentYearDeadCap,
+          voidBill: null,
+          projectedExtApy: null,
+          extLikelihoodPct: null,
+          primaryLabel: `$${hit.toFixed(1)}M Hit`,
+          secondaryLabel: `Cut +$${cutSim.currentYearCapSavings.toFixed(1)}M`,
+          isAtOrPastCliff,
+        };
+      }
+
+      return {
+        year: yr,
+        age,
+        segmentType: 'LOCKED_CONTRACT',
+        capHit: hit,
+        baseSalary: cy.baseSalary,
+        cutSavings: cutSim.currentYearCapSavings,
+        deadCap: cutSim.currentYearDeadCap,
+        voidBill: null,
+        projectedExtApy: null,
+        extLikelihoodPct: null,
+        primaryLabel: `$${hit.toFixed(1)}M`,
+        secondaryLabel:
+          cy.guaranteedSalary > 0
+            ? `$${cy.guaranteedSalary.toFixed(1)}M Gtd`
+            : `Base $${cy.baseSalary.toFixed(1)}M`,
+        isAtOrPastCliff,
+      };
+    }
+
+    // 2. If in the Projected Extension Window (even if a dummy void year exists, highlight Extension Window if HIGH/MEDIUM likelihood, or show void note)
+    if (extensionWindowYears.includes(yr)) {
+      const voidNote =
+        cy && cy.isVoidYear ? ` · Void $${cy.proratedBonus.toFixed(1)}M` : '';
+      return {
+        year: yr,
+        age,
+        segmentType: 'EXTENSION_WINDOW',
+        capHit: null,
+        baseSalary: null,
+        cutSavings: null,
+        deadCap: null,
+        voidBill: cy?.isVoidYear ? cy.proratedBonus : null,
+        projectedExtApy: forecast.projectedMarketApy,
+        extLikelihoodPct: extensionLikelihoodPct,
+        primaryLabel: `${extensionLikelihoodPct}% Ext. Likely`,
+        secondaryLabel: `~$${forecast.projectedMarketApy.toFixed(1)}M/yr${voidNote}`,
+        isAtOrPastCliff,
+      };
+    }
+
+    // 3. Void Year Ghost Bill (when not in a likely extension window)
+    if (cy && cy.isVoidYear) {
+      return {
+        year: yr,
+        age,
+        segmentType: 'VOID_GHOST_BILL',
+        capHit: cy.proratedBonus,
+        baseSalary: 0,
+        cutSavings: 0,
+        deadCap: cy.proratedBonus,
+        voidBill: cy.proratedBonus,
+        projectedExtApy: forecast.projectedMarketApy,
+        extLikelihoodPct: extensionLikelihoodPct,
+        primaryLabel: `Void $${cy.proratedBonus.toFixed(1)}M`,
+        secondaryLabel: `Ghost Bill (Age ${age})`,
+        isAtOrPastCliff,
+      };
+    }
+
+    // 4. Off-Contract / Post-Cliff / Low-Likelihood Walk Year
+    return {
+      year: yr,
+      age,
+      segmentType: 'CLIFF_OR_WALK',
+      capHit: null,
+      baseSalary: null,
+      cutSavings: null,
+      deadCap: null,
+      voidBill: null,
+      projectedExtApy: forecast.projectedMarketApy,
+      extLikelihoodPct: extensionLikelihoodPct,
+      primaryLabel: isAtOrPastCliff
+        ? `Age ${age} (Cliff)`
+        : `UFA (${extensionLikelihoodPct}% Re-Sign)`,
+      secondaryLabel: isAtOrPastCliff ? 'Decline / Walk' : 'Open Market',
+      isAtOrPastCliff,
+    };
+  });
+
+  // Compute span metadata so adjacent cells of the same segmentType form connected horizontal bars
+  const cells: TimelineYearCell[] = rawCells.map((cell, idx) => {
+    const prev = idx > 0 ? rawCells[idx - 1] : null;
+    const next = idx < rawCells.length - 1 ? rawCells[idx + 1] : null;
+    const isStartOfSpan = !prev || prev.segmentType !== cell.segmentType;
+    const isEndOfSpan = !next || next.segmentType !== cell.segmentType;
+
+    let spanLength = 1;
+    if (isStartOfSpan) {
+      for (let j = idx + 1; j < rawCells.length; j++) {
+        if (rawCells[j].segmentType === cell.segmentType) {
+          spanLength++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    return {
+      ...cell,
+      isStartOfSpan,
+      isEndOfSpan,
+      spanLength,
+    };
+  });
+
+  return {
+    player,
+    forecast,
+    xray,
+    career,
+    lastActiveContractYear,
+    extensionLikelihoodPct,
+    extensionLikelihoodTier,
+    extensionWindowYears,
+    cells,
+  };
+}
+
 
