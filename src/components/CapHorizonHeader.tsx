@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Home, RotateCcw } from 'lucide-react';
 import {
   computeDerivedTeamCapState,
   DEFAULT_CAP_GROWTH_RATE,
@@ -37,6 +37,8 @@ export function CapHorizonHeader() {
     selectTeam,
     setCapGrowthRate,
     setActiveTab,
+    goBack,
+    goHome,
     setLedgerMode,
     setScenarioDrawerOpen,
     openFreeAgencyModal,
@@ -70,8 +72,36 @@ export function CapHorizonHeader() {
     <header className="sticky top-0 z-30 border-b border-[#dfd9cc] bg-[#f6f3ec]/95 backdrop-blur-sm">
       {/* Masthead Row */}
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#dfd9cc]">
-        <div className="flex flex-wrap items-center gap-5">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-4">
+          {activeTab !== 'cap-checkup' && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={goBack}
+                title="Go back to previous journey"
+                className="flex items-center gap-1.5 border border-[#1c1917] bg-[#1c1917] px-2.5 py-1.5 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back</span>
+              </button>
+              <button
+                type="button"
+                onClick={goHome}
+                title="Return to Home Mission Hub"
+                className="flex items-center gap-1.5 border border-[#1c1917] bg-[#fcfaf6] px-2.5 py-1.5 text-xs font-semibold text-[#1c1917] hover:bg-[#ede8dd] transition-colors cursor-pointer"
+              >
+                <Home className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Home Hub</span>
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={goHome}
+            title="Return to Armchair GM Home Hub"
+            className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
+          >
             {baseTeam.logoUrl && (
               <img
                 src={baseTeam.logoUrl}
@@ -83,11 +113,11 @@ export function CapHorizonHeader() {
               <span className="font-editorial text-2xl font-normal tracking-tight text-[#1c1917]">
                 Armchair GM
               </span>
-              <span className="ml-3 text-xs uppercase tracking-[0.14em] text-[#8a8379]">
+              <span className="ml-3 hidden md:inline text-xs uppercase tracking-[0.14em] text-[#8a8379]">
                 {baseTeam.city} {baseTeam.name} · OTC Live Ledger
               </span>
             </div>
-          </div>
+          </button>
 
           {/* All-32 NFL Franchise Directory Toggle */}
           <div className="flex items-center gap-2 text-xs">

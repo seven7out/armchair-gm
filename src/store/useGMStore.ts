@@ -39,6 +39,7 @@ interface GMStoreState {
 
   // UI Navigation & Drawers
   activeTab: ActiveTab;
+  navHistory: ActiveTab[];
   ledgerMode: 'CAP' | 'CASH';
   selectedPlayerId: string | null;
   initialDrawerTab: 'cut' | 'restructure' | 'extend' | 'trade' | null;
@@ -55,6 +56,8 @@ interface GMStoreState {
   selectTeam: (teamId: string) => void;
   setCapGrowthRate: (rate: number) => void;
   setActiveTab: (tab: ActiveTab) => void;
+  goBack: () => void;
+  goHome: () => void;
   setLedgerMode: (mode: 'CAP' | 'CASH') => void;
   selectPlayer: (
     playerId: string | null,
@@ -158,6 +161,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     derivedState: initialDerived,
 
     activeTab: 'cap-checkup',
+    navHistory: [],
     ledgerMode: 'CAP',
     selectedPlayerId: null,
     initialDrawerTab: null,
@@ -191,7 +195,44 @@ export const useGMStore = create<GMStoreState>((set, get) => {
       });
     },
 
-    setActiveTab: (tab) => set({ activeTab: tab }),
+    setActiveTab: (tab) => {
+      const current = get().activeTab;
+      if (current === tab) return;
+      const nextHistory = [...get().navHistory, current];
+      if (typeof window !== 'undefined') {
+        window.history.pushState({ tab }, '', `#${tab}`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      set({ activeTab: tab, navHistory: nextHistory });
+    },
+    goBack: () => {
+      const history = get().navHistory;
+      if (history.length > 0) {
+        const prevTab = history[history.length - 1];
+        const nextHistory = history.slice(0, -1);
+        if (typeof window !== 'undefined') {
+          window.history.pushState({ tab: prevTab }, '', `#${prevTab}`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        set({ activeTab: prevTab, navHistory: nextHistory });
+      } else {
+        if (typeof window !== 'undefined') {
+          window.history.pushState({ tab: 'cap-checkup' }, '', '#cap-checkup');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        set({ activeTab: 'cap-checkup', navHistory: [] });
+      }
+    },
+    goHome: () => {
+      const current = get().activeTab;
+      if (current === 'cap-checkup') return;
+      const nextHistory = [...get().navHistory, current];
+      if (typeof window !== 'undefined') {
+        window.history.pushState({ tab: 'cap-checkup' }, '', '#cap-checkup');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      set({ activeTab: 'cap-checkup', navHistory: nextHistory });
+    },
     setLedgerMode: (mode) => set({ ledgerMode: mode }),
     selectPlayer: (playerId, initialTab = null, initialActionYear = null) =>
       set({
