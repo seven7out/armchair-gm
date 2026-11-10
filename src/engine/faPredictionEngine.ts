@@ -9,6 +9,7 @@ import {
   DerivedTeamCapState,
   FreeAgentOriginType,
   FreeAgentTarget,
+  LEAGUE_YEARS,
   LeagueYear,
   Player,
   PositionGroup,
@@ -711,3 +712,357 @@ export function evaluateTeamCapHealth(
     topCutWatchCandidates,
   };
 }
+
+// ============================================================================
+// Multi-Year Future Roster Projection (2026–2029)
+// ("View a team's projected roster in future years: Under Contract, Likely Cuts,
+//  Off-Contract Free Agents, and Void-Year Ghost Bills")
+// ============================================================================
+
+export type FutureRosterBucket =
+  | 'SAFE_UNDER_CONTRACT'
+  | 'LIKELY_CAP_CUT'
+  | 'OFF_CONTRACT_FA'
+  | 'VOID_GHOST_BILL';
+
+export interface FutureSeasonPlayerEvaluation {
+  player: Player;
+  targetYear: LeagueYear;
+  ageInTargetYear: number;
+  bucket: FutureRosterBucket;
+  badgeLabel: string;
+  subStatusLabel: string;
+  rationale: string;
+  capHitInTargetYear: number;
+  baseSalaryInTargetYear: number;
+  proratedBonusInTargetYear: number;
+  guaranteedSalaryInTargetYear: number;
+  deadCapIfCutPreJune1: number;
+  capSavingsIfCutPreJune1: number;
+  capSavingsIfCutPostJune1: number;
+  restructureSavingsInTargetYear: number;
+  projectedMarketApy: number;
+  expiredEnteringYear: LeagueYear | null;
+  isNewlyExpiredInTargetYear: boolean;
+  isPrimeResignCandidate: boolean;
+  voidBillAccelerating: number;
+  recommendedActionTab: 'cut' | 'restructure' | 'extend' | 'trade';
+}
+
+export interface FutureSeasonRosterOutlook {
+  targetYear: LeagueYear;
+  safeUnderContract: FutureSeasonPlayerEvaluation[];
+  likelyCapCuts: FutureSeasonPlayerEvaluation[];
+  offContractFreeAgents: FutureSeasonPlayerEvaluation[];
+  voidYearGhostBills: FutureSeasonPlayerEvaluation[];
+  totals: {
+    underContractCount: number;
+    safeContractCapTotal: number;
+    likelyCutsCount: number;
+    likelyCutsCapTotal: number;
+    likelyCutsPotentialSavings: number;
+    offContractCount: number;
+    newlyExpiredCount: number;
+    primeResignCount: number;
+    voidGhostBillsCount: number;
+    voidGhostBillsTotal: number;
+  };
+}
+
+export function evaluateFutureSeasonRosterOutlook(
+  derivedState: DerivedTeamCapState,
+  targetYear: LeagueYear
+): FutureSeasonRosterOutlook {
+  const yearCapSpace = derivedState.years[targetYear].effectiveCapSpace;
+
+  const safeUnderContract: FutureSeasonPlayerEvaluation[] = [];
+  const likelyCapCuts: FutureSeasonPlayerEvaluation[] = [];
+  const offContractFreeAgents: FutureSeasonPlayerEvaluation[] = [];
+  const voidYearGhostBills: FutureSeasonPlayerEvaluation[] = [];
+
+  for (const player of derivedState.roster) {
+    const yearOffset = targetYear - 2026;
+    const ageInTargetYear = player.ageIn2026 + yearOffset;
+    const curve = POSITIONAL_AGING_CURVES[player.position];
+    const longevity = evaluatePlayerLongevity(player);
+    const baseForecast = evaluateRosterPlayerFate(
+      player,
+      derivedState.years[2026].effectiveCapSpace
+    );
+    const projectedMarketApy = baseForecast.projectedMarketApy;
+
+    const cy = player.contractYears[targetYear];
+
+    // Find last active (non-void) year on contract
+    let lastActiveYear: LeagueYear = 2026;
+    for (const y of LEAGUE_YEARS) {
+      const c = player.contractYears[y];
+      if (c && !c.isVoidYear) {
+        lastActiveYear = y;
+      }
+    }
+    const expiredEnteringYear =
+      lastActiveYear < 2029 ? ((lastActiveYear + 1) as LeagueYear) : null;
+    const isNewlyExpiredInTargetYear = expiredEnteringYear === targetYear;
+
+    // CASE 1: Void Year Ghost Bill in targetYear (or first void year after lastActiveYear)
+    if (cy && cy.isVoidYear) {
+      // Sum all remaining void proration from (lastActiveYear + 1)..2029 if this is the year the contract voids,
+      // or show this year's scheduled void proration
+      let voidBillAccelerating = cy.proratedBonus;
+      if (isNewlyExpiredInTargetYear) {
+        let sumVoid = 0;
+        for (const y of LEAGUE_YEARS) {
+          if (y >= targetYear && player.contractYears[y]?.isVoidYear) {
+            sumVoid += player.contractYears[y]!.proratedBonus;
+          }
+        }
+        voidBillAccelerating = roundCap(sumVoid);
+      }
+
+      const isPrimeResign =
+        ageInTargetYear < curve.cliffAge && player.overallRating >= 78;
+
+      voidYearGhostBills.push({
+        player,
+        targetYear,
+        ageInTargetYear,
+        bucket: 'VOID_GHOST_BILL',
+        badgeLabel: isNewlyExpiredInTargetYear
+          ? `Contract Voids in ${targetYear}`
+          : `Void Year #${targetYear - lastActiveYear}`,
+        subStatusLabel: `$${voidBillAccelerating.toFixed(1)}M Ghost Bill`,
+        rationale: isNewlyExpiredInTargetYear
+          ? `${player.name}'s active deal ended after ${lastActiveYear}, triggering $${voidBillAccelerating.toFixed(1)}M in deferred Void-Year bonus money unless extended before the league year.`
+          : `Scheduled $${cy.proratedBonus.toFixed(1)}M dummy void-year proration from prior bonus restructures.`,
+        capHitInTargetYear: roundCap(cy.proratedBonus),
+        baseSalaryInTargetYear: 0,
+        proratedBonusInTargetYear: cy.proratedBonus,
+        guaranteedSalaryInTargetYear: 0,
+        deadCapIfCutPreJune1: voidBillAccelerating,
+        capSavingsIfCutPreJune1: 0,
+        capSavingsIfCutPostJune1: 0,
+        restructureSavingsInTargetYear: 0,
+        projectedMarketApy,
+        expiredEnteringYear,
+        isNewlyExpiredInTargetYear,
+        isPrimeResignCandidate: isPrimeResign,
+        voidBillAccelerating,
+        recommendedActionTab: 'extend',
+      });
+      continue;
+    }
+
+    // CASE 2: Off-Contract / Free Agent in targetYear (!cy)
+    if (!cy) {
+      const isPrimeResign =
+        ageInTargetYear < curve.cliffAge && player.overallRating >= 77;
+
+      offContractFreeAgents.push({
+        player,
+        targetYear,
+        ageInTargetYear,
+        bucket: 'OFF_CONTRACT_FA',
+        badgeLabel: isNewlyExpiredInTargetYear
+          ? `${targetYear} Free Agent (Just Expired)`
+          : `Expired in ${expiredEnteringYear ?? 2027}`,
+        subStatusLabel: isPrimeResign
+          ? `Prime Re-Sign (~$${projectedMarketApy.toFixed(1)}M/yr)`
+          : `Likely Walk / Market FA`,
+        rationale: isPrimeResign
+          ? `Off contract in ${targetYear} at Age ${ageInTargetYear} (${curve.cliffAge - ageInTargetYear} yrs before ${player.position} cliff). Projecting ~$${projectedMarketApy.toFixed(1)}M/yr to re-sign.`
+          : `Contract expired after ${lastActiveYear}; at Age ${ageInTargetYear} in ${targetYear}, projected to test the open market or be replaced via the draft.`,
+        capHitInTargetYear: 0,
+        baseSalaryInTargetYear: 0,
+        proratedBonusInTargetYear: 0,
+        guaranteedSalaryInTargetYear: 0,
+        deadCapIfCutPreJune1: 0,
+        capSavingsIfCutPreJune1: 0,
+        capSavingsIfCutPostJune1: 0,
+        restructureSavingsInTargetYear: 0,
+        projectedMarketApy,
+        expiredEnteringYear,
+        isNewlyExpiredInTargetYear,
+        isPrimeResignCandidate: isPrimeResign,
+        voidBillAccelerating: 0,
+        recommendedActionTab: 'extend',
+      });
+      continue;
+    }
+
+    // CASE 3: Active Contract in targetYear
+    const capHit = getContractYearCapHit(cy);
+    const preCut = simulateCutOrTrade(player, targetYear, 'PRE_JUNE_1_CUT');
+    const postCut = simulateCutOrTrade(player, targetYear, 'POST_JUNE_1_CUT');
+    const restSim = simulateRestructure(player, targetYear, 1.0, 2);
+
+    const bestCutSavings = Math.max(
+      preCut.currentYearCapSavings,
+      postCut.currentYearCapSavings
+    );
+
+    const isFinalActiveYear = lastActiveYear === targetYear;
+    const isAtOrPastCliff = ageInTargetYear >= curve.cliffAge;
+    const isBloatedVsMarket =
+      capHit >= projectedMarketApy * 1.18 && preCut.currentYearCapSavings >= 5.5;
+    const isUnprotectedBackEnd =
+      cy.guaranteedSalary === 0 &&
+      preCut.currentYearCapSavings >= 6.5 &&
+      preCut.currentYearCapSavings >= preCut.currentYearDeadCap * 1.25 &&
+      player.overallRating < 89;
+    const isAgingCutTarget =
+      isAtOrPastCliff && preCut.currentYearCapSavings >= 4.0 && player.overallRating < 88;
+    const isCapSqueezeCasualty =
+      yearCapSpace < 15.0 &&
+      preCut.currentYearCapSavings >= 7.5 &&
+      player.overallRating < 84;
+
+    if (
+      isBloatedVsMarket ||
+      isUnprotectedBackEnd ||
+      isAgingCutTarget ||
+      isCapSqueezeCasualty
+    ) {
+      let cutReason = '';
+      if (isAgingCutTarget) {
+        cutReason = `Turns ${ageInTargetYear} in ${targetYear} (at/past ${player.position} Age-${curve.cliffAge} cliff) with $${cy.baseSalary.toFixed(1)}M unguaranteed base; releasing saves +$${preCut.currentYearCapSavings.toFixed(1)}M.`;
+      } else if (isBloatedVsMarket) {
+        cutReason = `${targetYear} cap hit spikes to $${capHit.toFixed(1)}M vs ~$${projectedMarketApy.toFixed(1)}M market value; cutting clears +$${preCut.currentYearCapSavings.toFixed(1)}M (only $${preCut.currentYearDeadCap.toFixed(1)}M dead).`;
+      } else {
+        cutReason = `Unguaranteed $${cy.baseSalary.toFixed(1)}M base salary in ${targetYear} ("paper back-end year"); team can exit for +$${preCut.currentYearCapSavings.toFixed(1)}M net cap savings.`;
+      }
+
+      likelyCapCuts.push({
+        player,
+        targetYear,
+        ageInTargetYear,
+        bucket: 'LIKELY_CAP_CUT',
+        badgeLabel:
+          preCut.currentYearDeadCap <= 2.5
+            ? `Clean Exit Year (+$${preCut.currentYearCapSavings.toFixed(1)}M)`
+            : `Likely ${targetYear} Cut / Pay-Cut Target`,
+        subStatusLabel: `Saves +$${bestCutSavings.toFixed(1)}M (${preCut.currentYearDeadCap.toFixed(1)}M Dead)`,
+        rationale: cutReason,
+        capHitInTargetYear: capHit,
+        baseSalaryInTargetYear: cy.baseSalary,
+        proratedBonusInTargetYear: cy.proratedBonus,
+        guaranteedSalaryInTargetYear: cy.guaranteedSalary,
+        deadCapIfCutPreJune1: preCut.currentYearDeadCap,
+        capSavingsIfCutPreJune1: preCut.currentYearCapSavings,
+        capSavingsIfCutPostJune1: postCut.currentYearCapSavings,
+        restructureSavingsInTargetYear: restSim.currentYearCapSavings,
+        projectedMarketApy,
+        expiredEnteringYear,
+        isNewlyExpiredInTargetYear: false,
+        isPrimeResignCandidate: false,
+        voidBillAccelerating: 0,
+        recommendedActionTab: 'cut',
+      });
+    } else {
+      // Safe Under Contract in targetYear
+      let badgeLabel = `Locked Under Contract`;
+      let subStatusLabel = `Hit $${capHit.toFixed(1)}M · Dead $${preCut.currentYearDeadCap.toFixed(1)}M`;
+      let rationale = `Protected ${targetYear} contract ($${preCut.currentYearDeadCap.toFixed(1)}M dead money if cut vs $${capHit.toFixed(1)}M cap hit).`;
+      let recommendedTab: 'cut' | 'restructure' | 'extend' | 'trade' =
+        restSim.currentYearCapSavings >= 3.0 ? 'restructure' : 'extend';
+
+      if (player.isRookieContract) {
+        badgeLabel = isFinalActiveYear
+          ? `Final Rookie Year (Ext. Window)`
+          : `Cost-Controlled Rookie Deal`;
+        subStatusLabel = `$${capHit.toFixed(2)}M Cap Hit`;
+        rationale = isFinalActiveYear
+          ? `Entering final year of rookie deal in ${targetYear} at Age ${ageInTargetYear}; prime extension candidate (~$${projectedMarketApy.toFixed(1)}M/yr).`
+          : `High-surplus rookie scale contract ($${capHit.toFixed(2)}M in ${targetYear}) at Age ${ageInTargetYear}.`;
+        recommendedTab = 'extend';
+      } else if (isFinalActiveYear && longevity.postContractViableYears >= 1) {
+        badgeLabel = `Contract Year in ${targetYear}`;
+        subStatusLabel = `Ext. Target (~$${projectedMarketApy.toFixed(1)}M/yr)`;
+        rationale = `Entering final under-contract season in ${targetYear} at Age ${ageInTargetYear}; candidate for an extension before hitting ${targetYear + 1} free agency.`;
+        recommendedTab = 'extend';
+      } else if (restSim.currentYearCapSavings >= 4.0) {
+        badgeLabel = `${targetYear} Restructure Pillar`;
+        subStatusLabel = `Can Clear +$${restSim.currentYearCapSavings.toFixed(1)}M`;
+        rationale = `Core starter under contract in ${targetYear} with $${cy.baseSalary.toFixed(1)}M base salary; restructuring clears +$${restSim.currentYearCapSavings.toFixed(1)}M in ${targetYear} room.`;
+        recommendedTab = 'restructure';
+      }
+
+      safeUnderContract.push({
+        player,
+        targetYear,
+        ageInTargetYear,
+        bucket: 'SAFE_UNDER_CONTRACT',
+        badgeLabel,
+        subStatusLabel,
+        rationale,
+        capHitInTargetYear: capHit,
+        baseSalaryInTargetYear: cy.baseSalary,
+        proratedBonusInTargetYear: cy.proratedBonus,
+        guaranteedSalaryInTargetYear: cy.guaranteedSalary,
+        deadCapIfCutPreJune1: preCut.currentYearDeadCap,
+        capSavingsIfCutPreJune1: preCut.currentYearCapSavings,
+        capSavingsIfCutPostJune1: postCut.currentYearCapSavings,
+        restructureSavingsInTargetYear: restSim.currentYearCapSavings,
+        projectedMarketApy,
+        expiredEnteringYear,
+        isNewlyExpiredInTargetYear: false,
+        isPrimeResignCandidate: isFinalActiveYear,
+        voidBillAccelerating: 0,
+        recommendedActionTab: recommendedTab,
+      });
+    }
+  }
+
+  // Sort each bucket logically
+  safeUnderContract.sort((a, b) => b.capHitInTargetYear - a.capHitInTargetYear);
+  likelyCapCuts.sort(
+    (a, b) => b.capSavingsIfCutPreJune1 - a.capSavingsIfCutPreJune1
+  );
+  offContractFreeAgents.sort((a, b) => {
+    if (a.isNewlyExpiredInTargetYear !== b.isNewlyExpiredInTargetYear) {
+      return a.isNewlyExpiredInTargetYear ? -1 : 1;
+    }
+    return b.projectedMarketApy - a.projectedMarketApy;
+  });
+  voidYearGhostBills.sort(
+    (a, b) => b.voidBillAccelerating - a.voidBillAccelerating
+  );
+
+  const safeContractCapTotal = roundCap(
+    safeUnderContract.reduce((sum, x) => sum + x.capHitInTargetYear, 0)
+  );
+  const likelyCutsCapTotal = roundCap(
+    likelyCapCuts.reduce((sum, x) => sum + x.capHitInTargetYear, 0)
+  );
+  const likelyCutsPotentialSavings = roundCap(
+    likelyCapCuts.reduce((sum, x) => sum + x.capSavingsIfCutPreJune1, 0)
+  );
+  const voidGhostBillsTotal = roundCap(
+    voidYearGhostBills.reduce((sum, x) => sum + x.voidBillAccelerating, 0)
+  );
+
+  return {
+    targetYear,
+    safeUnderContract,
+    likelyCapCuts,
+    offContractFreeAgents,
+    voidYearGhostBills,
+    totals: {
+      underContractCount: safeUnderContract.length + likelyCapCuts.length,
+      safeContractCapTotal,
+      likelyCutsCount: likelyCapCuts.length,
+      likelyCutsCapTotal,
+      likelyCutsPotentialSavings,
+      offContractCount: offContractFreeAgents.length,
+      newlyExpiredCount: offContractFreeAgents.filter(
+        (x) => x.isNewlyExpiredInTargetYear
+      ).length,
+      primeResignCount: offContractFreeAgents.filter(
+        (x) => x.isPrimeResignCandidate
+      ).length,
+      voidGhostBillsCount: voidYearGhostBills.length,
+      voidGhostBillsTotal,
+    },
+  };
+}
+

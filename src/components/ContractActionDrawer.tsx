@@ -29,6 +29,7 @@ export function ContractActionDrawer() {
     derivedState,
     selectedPlayerId,
     initialDrawerTab,
+    initialActionYear,
     selectPlayer,
     addCutTransaction,
     addRestructureTransaction,
@@ -82,11 +83,16 @@ export function ContractActionDrawer() {
       } else {
         setActiveTab(forecast.recommendedActionTab);
       }
+      if (initialActionYear) {
+        setActionYear(initialActionYear);
+      } else {
+        setActionYear(2026);
+      }
       setExtApy(forecast.projectedMarketApy);
     } else if (dialog.open) {
       dialog.close();
     }
-  }, [player, initialDrawerTab, derivedState.years]);
+  }, [player, initialDrawerTab, initialActionYear, derivedState.years]);
 
   if (!player) {
     return (

@@ -42,6 +42,7 @@ interface GMStoreState {
   ledgerMode: 'CAP' | 'CASH';
   selectedPlayerId: string | null;
   initialDrawerTab: 'cut' | 'restructure' | 'extend' | 'trade' | null;
+  initialActionYear: LeagueYear | null;
   preselectedFreeAgentId: string | null;
   freeAgencyPositionFilter: PositionGroup | 'ALL';
   isScenarioDrawerOpen: boolean;
@@ -56,7 +57,8 @@ interface GMStoreState {
   setLedgerMode: (mode: 'CAP' | 'CASH') => void;
   selectPlayer: (
     playerId: string | null,
-    initialTab?: 'cut' | 'restructure' | 'extend' | 'trade' | null
+    initialTab?: 'cut' | 'restructure' | 'extend' | 'trade' | null,
+    initialActionYear?: LeagueYear | null
   ) => void;
   openFreeAgencyModal: (options?: {
     freeAgentId?: string | null;
@@ -156,6 +158,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     ledgerMode: 'CAP',
     selectedPlayerId: null,
     initialDrawerTab: null,
+    initialActionYear: null,
     preselectedFreeAgentId: null,
     freeAgencyPositionFilter: 'ALL',
     isScenarioDrawerOpen: false,
@@ -186,8 +189,12 @@ export const useGMStore = create<GMStoreState>((set, get) => {
 
     setActiveTab: (tab) => set({ activeTab: tab }),
     setLedgerMode: (mode) => set({ ledgerMode: mode }),
-    selectPlayer: (playerId, initialTab = null) =>
-      set({ selectedPlayerId: playerId, initialDrawerTab: initialTab }),
+    selectPlayer: (playerId, initialTab = null, initialActionYear = null) =>
+      set({
+        selectedPlayerId: playerId,
+        initialDrawerTab: initialTab,
+        initialActionYear,
+      }),
     openFreeAgencyModal: (options) =>
       set({
         isFreeAgencyModalOpen: true,

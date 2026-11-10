@@ -133,8 +133,8 @@ export function CapHorizonHeader() {
             {
               id: 'player-fate' as const,
               step: '2',
-              label: 'Player Fate & X-Ray',
-              subtitle: 'Stay, Extend or Cut?',
+              label: 'Player Fate & Future Roster',
+              subtitle: '2026–2029 Outlook',
             },
             {
               id: 'free-agency' as const,

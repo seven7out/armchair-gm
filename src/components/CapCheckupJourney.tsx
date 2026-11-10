@@ -175,11 +175,11 @@ export function CapCheckupJourney() {
                 <UserCheck className="h-3.5 w-3.5 text-[#57534e]" />
               </div>
               <div className="mt-1.5 font-editorial text-lg text-[#1c1917]">
-                Player Fate & Contract X-Ray
+                Player Fate & Future Roster (2026–2029)
               </div>
               <p className="mt-1 text-xs leading-relaxed text-[#57534e]">
-                Will your favorite player stay, get extended, or get cut? See
-                their true contract vs. fake years.
+                View your projected roster in 2026, 2027, 2028, or 2029: who is
+                under contract, likely cap cuts, and expiring FAs.
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-[#dfd9cc] flex items-center justify-between text-[11px] font-semibold text-[#1c1917] group-hover:translate-x-0.5 transition-transform">
