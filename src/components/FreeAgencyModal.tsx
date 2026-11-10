@@ -58,6 +58,7 @@ export function FreeAgencySimulatorView({
   );
   const [structure, setStructure] =
     useState<ContractStructureTemplate>('Backloaded');
+  const [showCompChart, setShowCompChart] = useState<boolean>(false);
 
   const apySliderId = useId();
 
@@ -162,7 +163,26 @@ export function FreeAgencySimulatorView({
   )?.loss;
 
   return (
-    <div className={isModal ? 'p-7' : 'mx-auto max-w-[1440px] px-6 py-8'}>
+    <div className={isModal ? 'p-7' : 'mx-auto max-w-[1440px] px-6 py-8 space-y-6'}>
+      {!isModal && (
+        <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-6">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
+            Journey 03 · 2026 Free Agency Market &amp; Comp-Pick Guard
+          </span>
+          <h1 className="mt-1 font-editorial text-2xl sm:text-3xl text-[#1c1917]">
+            Who Can We Sign in Free Agency — And Will It Cancel a 2027 Comp Pick?
+          </h1>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[#57534e]">
+            <strong>Step 1:</strong> Pick an available Free Agent or Street Cap
+            Casualty on the left. <strong>Step 2:</strong> Customize your offer
+            on the right and check whether signing them is{' '}
+            <span className="font-semibold text-[#2d5a43]">
+              Comp-Pick Safe (Cut Player)
+            </span>{' '}
+            or cancels out one of your departing 2027 draft picks.
+          </p>
+        </section>
+      )}
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#dfd9cc]">
         {/* Left 5 Cols: Open Market Index + Comp Pick Cancellation Ledger */}
         <div className="lg:col-span-5 lg:pr-8 space-y-6">
@@ -285,53 +305,32 @@ export function FreeAgencySimulatorView({
             </div>
           </div>
 
-          {/* LIVE COMPENSATORY PICK CANCELLATION LEDGER */}
+          {/* LIVE COMPENSATORY PICK CANCELLATION LEDGER (Progressive Disclosure) */}
           <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-3.5 space-y-2.5 text-xs">
             <div className="flex items-baseline justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
                 <JargonTip term="CFA_CANCELLATION">
-                  2027 Comp Pick Cancellation Chart
+                  2027 Comp Pick Impact Check
                 </JargonTip>
               </span>
-              <span className="font-mono-ledger text-[10px] text-[#2d5a43]">
-                {compSummary.streetFASigningsCount} Safe Street FA
-                {compSummary.streetFASigningsCount === 1 ? '' : 's'} Signed
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowCompChart((prev) => !prev)}
+                className="font-mono-ledger text-[10px] font-semibold text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-4 cursor-pointer"
+              >
+                {showCompChart
+                  ? 'Hide Cancellation Chart ▲'
+                  : `View All ${compCancellationPairs.length} Comp-Pick Pairs ▼`}
+              </button>
             </div>
 
-            <div className="divide-y divide-[#dfd9cc] border-y border-[#dfd9cc] font-mono-ledger text-[11px]">
-              {compCancellationPairs.map(({ loss, canceledBy }, idx) => (
-                <div
-                  key={`${loss.name}-${idx}`}
-                  className="flex items-center justify-between py-1.5"
-                >
-                  <div>
-                    <span className="text-[#1c1917]">
-                      Lost: {loss.name} ({loss.position})
-                    </span>{' '}
-                    <span className="text-[10px] text-[#8a8379]">
-                      ~${loss.estApy.toFixed(1)}M → Rd {loss.projectedRound}
-                    </span>
-                  </div>
-                  {canceledBy ? (
-                    <span className="text-[#b84a27] line-through">
-                      Erased by {canceledBy.name}
-                    </span>
-                  ) : (
-                    <span className="font-semibold text-[#2d5a43]">
-                      Active: 2027 Rd {loss.projectedRound} Pick
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Live Pre-Commit Warning for Selected FA */}
+            {/* Live Pre-Commit Warning for Selected FA (Shown First) */}
             {!selectedPrediction.countsTowardCompFormula ? (
               <div className="text-[11px] text-[#2d5a43]">
                 <strong>✓ Safe Signing Stamp:</strong> {selectedFA.name} is a
-                projected Cap Casualty (<JargonTip term="STREET_FREE_AGENT">Street FA</JargonTip>
-                ). Signing him will <strong>NOT</strong> cancel any of your{' '}
+                projected Cap Casualty (
+                <JargonTip term="STREET_FREE_AGENT">Street FA</JargonTip>).
+                Signing him will <strong>NOT</strong> cancel any of your{' '}
                 {compSummary.netProjectedCompPicks.length} projected comp picks.
               </div>
             ) : nextUncanceledLoss ? (
@@ -339,13 +338,43 @@ export function FreeAgencySimulatorView({
                 <strong>⚠ CFA Cancellation Warning:</strong> Signing{' '}
                 {selectedFA.name} (qualifying UFA) will pair with{' '}
                 <strong>{nextUncanceledLoss.name}</strong> and erase your
-                projected <strong>2027 Round {nextUncanceledLoss.projectedRound}</strong>{' '}
+                projected{' '}
+                <strong>2027 Round {nextUncanceledLoss.projectedRound}</strong>{' '}
                 compensatory pick.
               </div>
             ) : (
               <div className="text-[11px] text-[#57534e]">
-                All departing CFA comp picks are already canceled out, so signing{' '}
-                {selectedFA.name} costs no additional comp picks.
+                All departing CFA comp picks are already canceled out, so
+                signing {selectedFA.name} costs no additional comp picks.
+              </div>
+            )}
+
+            {showCompChart && (
+              <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] pt-2 font-mono-ledger text-[11px]">
+                {compCancellationPairs.map(({ loss, canceledBy }, idx) => (
+                  <div
+                    key={`${loss.name}-${idx}`}
+                    className="flex items-center justify-between py-1.5"
+                  >
+                    <div>
+                      <span className="text-[#1c1917]">
+                        Lost: {loss.name} ({loss.position})
+                      </span>{' '}
+                      <span className="text-[10px] text-[#8a8379]">
+                        ~${loss.estApy.toFixed(1)}M → Rd {loss.projectedRound}
+                      </span>
+                    </div>
+                    {canceledBy ? (
+                      <span className="text-[#b84a27] line-through">
+                        Erased by {canceledBy.name}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-[#2d5a43]">
+                        Active: 2027 Rd {loss.projectedRound} Pick
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

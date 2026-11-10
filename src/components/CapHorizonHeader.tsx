@@ -118,52 +118,79 @@ export function CapHorizonHeader() {
           </div>
         </div>
 
-        {/* Center Navigation Links — Clean Underline Tabs */}
-        <nav className="flex flex-wrap items-center gap-6 text-xs uppercase tracking-[0.1em]">
-          <button
-            type="button"
-            onClick={() => setActiveTab('matrix')}
-            className={`pb-1 transition-colors cursor-pointer ${
-              activeTab === 'matrix'
-                ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
-                : 'text-[#57534e] hover:text-[#1c1917]'
-            }`}
-          >
-            01. Roster Ledger
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('predictor')}
-            className={`pb-1 transition-colors cursor-pointer ${
-              activeTab === 'predictor'
-                ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
-                : 'text-[#57534e] hover:text-[#1c1917]'
-            }`}
-          >
-            02. FA Predictor & Backtest
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('draft')}
-            className={`pb-1 transition-colors cursor-pointer ${
-              activeTab === 'draft'
-                ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
-                : 'text-[#57534e] hover:text-[#1c1917]'
-            }`}
-          >
-            03. Draft & Trade Desk
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('free-agency')}
-            className={`pb-1 transition-colors cursor-pointer ${
-              activeTab === 'free-agency'
-                ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
-                : 'text-[#57534e] hover:text-[#1c1917]'
-            }`}
-          >
-            04. Free Agency Market
-          </button>
+        {/* Center Navigation Links — 5 Step-by-Step Customer Journeys */}
+        <nav
+          aria-label="Customer Journeys"
+          className="flex flex-wrap items-center gap-1.5 lg:gap-2"
+        >
+          {[
+            {
+              id: 'cap-checkup' as const,
+              step: '1',
+              label: 'Cap Checkup & Clear Space',
+              subtitle: 'Fix Cap Crunch',
+            },
+            {
+              id: 'player-fate' as const,
+              step: '2',
+              label: 'Player Fate & X-Ray',
+              subtitle: 'Stay, Extend or Cut?',
+            },
+            {
+              id: 'free-agency' as const,
+              step: '3',
+              label: 'Sign Free Agents',
+              subtitle: 'Market & Comp Picks',
+            },
+            {
+              id: 'draft' as const,
+              step: '4',
+              label: 'Trade & Draft',
+              subtitle: 'Fit Targets & Picks',
+            },
+            {
+              id: 'matrix' as const,
+              step: '5',
+              label: 'Full Spreadsheet',
+              subtitle: '4-Yr Ledger & Lab',
+            },
+          ].map((item) => {
+            const isActive =
+              activeTab === item.id ||
+              (item.id === 'matrix' && activeTab === 'predictor');
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                className={`group flex flex-col items-start border px-3 py-1.5 text-left transition-colors cursor-pointer ${
+                  isActive
+                    ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
+                    : 'border-[#dfd9cc] bg-[#fcfaf6] text-[#1c1917] hover:border-[#1c1917] hover:bg-[#ede8dd]'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-tight">
+                  <span
+                    className={`inline-flex h-4 w-4 items-center justify-center rounded-full font-mono-ledger text-[10px] ${
+                      isActive
+                        ? 'bg-[#f6f3ec] text-[#1c1917]'
+                        : 'bg-[#ede8dd] text-[#57534e]'
+                    }`}
+                  >
+                    {item.step}
+                  </span>
+                  <span>{item.label}</span>
+                </div>
+                <span
+                  className={`hidden xl:inline text-[9px] uppercase tracking-[0.08em] ${
+                    isActive ? 'text-[#f6f3ec]/75' : 'text-[#8a8379]'
+                  }`}
+                >
+                  {item.subtitle}
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
         {/* Right Controls: Cap vs Cash Toggle, Growth & Scenario Notebook */}

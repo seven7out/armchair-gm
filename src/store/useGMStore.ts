@@ -22,7 +22,13 @@ import {
 } from '@/engine';
 import { SEED_TEAMS } from '@/data/seed/teams';
 
-export type ActiveTab = 'matrix' | 'draft' | 'free-agency' | 'predictor';
+export type ActiveTab =
+  | 'cap-checkup'
+  | 'player-fate'
+  | 'free-agency'
+  | 'draft'
+  | 'matrix'
+  | 'predictor';
 
 interface GMStoreState {
   selectedTeamId: string;
@@ -146,7 +152,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     transactions: [],
     derivedState: initialDerived,
 
-    activeTab: 'matrix',
+    activeTab: 'cap-checkup',
     ledgerMode: 'CAP',
     selectedPlayerId: null,
     initialDrawerTab: null,

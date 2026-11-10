@@ -34,7 +34,7 @@ export function RosterMatrix() {
     setSearchQuery,
     selectPlayer,
     openFreeAgencyModal,
-    applyMaxTopRestructures,
+    setActiveTab,
   } = useGMStore();
 
   const [viewMode, setViewMode] = useState<MatrixViewMode>('POSITION');
@@ -325,243 +325,52 @@ export function RosterMatrix() {
 
   return (
     <section className="mx-auto max-w-[1440px] px-6 py-8">
-      {/* Editorial Intro & Search */}
-      <div className="mb-6 flex flex-col gap-6 border-b border-[#dfd9cc] pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex items-start gap-4">
-          {baseTeam.logoUrl && (
-            <img
-              src={baseTeam.logoUrl}
-              alt={`${baseTeam.city} ${baseTeam.name}`}
-              className="mt-1 h-12 w-12 shrink-0 object-contain"
-            />
-          )}
-          <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
-              {baseTeam.archetypeLabel} · Synced with Over The Cap &amp; ESPN API
-            </p>
-            <h2 className="font-editorial mt-1 text-3xl font-normal text-[#1c1917]">
-              {baseTeam.city} {baseTeam.name} Multi-Year Contract Ledger (2026–2029)
-            </h2>
-            <p className="mt-1.5 max-w-2xl text-sm text-[#57534e] leading-relaxed">
-              {baseTeam.archetypeDescription}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8a8379]" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Find player on roster..."
-              aria-label="Filter player or position"
-              className="w-52 border-b border-[#c7bfb0] bg-transparent py-1 pl-8 pr-2 text-xs text-[#1c1917] placeholder-[#8a8379] focus:border-[#1c1917] focus:outline-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* EXECUTIVE BRIEF: 1. Is my team in a cap crunch? 2. Who gets extended, restructured, or let go? */}
-      <div className="mb-8 border border-[#dfd9cc] bg-[#fcfaf6] p-5">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#dfd9cc]">
-          {/* Left 4 Cols: Cap Crunch vs Warchest Diagnostic */}
-          <div className="lg:col-span-4 lg:pr-6 flex flex-col justify-between">
+      {/* Journey 05 Intro & Sub-Tab Switcher */}
+      <div className="mb-6 border border-[#dfd9cc] bg-[#fcfaf6] p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            {baseTeam.logoUrl && (
+              <img
+                src={baseTeam.logoUrl}
+                alt={`${baseTeam.city} ${baseTeam.name}`}
+                className="mt-1 h-11 w-11 shrink-0 object-contain"
+              />
+            )}
             <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
-                  Team Cap Diagnostic
-                </span>
-                <span
-                  className={`font-mono-ledger text-[11px] font-semibold ${
-                    capHealth.tier === 'SEVERE_CRUNCH'
-                      ? 'text-[#b84a27]'
-                      : capHealth.tier === 'CAP_WARCHEST'
-                      ? 'text-[#2d5a43]'
-                      : 'text-[#1c1917]'
-                  }`}
-                >
-                  {capHealth.tierLabel}
-                </span>
-              </div>
-
-              <h3 className="font-editorial mt-1.5 text-lg text-[#1c1917] leading-snug">
-                {capHealth.headlineAnswer}
-              </h3>
-              <p className="mt-1 text-xs text-[#57534e] leading-relaxed">
-                {capHealth.subheadlineAnswer}
+              <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
+                Journey 05 · Power-User 4-Year Ledger &amp; Backtest Lab
+              </span>
+              <h1 className="font-editorial mt-1 text-2xl sm:text-3xl font-normal text-[#1c1917]">
+                {baseTeam.city} {baseTeam.name} Multi-Year Contract Spreadsheet
+                (2026–2029)
+              </h1>
+              <p className="mt-1 max-w-2xl text-xs text-[#57534e] leading-relaxed">
+                Click any player row to open their 4-Door GM Drawer, or click an
+                unprotected future cell to model an extension.
               </p>
-
-              {/* One-Glance Answers: "Room We Could Create" & "When Does Our Cap Clear?" */}
-              <div className="mt-3 space-y-1.5 border-t border-[#dfd9cc] pt-2.5 font-mono-ledger text-[11px]">
-                <div className="flex items-center justify-between text-[#57534e]">
-                  <span>Room We Could Create:</span>
-                  <span className="text-[#2d5a43] font-semibold">
-                    Up to +${capHealth.roomWeCouldCreate.combinedMaxFlex.toFixed(1)}M
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#8a8379]">
-                  <span>
-                    <JargonTip term="RESTRUCTURE">Restructures Only</JargonTip>: +$
-                    {capHealth.roomWeCouldCreate.restructuresOnly.toFixed(1)}M
-                  </span>
-                  <span>·</span>
-                  <span>
-                    Cuts Only: +${capHealth.roomWeCouldCreate.cutsOnly.toFixed(1)}M
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-0.5 text-[10px] text-[#1c1917]">
-                  <span className="text-[#8a8379]">When Books Clear:</span>
-                  <span className="font-semibold text-[#2d5a43]">
-                    {capHealth.cleanBooksYear} Season (Dead &lt; 5%)
-                  </span>
-                </div>
-              </div>
             </div>
-
-            {capHealth.maxTop3RestructurePower > 0 && (
-              <button
-                type="button"
-                onClick={applyMaxTopRestructures}
-                className="mt-4 flex items-center justify-center gap-2 border border-[#1c1917] bg-[#1c1917] px-3.5 py-2 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>
-                  1-Click Auto-Clear Cap: Restructure Top 3 Pillars (+$
-                  {capHealth.maxTop3RestructurePower.toFixed(1)}M)
-                </span>
-              </button>
-            )}
           </div>
 
-          {/* Right 8 Cols: 3-Column Player Fate Watchlist */}
-          <div className="lg:col-span-8 pt-4 lg:pt-0 lg:pl-6 flex flex-col justify-between">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#dfd9cc]">
-              {/* Col 1: Who Gets Extended / Re-Signed? */}
-              <div className="sm:pr-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#2d5a43] mb-2">
-                  Prime Extension / Re-Sign Radar
-                </div>
-                <div className="space-y-2">
-                  {capHealth.topExtensionCandidates.length > 0 ? (
-                    capHealth.topExtensionCandidates.map(({ player, forecast }) => (
-                      <button
-                        key={player.id}
-                        type="button"
-                        onClick={() => selectPlayer(player.id, 'extend')}
-                        className="flex w-full items-center justify-between text-left text-xs hover:bg-[#ede8dd] p-1 -mx-1 transition-colors cursor-pointer"
-                      >
-                        <div className="truncate pr-2">
-                          <span className="font-medium text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-2">
-                            {player.name}
-                          </span>{' '}
-                          <span className="text-[11px] text-[#8a8379]">
-                            ({player.position})
-                          </span>
-                        </div>
-                        <span className="font-mono-ledger text-[11px] text-[#2d5a43] shrink-0">
-                          ~${forecast.projectedMarketApy.toFixed(1)}M/yr →
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="text-xs text-[#8a8379]">
-                      Core pillars already locked into multi-year deals.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Col 2: Who Gets Restructured? */}
-              <div className="pt-4 sm:pt-0 sm:px-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#1c1917] mb-2">
-                  Top Restructure Levers (Stay)
-                </div>
-                <div className="space-y-2">
-                  {capHealth.topRestructureLevers.map(({ player, forecast }) => (
-                    <button
-                      key={player.id}
-                      type="button"
-                      onClick={() => selectPlayer(player.id, 'restructure')}
-                      className="flex w-full items-center justify-between text-left text-xs hover:bg-[#ede8dd] p-1 -mx-1 transition-colors cursor-pointer"
-                    >
-                      <div className="truncate pr-2">
-                        <span className="font-medium text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-2">
-                          {player.name}
-                        </span>{' '}
-                        <span className="text-[11px] text-[#8a8379]">
-                          ({player.position})
-                        </span>
-                      </div>
-                      <span className="font-mono-ledger text-[11px] font-semibold text-[#2d5a43] shrink-0">
-                        +${forecast.maxRestructureSavings2026.toFixed(1)}M →
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Col 3: Who Gets Let Go / Cut Watch? */}
-              <div className="pt-4 sm:pt-0 sm:pl-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b84a27] mb-2">
-                  Cut / Walk Watch (Let Go Risk)
-                </div>
-                <div className="space-y-2">
-                  {capHealth.topCutWatchCandidates.length > 0 ? (
-                    capHealth.topCutWatchCandidates.map(({ player, forecast }) => (
-                      <button
-                        key={player.id}
-                        type="button"
-                        onClick={() => selectPlayer(player.id, 'cut')}
-                        className="flex w-full items-center justify-between text-left text-xs hover:bg-[#ede8dd] p-1 -mx-1 transition-colors cursor-pointer"
-                      >
-                        <div className="truncate pr-2">
-                          <span className="font-medium text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-2">
-                            {player.name}
-                          </span>{' '}
-                          <span className="text-[11px] text-[#8a8379]">
-                            ({player.position})
-                          </span>
-                        </div>
-                        <span className="font-mono-ledger text-[11px] font-semibold text-[#b84a27] shrink-0">
-                          Saves +${forecast.bestCutSavings2026.toFixed(1)}M →
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="text-xs text-[#8a8379]">
-                      Clean cap sheet with minimal bloated veteran contracts.
-                    </p>
-                  )}
-                </div>
-              </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8a8379]" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter player or position..."
+                aria-label="Filter player or position"
+                className="w-52 border border-[#1c1917] bg-[#f6f3ec] py-1.5 pl-8 pr-2 text-xs text-[#1c1917] placeholder-[#8a8379] focus:outline-none"
+              />
             </div>
 
-            {/* Bottom Strip: "Can We Afford to Keep Our Young Core?" (Second-Contract Wall) */}
-            {capHealth.secondContractWall.length > 0 && (
-              <div className="mt-4 border-t border-[#dfd9cc] pt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8379]">
-                  Young Core Second-Contract Wall:
-                </span>
-                <div className="flex flex-wrap items-center gap-4">
-                  {capHealth.secondContractWall.map((item) => (
-                    <button
-                      key={item.player.id}
-                      type="button"
-                      onClick={() => selectPlayer(item.player.id, 'extend')}
-                      className="font-mono-ledger text-[11px] text-[#1c1917] hover:text-[#2d5a43] underline decoration-dotted underline-offset-2 cursor-pointer"
-                    >
-                      {item.player.name} ({item.player.position}):{' '}
-                      <strong className="text-[#2d5a43]">
-                        ~${item.projectedMarketApy.toFixed(1)}M/yr
-                      </strong>{' '}
-                      by {item.decisionYear}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setActiveTab('predictor')}
+              className="border border-[#1c1917] bg-[#f6f3ec] px-3.5 py-1.5 text-xs font-semibold text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+            >
+              5B. Open FA Predictor &amp; Backtest Lab →
+            </button>
           </div>
         </div>
       </div>

@@ -29,6 +29,7 @@ export function DraftTradeSandbox() {
   } = useGMStore();
 
   const [chartModel, setChartModel] = useState<TradeChartModel>('RichHill');
+  const [subTab, setSubTab] = useState<'trade' | 'draft'>('trade');
   const [futurePickDiscount, setFuturePickDiscount] = useState<number>(1);
   const [partnerTeamId, setPartnerTeamId] = useState<string>('LV');
   const [tradeDesignation, setTradeDesignation] = useState<
@@ -323,8 +324,55 @@ export function DraftTradeSandbox() {
   };
 
   return (
-    <section className="mx-auto max-w-[1440px] px-6 py-8 space-y-14">
-      {/* PART 1: Rookie Wage Scale Ledger */}
+    <section className="mx-auto max-w-[1440px] px-6 py-8 space-y-8">
+      {/* Journey 04 Intro & Sub-Tab Switcher */}
+      <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
+              Journey 04 · Trade Wizard &amp; 2026 Rookie Draft
+            </span>
+            <h1 className="mt-1 font-editorial text-2xl sm:text-3xl text-[#1c1917]">
+              {subTab === 'trade'
+                ? 'Can We Fit This Trade Target Under Today’s Cap?'
+                : '2026 NFL Draft Picks & Rookie Wage Scale'}
+            </h1>
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[#57534e]">
+              {subTab === 'trade'
+                ? 'Remember the #1 NFL trade rule: the old team keeps any unpaid signing bonus, while your team only takes on the player’s remaining base salary—and must fit his cap hit on the day of the trade.'
+                : 'Every draft pick gets a fixed 4-year rookie contract and displaces your 51st-lowest contract, so the net cap cost is much smaller than the gross salary.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSubTab('trade')}
+              className={`border px-4 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                subTab === 'trade'
+                  ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
+                  : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
+              }`}
+            >
+              4A. &ldquo;Can We Fit Him?&rdquo; Trade Wizard
+            </button>
+            <button
+              type="button"
+              onClick={() => setSubTab('draft')}
+              className={`border px-4 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                subTab === 'draft'
+                  ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
+                  : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
+              }`}
+            >
+              4B. 2026 Mock Draft &amp; Rookie Scale ({derivedState.draftPicks.length} Picks)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* PART 1: Rookie Wage Scale Ledger (Shown when subTab === 'draft') */}
+      {subTab === 'draft' && (
       <div>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-[#dfd9cc] pb-5">
           <div>
@@ -483,9 +531,11 @@ export function DraftTradeSandbox() {
           </table>
         </div>
       </div>
+      )}
 
-      {/* PART 2: Trade Desk */}
-      <div className="border-t-2 border-[#1c1917] pt-10">
+      {/* PART 2: Trade Desk (Shown when subTab === 'trade') */}
+      {subTab === 'trade' && (
+      <div>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
@@ -973,6 +1023,7 @@ export function DraftTradeSandbox() {
           </button>
         </div>
       </div>
+      )}
     </section>
   );
 }
