@@ -12,6 +12,7 @@ import {
 import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
 import { JargonDecoderButton, JargonTip } from './JargonTooltip';
+import { GlobalPlayerSearch } from './PlayerDossierModal';
 
 const NFL_DIVISIONS = [
   'NFC North',
@@ -193,8 +194,13 @@ export function CapHorizonHeader() {
           })}
         </nav>
 
-        {/* Right Controls: Cap vs Cash Toggle, Growth & Scenario Notebook */}
-        <div className="flex items-center gap-3 text-xs">
+        {/* Right Controls: Global Player Lookup, Cap vs Cash Toggle, Growth & Scenario Notebook */}
+        <div className="flex flex-wrap items-center gap-2.5 text-xs">
+          <GlobalPlayerSearch
+            placeholder="Lookup any NFL player (age, yrs left, deal)..."
+            className="w-56 xl:w-64"
+          />
+
           <JargonDecoderButton />
 
           {/* Cap vs Cash Accounting Toggle */}

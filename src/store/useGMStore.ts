@@ -47,6 +47,7 @@ interface GMStoreState {
   freeAgencyPositionFilter: PositionGroup | 'ALL';
   isScenarioDrawerOpen: boolean;
   isFreeAgencyModalOpen: boolean;
+  dossierPlayer: { player: Player; teamId: string } | null;
   positionFilter: PositionGroup | 'ALL';
   searchQuery: string;
 
@@ -60,6 +61,8 @@ interface GMStoreState {
     initialTab?: 'cut' | 'restructure' | 'extend' | 'trade' | null,
     initialActionYear?: LeagueYear | null
   ) => void;
+  openPlayerDossier: (player: Player, teamId?: string) => void;
+  closePlayerDossier: () => void;
   openFreeAgencyModal: (options?: {
     freeAgentId?: string | null;
     position?: PositionGroup | 'ALL';
@@ -163,6 +166,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     freeAgencyPositionFilter: 'ALL',
     isScenarioDrawerOpen: false,
     isFreeAgencyModalOpen: false,
+    dossierPlayer: null,
     positionFilter: 'ALL',
     searchQuery: '',
 
@@ -195,6 +199,14 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         initialDrawerTab: initialTab,
         initialActionYear,
       }),
+    openPlayerDossier: (player, teamId) =>
+      set({
+        dossierPlayer: {
+          player,
+          teamId: teamId ?? get().selectedTeamId,
+        },
+      }),
+    closePlayerDossier: () => set({ dossierPlayer: null }),
     openFreeAgencyModal: (options) =>
       set({
         isFreeAgencyModalOpen: true,

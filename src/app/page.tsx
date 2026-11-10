@@ -13,6 +13,7 @@ import {
 } from '@/components/FreeAgencyModal';
 import { ScenarioStackDrawer } from '@/components/ScenarioStackDrawer';
 import { PredictorBacktestLab } from '@/components/PredictorBacktestLab';
+import { PlayerDossierModal } from '@/components/PlayerDossierModal';
 import { useGMStore } from '@/store/useGMStore';
 
 export default function ArmchairGMApp() {
@@ -37,6 +38,7 @@ export default function ArmchairGMApp() {
       <ContractActionDrawer />
       <FreeAgencyModal />
       <ScenarioStackDrawer />
+      <PlayerDossierModal />
     </div>
   );
 }

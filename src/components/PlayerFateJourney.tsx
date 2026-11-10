@@ -21,10 +21,12 @@ import {
   LeagueYear,
   POSITION_GROUPS,
   PositionGroup,
+  projectPlayerCareerHorizon,
 } from '@/engine';
 import { useGMStore } from '@/store/useGMStore';
 import { PlayerAvatar } from './PlayerAvatar';
 import { JargonTip } from './JargonTooltip';
+import { GlobalPlayerSearch } from './PlayerDossierModal';
 
 type BucketFilter = 'ALL_BUCKETS' | FutureRosterBucket;
 
@@ -39,6 +41,7 @@ export function PlayerFateJourney() {
     addCutTransaction,
     addRestructureTransaction,
     openFreeAgencyModal,
+    openPlayerDossier,
   } = useGMStore();
 
   const [targetYear, setTargetYear] = useState<LeagueYear>(2027);
@@ -90,6 +93,7 @@ export function PlayerFateJourney() {
   const renderEvaluationCard = (item: FutureSeasonPlayerEvaluation) => {
     const { player, bucket } = item;
     const xray = computeRealContractXRay(player);
+    const career = projectPlayerCareerHorizon(player);
 
     const badgeStyle =
       bucket === 'SAFE_UNDER_CONTRACT'
@@ -130,6 +134,11 @@ export function PlayerFateJourney() {
                   <span className="border border-[#dfd9cc] bg-[#f6f3ec] px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-[#57534e]">
                     {player.position} · Age {item.ageInTargetYear} in{' '}
                     {targetYear} · OVR {player.overallRating}
+                  </span>
+                  <span className="border border-[#2d5a43]/40 bg-[#2d5a43]/10 px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-[#2d5a43]">
+                    ~{career.expectedRemainingStarterYears} starter yr
+                    {career.expectedRemainingStarterYears === 1 ? '' : 's'} left
+                    (thru ~Age {career.projectedRetirementAge})
                   </span>
                 </div>
 
@@ -298,16 +307,25 @@ export function PlayerFateJourney() {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              selectPlayer(player.id, item.recommendedActionTab, targetYear)
-            }
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#1c1917] hover:underline cursor-pointer"
-          >
-            <span>4-Door X-Ray ({targetYear})</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => openPlayerDossier(player, baseTeam.id)}
+              className="border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-1 text-[11px] font-semibold text-[#1c1917] hover:border-[#1c1917] cursor-pointer"
+            >
+              Scouting &amp; Longevity Dossier
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                selectPlayer(player.id, item.recommendedActionTab, targetYear)
+              }
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#1c1917] hover:underline cursor-pointer"
+            >
+              <span>4-Door X-Ray ({targetYear})</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -545,15 +563,22 @@ export function PlayerFateJourney() {
         </div>
 
         {/* 3. Search, Bucket Pill Reset & Position Filter Bar */}
-        <div className="mt-5 pt-4 border-t border-[#dfd9cc] flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a8379]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search ${baseTeam.name} players in ${targetYear}...`}
-              className="w-full border border-[#1c1917] bg-[#f6f3ec] py-1.5 pl-9 pr-3 text-xs text-[#1c1917] placeholder:text-[#8a8379] focus:outline-none"
+        <div className="mt-5 pt-4 border-t border-[#dfd9cc] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2.5 flex-1">
+            <div className="relative flex-1 min-w-[220px] max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a8379]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Filter ${baseTeam.name} roster in ${targetYear}...`}
+                className="w-full border border-[#1c1917] bg-[#f6f3ec] py-1.5 pl-9 pr-3 text-xs text-[#1c1917] placeholder:text-[#8a8379] focus:outline-none"
+              />
+            </div>
+
+            <GlobalPlayerSearch
+              placeholder="Or lookup any player across all 32 teams..."
+              className="w-64 sm:w-72"
             />
           </div>
 
