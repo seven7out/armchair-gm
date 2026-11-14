@@ -46,7 +46,7 @@ export default function ArmchairGMApp() {
       : 'Home Roster Grid';
 
   return (
-    <div className="min-h-screen bg-[#f6f3ec] text-[#1c1917] flex flex-col">
+    <div className="min-h-dvh bg-[#f6f3ec] text-[#1c1917] flex flex-col">
       {/* 1. Sticky 4-Year Cap Horizon Header */}
       <CapHorizonHeader />
 

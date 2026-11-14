@@ -8,11 +8,13 @@ import {
   Check,
   Ghost,
   LayoutGrid,
+  Monitor,
   Plus,
   RotateCcw,
   Scissors,
   Search,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Target,
   UserMinus,
@@ -83,6 +85,9 @@ export function PlayerFateJourney() {
   const [faPosFilter, setFaPosFilter] = useState<PositionGroup | 'ALL'>('ALL');
   const [faSearchQuery, setFaSearchQuery] = useState('');
   const [faShowCount, setFaShowCount] = useState(14);
+  const [deviceLayoutMode, setDeviceLayoutMode] = useState<
+    'AUTO' | 'PHONE' | 'DESKTOP'
+  >('AUTO');
 
   const space2026 = derivedState.years[2026].effectiveCapSpace;
 
@@ -503,22 +508,36 @@ export function PlayerFateJourney() {
     );
   };
 
+  const desktopBlockClass =
+    deviceLayoutMode === 'PHONE'
+      ? 'hidden'
+      : deviceLayoutMode === 'DESKTOP'
+      ? 'block'
+      : 'hidden md:block';
+
+  const mobileBlockClass =
+    deviceLayoutMode === 'DESKTOP'
+      ? 'hidden'
+      : deviceLayoutMode === 'PHONE'
+      ? 'block max-w-[480px] mx-auto'
+      : 'block md:hidden';
+
   return (
-    <div className="mx-auto max-w-[1440px] px-6 py-8 space-y-8">
+    <div className="mx-auto max-w-[1440px] px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
       {/* 1. Journey 02 Header (Default Home Hub) + View Mode Switcher */}
-      <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-5">
+      <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-4 sm:pb-5">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="bg-[#1c1917] px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6f3ec]">
                 Home Hub · {derivedState.roster.length}-Player Active Roster Grid
               </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
+              <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
                 2026–2031 Contract &amp; Extension Horizon + Positional Needs +
                 FA Builder
               </span>
             </div>
-            <h1 className="mt-1.5 font-editorial text-2xl sm:text-3xl text-[#1c1917]">
+            <h1 className="mt-1.5 font-editorial text-[clamp(1.35rem,1rem+1.6vw,2rem)] leading-tight text-[#1c1917]">
               {viewMode === 'TIMELINE_BARS'
                 ? `${baseTeam.city} ${baseTeam.name} — Multi-Year Roster & Extension Timeline (${derivedState.roster.length} Players)`
                 : `${baseTeam.city} ${baseTeam.name} — ${targetYear} Projected Roster By Status`}
@@ -530,45 +549,81 @@ export function PlayerFateJourney() {
             </p>
           </div>
 
-          {/* Primary View Mode Switcher + Section Jump Links */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Primary View Mode Switcher + Phone/Desktop Toggle + Section Jump Links */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Phone vs Desktop Layout Switcher */}
+            <div className="inline-flex border border-[#1c1917] bg-[#f6f3ec] p-0.5">
+              <button
+                type="button"
+                onClick={() =>
+                  setDeviceLayoutMode((m) => (m === 'PHONE' ? 'AUTO' : 'PHONE'))
+                }
+                title="Switch to iPhone / Pixel Mobile Card View"
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+                  deviceLayoutMode === 'PHONE'
+                    ? 'bg-[#1c1917] text-[#f6f3ec]'
+                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                }`}
+              >
+                <Smartphone className="h-3.5 w-3.5" />
+                <span>Phone View</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setDeviceLayoutMode((m) =>
+                    m === 'DESKTOP' ? 'AUTO' : 'DESKTOP'
+                  )
+                }
+                title="Switch to Full Desktop Spreadsheet Grid"
+                className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+                  deviceLayoutMode === 'DESKTOP'
+                    ? 'bg-[#1c1917] text-[#f6f3ec]'
+                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                }`}
+              >
+                <Monitor className="h-3.5 w-3.5" />
+                <span>Full Table</span>
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => setViewMode('TIMELINE_BARS')}
-              className={`inline-flex items-center gap-2 border px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 border px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                 viewMode === 'TIMELINE_BARS'
                   ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
                   : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
               }`}
             >
               <BarChart3 className="h-3.5 w-3.5" />
-              <span>Player × Year Bars (2026–2031)</span>
+              <span>2026–2031 Bars</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('BUCKET_CARDS')}
-              className={`inline-flex items-center gap-2 border px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 border px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                 viewMode === 'BUCKET_CARDS'
                   ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
                   : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
               }`}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
-              <span>Future Roster Buckets</span>
+              <span>By Bucket</span>
             </button>
             <a
               href="#positional-needs-matrix"
-              className="inline-flex items-center gap-1.5 border border-[#dfd9cc] bg-[#f6f3ec] px-3 py-2 text-xs font-semibold text-[#1c1917] hover:border-[#1c1917]"
+              className="inline-flex items-center gap-1 border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-2 text-xs font-semibold text-[#1c1917] hover:border-[#1c1917]"
             >
               <Target className="h-3.5 w-3.5 text-[#b84a27]" />
-              <span>Positional Needs ↓</span>
+              <span>Needs ↓</span>
             </a>
             <a
               href="#add-free-agents-dock"
-              className="inline-flex items-center gap-1.5 border border-[#2d5a43] bg-[#2d5a43] px-3 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#234735]"
+              className="inline-flex items-center gap-1 border border-[#2d5a43] bg-[#2d5a43] px-2.5 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#234735]"
             >
               <UserPlus className="h-3.5 w-3.5" />
-              <span>+ Add Free Agents ↓</span>
+              <span>+ Add FAs ↓</span>
             </a>
           </div>
         </div>
@@ -749,8 +804,13 @@ export function PlayerFateJourney() {
             </div>
           </div>
 
-          {/* Horizontal Multi-Year Contract & Extension Bar Table */}
-          <div className="overflow-x-auto">
+          {/* DESKTOP VIEW: Horizontal Multi-Year Contract & Extension Bar Table */}
+          <div
+            tabIndex={0}
+            role="region"
+            aria-label="Multi-Year Contract and Extension Timeline Table"
+            className={`${desktopBlockClass} overflow-x-auto [container-type:inline-size]`}
+          >
             <table className="w-full min-w-[1080px] border-collapse text-left">
               <thead>
                 <tr className="border-b-2 border-[#1c1917] text-[11px] uppercase tracking-[0.12em] text-[#57534e]">
@@ -1134,6 +1194,263 @@ export function PlayerFateJourney() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* IPHONE / PIXEL MOBILE VIEW: Zero-Scroll 6-Year Visual Timeline Cards */}
+          <div className={`${mobileBlockClass} space-y-3`}>
+            {filteredTimelineRows.map((row) => {
+              const {
+                player,
+                forecast,
+                career,
+                extensionLikelihoodPct,
+                extensionLikelihoodTier,
+                cells,
+              } = row;
+
+              const isNewlySignedFa = player.id.startsWith('fa-signed-');
+              const faTxId = activeSignFaTxByPlayerId.get(player.id);
+              const activePlayerTx = activePlayerTxMap.get(player.id);
+
+              const extBadgeColor =
+                extensionLikelihoodTier === 'HIGH'
+                  ? 'text-[#2d5a43] bg-[#2d5a43]/15 border-[#2d5a43]/40'
+                  : extensionLikelihoodTier === 'MEDIUM'
+                  ? 'text-[#b57c1e] bg-[#b57c1e]/15 border-[#b57c1e]/40'
+                  : 'text-[#8a8379] bg-[#ede8dd] border-[#c7bfb0]';
+
+              return (
+                <div
+                  key={`mob-${player.id}`}
+                  className={`border p-3.5 space-y-3 transition-colors ${
+                    isNewlySignedFa
+                      ? 'border-2 border-[#2d5a43] bg-[#eef5f0]'
+                      : 'border-[#dfd9cc] bg-[#f6f3ec]'
+                  }`}
+                >
+                  {/* Card Row 1: Identity + Extension Probability Pill + Dossier */}
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        selectPlayer(
+                          player.id,
+                          forecast.recommendedActionTab,
+                          2026
+                        )
+                      }
+                      className="flex items-center gap-2.5 text-left min-w-0 cursor-pointer"
+                    >
+                      <PlayerAvatar
+                        name={player.name}
+                        headshotUrl={player.headshotUrl}
+                        size="sm"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-editorial text-base text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-2">
+                            {player.name}
+                          </span>
+                          <span className="shrink-0 border border-[#dfd9cc] bg-[#fcfaf6] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#1c1917]">
+                            {player.position} · Age {player.ageIn2026} · OVR{' '}
+                            {player.overallRating}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 font-mono-ledger text-[10px] text-[#57534e]">
+                          ~{career.expectedRemainingStarterYears} starter yr
+                          {career.expectedRemainingStarterYears === 1
+                            ? ''
+                            : 's'}{' '}
+                          left (thru ~Age {career.projectedRetirementAge}) ·
+                          Est. ${forecast.projectedMarketApy.toFixed(1)}M/yr
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {isNewlySignedFa ? (
+                        <span className="border border-[#2d5a43] bg-[#2d5a43] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#f6f3ec]">
+                          ★ NEW FA
+                        </span>
+                      ) : activePlayerTx ? (
+                        <span className="border border-[#2d5a43] bg-[#2d5a43]/15 px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#2d5a43]">
+                          ✓ {activePlayerTx.type}
+                        </span>
+                      ) : (
+                        <span
+                          className={`border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${extBadgeColor}`}
+                        >
+                          {extensionLikelihoodPct}% Ext.
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openPlayerDossier(player, baseTeam.id)}
+                        className="border border-[#dfd9cc] bg-[#fcfaf6] px-1.5 py-0.5 font-mono-ledger text-[9px] text-[#57534e]"
+                      >
+                        Dossier
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card Row 2: Full-Width 6-Year Mini Visual Bar (2026–2031) — Fits 100% on Phone! */}
+                  <div className="grid grid-cols-6 gap-1">
+                    {cells.map((cell) => {
+                      const targetActionYear: LeagueYear =
+                        cell.year <= 2029 ? (cell.year as LeagueYear) : 2029;
+                      const shortYr = `'${String(cell.year).slice(2)}`;
+
+                      let boxStyle =
+                        'border border-dotted border-[#dfd9cc] bg-[#fcfaf6]/70 text-[#8a8379]';
+                      let statusShort = 'UFA';
+
+                      if (cell.segmentType === 'LOCKED_CONTRACT') {
+                        boxStyle =
+                          'bg-[#1c1917] text-[#f6f3ec] border border-[#1c1917]';
+                        statusShort = `$${(cell.capHit ?? 0).toFixed(1)}M`;
+                      } else if (cell.segmentType === 'PAPER_CUT_RISK') {
+                        boxStyle =
+                          'bg-[#b57c1e]/20 text-[#1c1917] border-2 border-[#b57c1e]';
+                        statusShort = `✂$${(cell.capHit ?? 0).toFixed(0)}M`;
+                      } else if (cell.segmentType === 'EXTENSION_WINDOW') {
+                        boxStyle =
+                          'bg-[#2d5a43]/15 text-[#2d5a43] border-2 border-dashed border-[#2d5a43]';
+                        statusShort = cell.isStartOfSpan
+                          ? `${extensionLikelihoodPct}% Ext`
+                          : `~$${forecast.projectedMarketApy.toFixed(0)}M`;
+                      } else if (cell.segmentType === 'VOID_GHOST_BILL') {
+                        boxStyle =
+                          'bg-[#b84a27]/15 text-[#b84a27] border border-dashed border-[#b84a27]';
+                        statusShort = `Void`;
+                      } else if (cell.isAtOrPastCliff) {
+                        statusShort = `Cliff`;
+                      }
+
+                      return (
+                        <button
+                          key={cell.year}
+                          type="button"
+                          onClick={() =>
+                            selectPlayer(
+                              player.id,
+                              cell.segmentType === 'PAPER_CUT_RISK'
+                                ? 'cut'
+                                : cell.segmentType === 'EXTENSION_WINDOW'
+                                ? 'extend'
+                                : 'restructure',
+                              targetActionYear
+                            )
+                          }
+                          className={`flex flex-col items-center justify-between py-1.5 px-1 text-center font-mono-ledger transition-opacity active:opacity-80 cursor-pointer ${boxStyle}`}
+                        >
+                          <span className="text-[9px] opacity-75">
+                            {shortYr} · {cell.age}y
+                          </span>
+                          <span className="mt-0.5 text-[10px] font-bold leading-tight truncate max-w-full">
+                            {statusShort}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Card Row 3: Thumb-Friendly 1-Tap Quick Actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-[#dfd9cc]">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {isNewlySignedFa && faTxId ? (
+                        <button
+                          type="button"
+                          onClick={() => removeTransaction(faTxId)}
+                          className="inline-flex items-center gap-1 border border-[#b84a27] bg-[#b84a27] px-2.5 py-1 font-mono-ledger text-[10px] font-semibold text-[#f6f3ec]"
+                        >
+                          <X className="h-3 w-3" />
+                          <span>Remove Added FA</span>
+                        </button>
+                      ) : activePlayerTx ? (
+                        <button
+                          type="button"
+                          onClick={() => removeTransaction(activePlayerTx.txId)}
+                          className="inline-flex items-center gap-1 border border-[#2d5a43] bg-[#2d5a43] px-2.5 py-1 font-mono-ledger text-[10px] font-semibold text-[#f6f3ec]"
+                        >
+                          <span>Undo {activePlayerTx.label}</span>
+                        </button>
+                      ) : (
+                        <>
+                          {extensionLikelihoodPct >= 55 &&
+                            row.extensionWindowYears.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  addExtensionTransaction(
+                                    player,
+                                    Math.min(
+                                      3,
+                                      Math.max(
+                                        1,
+                                        row.extensionWindowYears.length
+                                      )
+                                    ),
+                                    forecast.projectedMarketApy,
+                                    0.55,
+                                    'Backloaded',
+                                    row.lastActiveContractYear
+                                  )
+                                }
+                                className="border border-[#2d5a43] bg-[#2d5a43]/15 px-2.5 py-1 font-mono-ledger text-[10px] font-bold text-[#2d5a43]"
+                              >
+                                + Extend (~$
+                                {forecast.projectedMarketApy.toFixed(1)}M/yr)
+                              </button>
+                            )}
+                          {forecast.bestCutSavings2026 >= 2.5 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                addCutTransaction(
+                                  player,
+                                  'PRE_JUNE_1_CUT',
+                                  2026
+                                )
+                              }
+                              className="border border-[#b84a27] bg-[#b84a27]/10 px-2.5 py-1 font-mono-ledger text-[10px] font-bold text-[#b84a27]"
+                            >
+                              ✂ Cut (+$
+                              {forecast.bestCutSavings2026.toFixed(1)}M)
+                            </button>
+                          )}
+                          {forecast.maxRestructureSavings2026 >= 2.5 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                addRestructureTransaction(player, 1.0, 2, 2026)
+                              }
+                              className="border border-[#1c1917] bg-[#fcfaf6] px-2 py-1 font-mono-ledger text-[10px] font-semibold text-[#1c1917]"
+                            >
+                              Restructure (+$
+                              {forecast.maxRestructureSavings2026.toFixed(1)}M)
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        selectPlayer(
+                          player.id,
+                          forecast.recommendedActionTab,
+                          2026
+                        )
+                      }
+                      className="inline-flex items-center gap-1 font-mono-ledger text-[10px] font-semibold text-[#1c1917] underline"
+                    >
+                      <span>4-Door Options →</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -1560,7 +1877,13 @@ export function PlayerFateJourney() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* DESKTOP VIEW: Positional Needs Table */}
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Positional Needs by Year Matrix"
+          className={`${desktopBlockClass} overflow-x-auto [container-type:inline-size]`}
+        >
           <table className="w-full min-w-[920px] border-collapse text-left">
             <thead>
               <tr className="border-b-2 border-[#1c1917] text-[11px] uppercase tracking-[0.12em] text-[#57534e]">
@@ -1709,6 +2032,94 @@ export function PlayerFateJourney() {
             </tbody>
           </table>
         </div>
+
+        {/* IPHONE / PIXEL MOBILE VIEW: Zero-Scroll Positional Needs Cards (2026–2029) */}
+        <div className={`${mobileBlockClass} space-y-2.5`}>
+          {positionalNeeds.map((row) => {
+            const isSelectedPos = faPosFilter === row.position;
+            return (
+              <div
+                key={`mob-need-${row.position}`}
+                className={`border p-3 space-y-2 ${
+                  isSelectedPos
+                    ? 'border-[#1c1917] bg-[#ede8dd]'
+                    : 'border-[#dfd9cc] bg-[#f6f3ec]'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="font-mono-ledger text-xs font-bold text-[#1c1917]">
+                      {row.label}
+                    </div>
+                    <div className="font-mono-ledger text-[10px] text-[#8a8379]">
+                      Target: {row.targetStarters} Starter
+                      {row.targetStarters > 1 ? 's' : ''} / {row.targetDepth}{' '}
+                      Total
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFaPosFilter(
+                        faPosFilter === row.position ? 'ALL' : row.position
+                      );
+                      const el = document.getElementById(
+                        'add-free-agents-dock'
+                      );
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`inline-flex items-center gap-1 border px-2.5 py-1 font-mono-ledger text-[10px] font-semibold ${
+                      isSelectedPos
+                        ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
+                        : 'border-[#1c1917] bg-[#fcfaf6] text-[#1c1917]'
+                    }`}
+                  >
+                    <UserPlus className="h-3 w-3" />
+                    <span>Add {row.position} FA ↓</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-1">
+                  {LEAGUE_YEARS.map((yr) => {
+                    const cell = row.cellsByYear[yr];
+                    const cellStyle =
+                      cell.urgency === 'CRITICAL_NEED'
+                        ? 'bg-[#b84a27]/15 border-[#b84a27] text-[#b84a27]'
+                        : cell.urgency === 'DEPTH_NEED'
+                        ? 'bg-[#b57c1e]/15 border-[#b57c1e] text-[#9a6512]'
+                        : 'bg-[#2d5a43]/15 border-[#2d5a43]/50 text-[#2d5a43]';
+                    return (
+                      <button
+                        key={yr}
+                        type="button"
+                        onClick={() => {
+                          setFaPosFilter(row.position);
+                          const el = document.getElementById(
+                            'add-free-agents-dock'
+                          );
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className={`flex flex-col items-center justify-between border py-1.5 px-1 text-center font-mono-ledger ${cellStyle}`}
+                      >
+                        <span className="text-[9px] font-bold text-[#1c1917]">
+                          {yr} ({cell.startersUnderContract}/
+                          {cell.targetStarters} St)
+                        </span>
+                        <span className="mt-0.5 text-[9px] font-bold uppercase leading-tight truncate max-w-full">
+                          {cell.urgency === 'CRITICAL_NEED'
+                            ? 'Need Starter'
+                            : cell.urgency === 'DEPTH_NEED'
+                            ? 'Need Depth'
+                            : 'Solid'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {/* =====================================================================
@@ -1841,8 +2252,13 @@ export function PlayerFateJourney() {
           </div>
         </div>
 
-        {/* Free Agent Grid Rows with 2026–2029 Contract Preview Bars & 1-Click Add to Grid */}
-        <div className="overflow-x-auto">
+        {/* DESKTOP VIEW: Free Agent Grid Rows with 2026–2029 Contract Preview Bars & 1-Click Add to Grid */}
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Available Free Agents and Street Cap Casualties"
+          className={`${desktopBlockClass} overflow-x-auto [container-type:inline-size]`}
+        >
           <table className="w-full min-w-[980px] border-collapse text-left">
             <thead>
               <tr className="border-b-2 border-[#1c1917] text-[11px] uppercase tracking-[0.12em] text-[#57534e]">
@@ -2024,6 +2440,153 @@ export function PlayerFateJourney() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* IPHONE / PIXEL MOBILE VIEW: Thumb-Friendly Free Agent Add Cards */}
+        <div className={`${mobileBlockClass} space-y-3`}>
+          {filteredFaPool.slice(0, faShowCount).map((item) => {
+            const { fa, evalResult, sampleContract } = item;
+            const existingTxId = activeSignFaTxByPlayerId.get(fa.id);
+            const isAdded = Boolean(existingTxId);
+            const isNeedPos = criticalPositions2026Or2027.includes(fa.position);
+
+            return (
+              <div
+                key={`mob-fa-${fa.id}`}
+                className={`border p-3.5 space-y-2.5 ${
+                  isAdded
+                    ? 'border-2 border-[#2d5a43] bg-[#2d5a43]/12'
+                    : 'border-[#dfd9cc] bg-[#f6f3ec]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <PlayerAvatar
+                      name={fa.name}
+                      headshotUrl={fa.headshotUrl}
+                      size="sm"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-sm text-[#1c1917]">
+                          {fa.name}
+                        </span>
+                        <span className="border border-[#dfd9cc] bg-[#fcfaf6] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#1c1917]">
+                          {fa.position} · Age {fa.ageIn2026} · OVR{' '}
+                          {fa.overallRating}
+                        </span>
+                        {isNeedPos && (
+                          <span className="border border-[#b84a27] bg-[#b84a27]/10 px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#b84a27]">
+                            Fills {fa.position} Need
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 font-mono-ledger text-[10px] text-[#57534e]">
+                        From {fa.previousTeam} ·{' '}
+                        <span
+                          className={
+                            evalResult.countsTowardCompFormula
+                              ? 'text-[#b57c1e] font-semibold'
+                              : 'text-[#2d5a43] font-semibold'
+                          }
+                        >
+                          {evalResult.countsTowardCompFormula
+                            ? 'UFA (Costs Comp Pick)'
+                            : '★ Street FA (Comp-Pick Safe!)'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right font-mono-ledger shrink-0">
+                    <div className="text-xs font-bold text-[#1c1917]">
+                      {fa.marketYears}yr · $
+                      {(fa.marketYears * fa.marketApy).toFixed(1)}M
+                    </div>
+                    <div className="text-[10px] text-[#2d5a43] font-semibold">
+                      ${fa.marketApy.toFixed(1)}M/yr
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4-Year Contract Preview Bar (2026–2029) */}
+                <div className="grid grid-cols-4 gap-1">
+                  {LEAGUE_YEARS.map((yr) => {
+                    const cy = sampleContract.contractYears[yr];
+                    const hit = getContractYearCapHit(cy);
+                    if (!cy || hit <= 0) {
+                      return (
+                        <div
+                          key={yr}
+                          className="border border-dotted border-[#dfd9cc] bg-[#fcfaf6]/60 py-1 px-1 text-center font-mono-ledger text-[9px] text-[#8a8379]"
+                        >
+                          <div>{yr}</div>
+                          <div>Off Deal</div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div
+                        key={yr}
+                        className={`py-1 px-1.5 text-center font-mono-ledger ${
+                          isAdded
+                            ? 'bg-[#2d5a43] text-[#f6f3ec]'
+                            : 'bg-[#1c1917] text-[#f6f3ec]'
+                        }`}
+                      >
+                        <div className="text-[9px] opacity-75">{yr}</div>
+                        <div className="text-[11px] font-bold">
+                          ${hit.toFixed(1)}M
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Full-Width Thumb-Friendly Add / Undo Action */}
+                <div className="flex items-center gap-2 pt-1">
+                  {isAdded && existingTxId ? (
+                    <button
+                      type="button"
+                      onClick={() => removeTransaction(existingTxId)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 border border-[#2d5a43] bg-[#2d5a43] py-2 px-3 text-xs font-semibold text-[#f6f3ec]"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Added to Roster Grid (Tap to Remove)</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addSignFATransaction(
+                            fa,
+                            fa.marketYears,
+                            fa.marketApy,
+                            fa.marketGuaranteedPct,
+                            'Backloaded'
+                          )
+                        }
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#1c1917] py-2 px-3 text-xs font-semibold text-[#f6f3ec] active:bg-[#2d5a43]"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>+ Add to Roster Grid</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openFreeAgencyModal({ freeAgentId: fa.id })
+                        }
+                        className="border border-[#1c1917] bg-[#fcfaf6] py-2 px-3 font-mono-ledger text-xs font-semibold text-[#1c1917]"
+                      >
+                        Customize
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {filteredFaPool.length > faShowCount && (
