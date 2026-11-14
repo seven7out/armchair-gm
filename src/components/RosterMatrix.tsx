@@ -142,15 +142,15 @@ export function RosterMatrix() {
             />
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="font-medium text-sm text-[#1c1917] group-hover:underline">
+                <span className="font-semibold text-sm text-[#111827] group-hover:underline">
                   {player.name}
                 </span>
-                <span className="font-mono-ledger text-[10px] uppercase text-[#8a8379]">
+                <span className="font-mono-ledger text-[11px] font-medium uppercase text-[#475569]">
                   {player.position} · {player.tier}
                 </span>
               </div>
-              <div className="mt-0.5 font-mono-ledger text-[11px] text-[#8a8379]">
-                Age {player.ageIn2026} · OVR {player.overallRating}
+              <div className="mt-0.5 font-mono-ledger text-xs text-[#334155]">
+                Age {player.ageIn2026} · Rating {player.overallRating}/99
                 {player.isRookieContract ? ' · Rookie' : ''}
               </div>
             </div>

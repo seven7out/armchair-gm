@@ -20,6 +20,32 @@ import { useGMStore } from '@/store/useGMStore';
 import { JargonTip } from './JargonTooltip';
 import { PlayerAvatar } from './PlayerAvatar';
 
+function getPickEquivalentLabel(points: number, chart: TradeChartModel): string {
+  if (points <= 0) return 'Min / Throw-In';
+  if (chart === 'JimmyJohnson') {
+    if (points >= 1200) return '~Top-10 1st Rd Eq.';
+    if (points >= 590) return '~1st Rd Pick Eq.';
+    if (points >= 270) return '~2nd Rd Pick Eq.';
+    if (points >= 115) return '~3rd Rd Pick Eq.';
+    if (points >= 45) return '~4th–5th Rd Eq.';
+    return '~Late Day 3 Eq.';
+  }
+  if (chart === 'FitzgeraldSpielberger') {
+    if (points >= 1800) return '~Top-10 1st Rd Eq.';
+    if (points >= 1000) return '~1st Rd Pick Eq.';
+    if (points >= 600) return '~2nd Rd Pick Eq.';
+    if (points >= 350) return '~3rd Rd Pick Eq.';
+    return '~Day 3 Pick Eq.';
+  }
+  // RichHill (default)
+  if (points >= 350) return '~Top-10 1st Rd Eq.';
+  if (points >= 180) return '~1st Rd Pick Eq.';
+  if (points >= 85) return '~2nd Rd Pick Eq.';
+  if (points >= 40) return '~3rd Rd Pick Eq.';
+  if (points >= 15) return '~4th–5th Rd Eq.';
+  return '~Day 3 Pick Eq.';
+}
+
 export function DraftTradeSandbox() {
   const {
     derivedState,
@@ -657,23 +683,44 @@ export function DraftTradeSandbox() {
         </div>
 
         {/* Minimalist Parity Scale + 3-Chart Comparison + "Can We Fit Him?" Trade Wizard */}
-        <div className="mb-8 border-y border-[#dfd9cc] py-4 space-y-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
-            <span className="font-mono-ledger">
-              Outgoing Value ({chartModel}):{' '}
-              <strong>{tradeEvaluation.totalSent} pts</strong>
+        <div className="mb-8 border-y border-[#d6d0c4] py-4 space-y-4">
+          <div className="border border-[#cbd5e1] bg-[#f8fafc] px-4 py-2.5 text-xs leading-relaxed text-[#334155]">
+            <strong className="text-[#1e3a5f]">
+              What are &ldquo;Trade Value pts&rdquo;?
+            </strong>{' '}
+            NFL front offices value trades using Draft Value Charts (Pick #1 =
+            1,000 pts, Late 1st Rd = ~200 pts, 3rd Rd = ~60 pts on the Rich
+            Hill scale). A player&apos;s points represent their estimated trade
+            value in draft-pick points based on their 0–99 skill rating, age
+            vs. positional cliff, and contract surplus.
+          </div>
+
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs sm:text-sm">
+            <span className="font-mono-ledger text-[#1e3a5f]">
+              Outgoing Trade Value ({chartModel}):{' '}
+              <strong>
+                {tradeEvaluation.totalSent} pts (
+                {getPickEquivalentLabel(tradeEvaluation.totalSent, chartModel)})
+              </strong>
             </span>
             <div className="text-center">
-              <div className="font-editorial text-sm italic text-[#1c1917]">
+              <div className="font-editorial text-base font-semibold italic text-[#111827]">
                 {tradeEvaluation.fairnessVerdict}
               </div>
-              <div className="text-[11px] text-[#57534e]">
+              <div className="text-xs text-[#334155]">
                 {tradeEvaluation.aiGmReason}
               </div>
             </div>
-            <span className="font-mono-ledger">
-              Incoming Value ({chartModel}):{' '}
-              <strong>{tradeEvaluation.totalReceived} pts</strong>
+            <span className="font-mono-ledger text-[#15803d]">
+              Incoming Trade Value ({chartModel}):{' '}
+              <strong>
+                {tradeEvaluation.totalReceived} pts (
+                {getPickEquivalentLabel(
+                  tradeEvaluation.totalReceived,
+                  chartModel
+                )}
+                )
+              </strong>
             </span>
           </div>
 
@@ -833,19 +880,19 @@ export function DraftTradeSandbox() {
                         pk.id
                       )
                     }
-                    className={`border px-2.5 py-1 text-xs font-mono-ledger transition-colors cursor-pointer ${
+                    className={`border px-2.5 py-1.5 text-xs font-mono-ledger transition-colors cursor-pointer ${
                       selected
-                        ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
-                        : 'border-[#c7bfb0] text-[#1c1917] hover:border-[#1c1917]'
+                        ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                        : 'border-[#94a3b8] bg-white text-[#111827] hover:border-[#1e3a5f]'
                     }`}
                   >
-                    Rd {pk.round} (#{pk.overallPick}) · {val} pts
+                    Rd {pk.round} (#{pk.overallPick}) · {val} Trade pts
                   </button>
                 );
               })}
             </div>
 
-            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc]">
+            <div className="divide-y divide-[#d6d0c4] border-t border-[#d6d0c4]">
               {derivedState.roster.slice(0, 10).map((p: Player) => {
                 const val = getPlayerTradeValue(p, chartModel, 2026);
                 const selected = selectedOutgoingPlayerIds.includes(p.id);
@@ -860,18 +907,24 @@ export function DraftTradeSandbox() {
                         p.id
                       )
                     }
-                    className={`flex w-full items-baseline justify-between py-2.5 px-2 text-left text-xs transition-colors cursor-pointer ${
-                      selected ? 'bg-[#ede8dd] font-semibold' : 'hover:bg-[#fcfaf6]'
+                    className={`flex w-full items-baseline justify-between gap-2 py-2.5 px-2.5 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
+                      selected
+                        ? 'bg-[#ebe6dc] font-semibold'
+                        : 'hover:bg-[#f8fafc]'
                     }`}
                   >
                     <div>
-                      <span className="text-[#1c1917]">{p.name}</span>{' '}
-                      <span className="text-[#8a8379]">
-                        ({p.position} · Age {p.ageIn2026})
+                      <span className="font-semibold text-[#111827]">
+                        {p.name}
+                      </span>{' '}
+                      <span className="text-xs text-[#475569]">
+                        ({p.position} · Age {p.ageIn2026} · Rating{' '}
+                        {p.overallRating}/99)
                       </span>
                     </div>
-                    <span className="font-mono-ledger text-[#57534e]">
-                      {val} pts
+                    <span className="font-mono-ledger text-xs font-semibold text-[#1e3a5f] shrink-0">
+                      Trade Value: {val} pts (
+                      {getPickEquivalentLabel(val, chartModel)})
                     </span>
                   </button>
                 );
@@ -881,7 +934,7 @@ export function DraftTradeSandbox() {
 
           {/* Right: Incoming */}
           <div className="pt-8 lg:pt-0 lg:pl-8">
-            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#57534e] mb-3">
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#334155] mb-3">
               {partnerTeam.logoUrl && (
                 <img
                   src={partnerTeam.logoUrl}
@@ -907,19 +960,19 @@ export function DraftTradeSandbox() {
                         pk.id
                       )
                     }
-                    className={`border px-2.5 py-1 text-xs font-mono-ledger transition-colors cursor-pointer ${
+                    className={`border px-2.5 py-1.5 text-xs font-mono-ledger transition-colors cursor-pointer ${
                       selected
-                        ? 'border-[#2d5a43] bg-[#2d5a43] text-[#f6f3ec]'
-                        : 'border-[#c7bfb0] text-[#1c1917] hover:border-[#1c1917]'
+                        ? 'border-[#15803d] bg-[#15803d] text-white'
+                        : 'border-[#94a3b8] bg-white text-[#111827] hover:border-[#15803d]'
                     }`}
                   >
-                    Rd {pk.round} (#{pk.overallPick}) · {val} pts
+                    Rd {pk.round} (#{pk.overallPick}) · {val} Trade pts
                   </button>
                 );
               })}
             </div>
 
-            <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc]">
+            <div className="divide-y divide-[#d6d0c4] border-t border-[#d6d0c4]">
               {partnerTeam.availablePlayers.map((p) => {
                 const val = getPlayerTradeValue(p, chartModel, 2026);
                 const selected = selectedIncomingPlayerIds.includes(p.id);
@@ -935,8 +988,10 @@ export function DraftTradeSandbox() {
                         p.id
                       )
                     }
-                    className={`flex w-full items-center justify-between py-2.5 px-2 text-left text-xs transition-colors cursor-pointer ${
-                      selected ? 'bg-[#ede8dd] font-semibold' : 'hover:bg-[#fcfaf6]'
+                    className={`flex w-full items-center justify-between gap-2 py-2.5 px-2.5 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
+                      selected
+                        ? 'bg-[#ebe6dc] font-semibold'
+                        : 'hover:bg-[#f8fafc]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -946,19 +1001,20 @@ export function DraftTradeSandbox() {
                         size="sm"
                       />
                       <div>
-                        <div className="text-sm font-medium text-[#1c1917]">
+                        <div className="text-sm font-semibold text-[#111827]">
                           {p.name}{' '}
-                          <span className="text-xs font-normal text-[#8a8379]">
-                            ({p.position} · OVR {p.overallRating})
+                          <span className="text-xs font-normal text-[#475569]">
+                            ({p.position} · Rating {p.overallRating}/99)
                           </span>
                         </div>
-                        <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                        <div className="font-mono-ledger text-xs text-[#475569]">
                           2026 Acquiring Base: ${acquiringHit.toFixed(2)}M
                         </div>
                       </div>
                     </div>
-                    <span className="font-mono-ledger text-[#2d5a43]">
-                      {val} pts
+                    <span className="font-mono-ledger text-xs font-semibold text-[#15803d] shrink-0">
+                      Trade Value: {val} pts (
+                      {getPickEquivalentLabel(val, chartModel)})
                     </span>
                   </button>
                 );

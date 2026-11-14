@@ -343,18 +343,18 @@ export function PlayerFateJourney({
                   <span className="font-editorial text-xl text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-4">
                     {player.name}
                   </span>
-                  <span className="border border-[#dfd9cc] bg-[#f6f3ec] px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-[#57534e]">
+                  <span className="border border-[#cbd5e1] bg-[#f8fafc] px-2 py-0.5 font-mono-ledger text-xs font-semibold text-[#334155]">
                     {player.position} · Age {item.ageInTargetYear} in{' '}
-                    {targetYear} · OVR {player.overallRating}
+                    {targetYear} · Rating {player.overallRating}/99
                   </span>
-                  <span className="border border-[#2d5a43]/40 bg-[#2d5a43]/10 px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-[#2d5a43]">
+                  <span className="border border-[#16a34a] bg-[#dcfce7] px-2 py-0.5 font-mono-ledger text-xs font-semibold text-[#14532d]">
                     ~{career.expectedRemainingStarterYears} starter yr
                     {career.expectedRemainingStarterYears === 1 ? '' : 's'} left
                     (thru ~Age {career.projectedRetirementAge})
                   </span>
                 </div>
 
-                <div className="mt-0.5 font-mono-ledger text-xs text-[#57534e]">
+                <div className="mt-1 font-mono-ledger text-xs font-medium text-[#334155]">
                   {bucket === 'OFF_CONTRACT_FA' ? (
                     <>
                       {targetYear} Cap Hit: <strong>$0.00M (Unsigned)</strong> ·
@@ -614,13 +614,13 @@ export function PlayerFateJourney({
                   ? `Mode 01 · Current State (${activeCapState.roster.length}-Man Roster)`
                   : `Mode 02 · Interactive Team Builder (${activeCapState.roster.length}-Man Roster)`}
               </span>
-              <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
+              <span className="hidden sm:inline text-xs font-semibold uppercase tracking-[0.12em] text-[#475569]">
                 {isCurrentState
                   ? '2026–2031 Unmodified Contract Horizon & Positional Needs'
                   : 'Modify Contracts, Add FAs, Trade, Draft & Project 2026–2031 Cap'}
               </span>
             </div>
-            <h1 className="mt-1.5 font-editorial text-[clamp(1.35rem,1rem+1.6vw,2rem)] leading-tight text-[#1c1917]">
+            <h1 className="mt-1.5 font-editorial text-[clamp(1.4rem,1rem+1.6vw,2.05rem)] font-bold leading-tight text-[#111827]">
               {isCurrentState
                 ? viewMode === 'TIMELINE_BARS'
                   ? `${baseTeam.city} ${baseTeam.name} — Current Roster Grid & Future Needs (${activeCapState.roster.length} Players)`
@@ -629,7 +629,7 @@ export function PlayerFateJourney({
                   ? `${baseTeam.city} ${baseTeam.name} — Interactive Roster & Cap Projector (${activeCapState.roster.length} Players)`
                   : `${baseTeam.city} ${baseTeam.name} — ${targetYear} Projected Roster Sandbox`}
             </h1>
-            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[#57534e]">
+            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-[#334155]">
               {isCurrentState
                 ? viewMode === 'TIMELINE_BARS'
                   ? 'Read-only view of the unmodified 2026–2031 roster trajectory: solid bars show locked years, amber boxes flag likely cut/restructure checkpoints, and dashed green boxes show projected extension windows. Scroll down for positional needs by year, or switch to Team Builder to test moves.'
@@ -941,7 +941,7 @@ export function PlayerFateJourney({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Filter ${baseTeam.name} ${activeCapState.roster.length}-man roster...`}
-                className="w-full border border-[#1c1917] bg-[#f6f3ec] py-1.5 pl-9 pr-3 text-xs text-[#1c1917] placeholder:text-[#8a8379] focus:outline-none"
+                className="w-full border border-[#111827] bg-white py-2 pl-9 pr-3 text-sm text-[#111827] placeholder:text-[#64748b] focus:outline-none"
               />
             </div>
 
@@ -951,8 +951,8 @@ export function PlayerFateJourney({
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8379]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs font-bold uppercase tracking-[0.08em] text-[#475569]">
               Position:
             </span>
             {ALL_POSITIONS.map((pos) => (
@@ -960,10 +960,10 @@ export function PlayerFateJourney({
                 key={pos}
                 type="button"
                 onClick={() => setPosFilter(pos)}
-                className={`px-2 py-0.5 font-mono-ledger text-[11px] transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 font-mono-ledger text-xs font-semibold transition-colors cursor-pointer ${
                   posFilter === pos
-                    ? 'bg-[#1c1917] font-semibold text-[#f6f3ec]'
-                    : 'text-[#57534e] hover:bg-[#ede8dd] hover:text-[#1c1917]'
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'text-[#334155] hover:bg-[#ebe6dc] hover:text-[#111827]'
                 }`}
               >
                 {pos}
@@ -977,42 +977,50 @@ export function PlayerFateJourney({
           VIEW MODE 1: VISUAL CONTRACT & EXTENSION BAR TIMELINE (2026–2031)
          ===================================================================== */}
       {viewMode === 'TIMELINE_BARS' && (
-        <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-5 space-y-5">
+        <section className="border border-[#d6d0c4] bg-white p-5 space-y-5 shadow-2xs">
           {/* Visual Legend + Quick Filter Pills */}
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between border-b border-[#dfd9cc] pb-4">
-            {/* 4-Box Visual Key */}
-            <div className="flex flex-wrap items-center gap-4 text-xs">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+          <div className="flex flex-col gap-4 border-b border-[#d6d0c4] pb-4">
+            {/* 4-Box Visual Key + Rating Scale Key */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-[#334155]">
                 Bar Legend:
               </span>
               <div className="flex items-center gap-2">
-                <span className="inline-block h-3.5 w-6 bg-[#1c1917] border border-[#1c1917]" />
-                <span className="text-[#1c1917] font-medium">
+                <span className="inline-block h-4 w-7 bg-[#1e3a5f] border border-[#1e3a5f] rounded-xs" />
+                <span className="text-[#111827] font-semibold">
                   Locked Contract Year
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block h-3.5 w-6 bg-[#b57c1e]/25 border-2 border-[#b57c1e]" />
-                <span className="text-[#1c1917] font-medium">
+                <span className="inline-block h-4 w-7 bg-[#fef3c7] border-2 border-[#d97706] rounded-xs" />
+                <span className="text-[#78350f] font-semibold">
                   Cut-Risk / Fake Back-End Year
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block h-3.5 w-6 bg-[#2d5a43]/20 border-2 border-dashed border-[#2d5a43]" />
-                <span className="text-[#2d5a43] font-semibold">
+                <span className="inline-block h-4 w-7 bg-[#dcfce7] border-2 border-dashed border-[#15803d] rounded-xs" />
+                <span className="text-[#14532d] font-semibold">
                   Projected Extension Window (% Likelihood)
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block h-3.5 w-6 bg-[#b84a27]/15 border border-dashed border-[#b84a27]" />
-                <span className="text-[#b84a27] font-medium">
+                <span className="inline-block h-4 w-7 bg-[#fee2e2] border border-dashed border-[#dc2626] rounded-xs" />
+                <span className="text-[#991b1b] font-semibold">
                   Void Ghost Bill / Age Cliff
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 border-l border-[#d6d0c4] pl-4 text-xs text-[#334155]">
+                <span className="font-mono-ledger font-bold text-[#1e3a5f]">
+                  Rating (0–99):
+                </span>
+                <span>
+                  90+ All-Pro · 82–89 Plus Starter · 75–81 Solid Starter
                 </span>
               </div>
             </div>
 
             {/* Quick Filter Pills */}
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               {(
                 [
                   { id: 'ALL', label: `All Roster (${timelineRows.length})` },
@@ -1040,10 +1048,10 @@ export function PlayerFateJourney({
                   key={pill.id}
                   type="button"
                   onClick={() => setTimelineFilter(pill.id)}
-                  className={`border px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
+                  className={`border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                     timelineFilter === pill.id
-                      ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
-                      : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#57534e] hover:border-[#1c1917] hover:text-[#1c1917]'
+                      ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                      : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155] hover:border-[#111827] hover:text-[#111827]'
                   }`}
                 >
                   {pill.label}
@@ -1059,10 +1067,10 @@ export function PlayerFateJourney({
             aria-label="Multi-Year Contract and Extension Timeline Table"
             className={`${desktopBlockClass} overflow-x-auto [container-type:inline-size]`}
           >
-            <table className="w-full min-w-[1080px] border-collapse text-left">
+            <table className="w-full min-w-[1120px] border-collapse text-left">
               <thead>
-                <tr className="border-b-2 border-[#1c1917] text-[11px] uppercase tracking-[0.12em] text-[#57534e]">
-                  <th className="sticky left-0 z-10 bg-[#fcfaf6] py-3 pr-4 w-[290px]">
+                <tr className="border-b-2 border-[#111827] text-xs uppercase tracking-[0.08em] text-[#334155]">
+                  <th className="sticky left-0 z-10 bg-white py-3 pr-4 w-[315px]">
                     {isCurrentState
                       ? `Player (${filteredTimelineRows.length}) · Ext. Likelihood`
                       : `Player (${filteredTimelineRows.length}) · Ext. Likelihood & Quick Actions`}
@@ -1124,27 +1132,27 @@ export function PlayerFateJourney({
 
                   const extBadgeColor =
                     extensionLikelihoodTier === 'HIGH'
-                      ? 'text-[#2d5a43] bg-[#2d5a43]/15 border-[#2d5a43]/40'
+                      ? 'text-[#14532d] bg-[#dcfce7] border-[#16a34a]'
                       : extensionLikelihoodTier === 'MEDIUM'
-                      ? 'text-[#b57c1e] bg-[#b57c1e]/15 border-[#b57c1e]/40'
-                      : 'text-[#8a8379] bg-[#ede8dd] border-[#c7bfb0]';
+                      ? 'text-[#92400e] bg-[#fef3c7] border-[#d97706]'
+                      : 'text-[#334155] bg-[#f1f5f9] border-[#94a3b8]';
 
                   return (
                     <tr
                       key={player.id}
                       className={`group transition-colors ${
                         isNewlySignedFa
-                          ? 'bg-[#2d5a43]/10 hover:bg-[#2d5a43]/15'
-                          : 'hover:bg-[#f6f3ec]'
+                          ? 'bg-[#dcfce7]/50 hover:bg-[#dcfce7]/70'
+                          : 'hover:bg-[#f8fafc]'
                       }`}
                     >
                       {/* Left Sticky Player Identity + Extension Probability Column */}
                       <th
                         scope="row"
-                        className={`sticky left-0 z-10 py-3 pr-4 align-middle font-normal border-r border-[#dfd9cc] ${
+                        className={`sticky left-0 z-10 py-3.5 pr-4 align-middle font-normal border-r border-[#d6d0c4] ${
                           isNewlySignedFa
-                            ? 'bg-[#eef5f0] group-hover:bg-[#e5f0e8] border-l-4 border-l-[#2d5a43] pl-2.5'
-                            : 'bg-[#fcfaf6] group-hover:bg-[#f6f3ec]'
+                            ? 'bg-[#f0fdf4] group-hover:bg-[#dcfce7] border-l-4 border-l-[#15803d] pl-2.5'
+                            : 'bg-white group-hover:bg-[#f8fafc]'
                         }`}
                       >
                         <div className="flex items-start gap-2.5">
@@ -1154,7 +1162,7 @@ export function PlayerFateJourney({
                             size="sm"
                           />
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center justify-between gap-1.5">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -1166,7 +1174,7 @@ export function PlayerFateJourney({
                                         2026
                                       )
                                 }
-                                className="truncate font-semibold text-xs text-[#1c1917] hover:underline text-left cursor-pointer"
+                                className="truncate font-bold text-sm text-[#111827] hover:text-[#1e3a5f] hover:underline text-left cursor-pointer"
                               >
                                 {player.name}
                               </button>
@@ -1179,7 +1187,7 @@ export function PlayerFateJourney({
                                       onClick={() =>
                                         openPlayerDossier(player, baseTeam.id)
                                       }
-                                      className="border border-[#dfd9cc] bg-[#f6f3ec] px-1.5 py-0.5 font-mono-ledger text-[9px] text-[#57534e] hover:border-[#1c1917] hover:text-[#1c1917] cursor-pointer"
+                                      className="border border-[#cbd5e1] bg-[#f8fafc] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#334155] hover:border-[#111827] hover:text-[#111827] cursor-pointer"
                                     >
                                       Dossier
                                     </button>
@@ -1194,7 +1202,7 @@ export function PlayerFateJourney({
                                         })
                                       }
                                       title={`Modify ${player.name} inside Team Builder`}
-                                      className="border border-[#1c1917] bg-[#1c1917] px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-[#f6f3ec] hover:bg-[#2d5a43] hover:border-[#2d5a43] transition-colors cursor-pointer"
+                                      className="border border-[#1e3a5f] bg-[#1e3a5f] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#15803d] hover:border-[#15803d] transition-colors cursor-pointer"
                                     >
                                       Builder →
                                     </button>
@@ -1206,9 +1214,9 @@ export function PlayerFateJourney({
                                         type="button"
                                         onClick={() => removeTransaction(faTxId)}
                                         title="Remove newly signed Free Agent from roster grid"
-                                        className="inline-flex items-center gap-0.5 border border-[#b84a27] bg-[#b84a27] px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-[#f6f3ec] hover:bg-[#9a3c1e] cursor-pointer"
+                                        className="inline-flex items-center gap-0.5 border border-[#b91c1c] bg-[#b91c1c] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#991b1b] cursor-pointer"
                                       >
-                                        <X className="h-2.5 w-2.5" />
+                                        <X className="h-3 w-3" />
                                         <span>Remove FA</span>
                                       </button>
                                     ) : activePlayerTx ? (
@@ -1218,7 +1226,7 @@ export function PlayerFateJourney({
                                           removeTransaction(activePlayerTx.txId)
                                         }
                                         title="Undo move on this player"
-                                        className="inline-flex items-center gap-0.5 border border-[#2d5a43] bg-[#2d5a43] px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-[#f6f3ec] cursor-pointer"
+                                        className="inline-flex items-center gap-0.5 border border-[#15803d] bg-[#15803d] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white cursor-pointer"
                                       >
                                         <span>Undo {activePlayerTx.type}</span>
                                       </button>
@@ -1228,7 +1236,7 @@ export function PlayerFateJourney({
                                       onClick={() =>
                                         openPlayerDossier(player, baseTeam.id)
                                       }
-                                      className="border border-[#dfd9cc] bg-[#f6f3ec] px-1.5 py-0.5 font-mono-ledger text-[9px] text-[#57534e] hover:border-[#1c1917] hover:text-[#1c1917] cursor-pointer"
+                                      className="border border-[#cbd5e1] bg-[#f8fafc] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#334155] hover:border-[#111827] hover:text-[#111827] cursor-pointer"
                                     >
                                       Dossier
                                     </button>
@@ -1237,9 +1245,9 @@ export function PlayerFateJourney({
                               </div>
                             </div>
 
-                            <div className="mt-0.5 font-mono-ledger text-[10px] text-[#57534e]">
-                              {player.position} · Age {player.ageIn2026} · OVR{' '}
-                              {player.overallRating} · ~
+                            <div className="mt-1 font-mono-ledger text-xs font-medium text-[#334155]">
+                              {player.position} · Age {player.ageIn2026} · Rating{' '}
+                              {player.overallRating}/99 · ~
                               {career.expectedRemainingStarterYears} starter yr
                               {career.expectedRemainingStarterYears === 1
                                 ? ''
@@ -1250,22 +1258,22 @@ export function PlayerFateJourney({
                             {/* Extension Likelihood Pill + Mode-Aware Quick Action */}
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               {isNewlySignedFa ? (
-                                <span className="inline-block border border-[#2d5a43] bg-[#2d5a43] px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-[#f6f3ec]">
+                                <span className="inline-block border border-[#15803d] bg-[#15803d] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white">
                                   ★ NEW FA SIGNING
                                 </span>
                               ) : activePlayerTx ? (
-                                <span className="inline-block border border-[#2d5a43] bg-[#2d5a43]/15 px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-[#2d5a43]">
+                                <span className="inline-block border border-[#16a34a] bg-[#dcfce7] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#14532d]">
                                   ✓ {activePlayerTx.label}
                                 </span>
                               ) : (
                                 <>
                                   <span
-                                    className={`inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold ${extBadgeColor}`}
+                                    className={`inline-block border px-2 py-0.5 font-mono-ledger text-[11px] font-semibold ${extBadgeColor}`}
                                   >
                                     {extensionLikelihoodPct}% Ext. Likelihood
                                   </span>
                                   {isCurrentState ? (
-                                    <span className="font-mono-ledger text-[9px] text-[#8a8379]">
+                                    <span className="font-mono-ledger text-[11px] font-medium text-[#475569]">
                                       ~${forecast.projectedMarketApy.toFixed(1)}
                                       M/yr mkt
                                     </span>
@@ -1290,7 +1298,7 @@ export function PlayerFateJourney({
                                             row.lastActiveContractYear
                                           )
                                         }
-                                        className="border border-[#2d5a43]/50 bg-[#2d5a43]/10 px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-[#2d5a43] hover:bg-[#2d5a43] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+                                        className="border border-[#15803d] bg-[#dcfce7] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
                                       >
                                         + 1-Click Extend (~$
                                         {forecast.projectedMarketApy.toFixed(1)}
@@ -1318,7 +1326,7 @@ export function PlayerFateJourney({
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#dfd9cc]/60"
+                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
                             >
                               <button
                                 type="button"
@@ -1336,20 +1344,20 @@ export function PlayerFateJourney({
                                     ? 'Click for Scouting Dossier or open Team Builder to modify.'
                                     : 'Click to open 4-Door options.'
                                 }`}
-                                className={`w-[calc(100%-4px)] h-12 bg-[#1c1917] text-[#f6f3ec] px-2.5 py-1.5 flex flex-col justify-between text-left hover:bg-[#332e2a] transition-colors cursor-pointer ${roundedClass}`}
+                                className={`w-[calc(100%-4px)] h-14 bg-[#1e3a5f] text-white px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#152c4a] transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-xs font-bold">
+                                  <span className="text-xs sm:text-sm font-bold text-white">
                                     {cell.primaryLabel}
                                   </span>
-                                  <span className="text-[9px] text-[#f6f3ec]/70">
+                                  <span className="text-[11px] font-medium text-[#bae6fd]">
                                     Age {cell.age}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between w-full font-mono-ledger text-[9px] text-[#f6f3ec]/80 truncate">
+                                <div className="flex items-center justify-between w-full font-mono-ledger text-[11px] text-[#e2e8f0] truncate">
                                   <span>{cell.secondaryLabel}</span>
                                   {player.isRookieContract && (
-                                    <span className="text-[#7ce0a8]">
+                                    <span className="text-[#86efac] font-semibold">
                                       Rookie
                                     </span>
                                   )}
@@ -1363,7 +1371,7 @@ export function PlayerFateJourney({
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#dfd9cc]/60"
+                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
                             >
                               <button
                                 type="button"
@@ -1377,21 +1385,21 @@ export function PlayerFateJourney({
                                       )
                                 }
                                 title={`${player.name} (${cell.year}): Unguaranteed back-end year. Cutting saves +$${cell.cutSavings?.toFixed(1)}M ($${cell.deadCap?.toFixed(1)}M dead). Click to inspect.`}
-                                className={`w-[calc(100%-4px)] h-12 bg-[#b57c1e]/20 border-y-2 border-[#b57c1e] ${
+                                className={`w-[calc(100%-4px)] h-14 bg-[#fef3c7] border-y-2 border-[#d97706] ${
                                   cell.isStartOfSpan ? 'border-l-2' : ''
                                 } ${
                                   cell.isEndOfSpan ? 'border-r-2' : ''
-                                } text-[#1c1917] px-2.5 py-1.5 flex flex-col justify-between text-left hover:bg-[#b57c1e]/30 transition-colors cursor-pointer ${roundedClass}`}
+                                } text-[#78350f] px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#fde68a] transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-xs font-bold text-[#1c1917]">
+                                  <span className="text-xs sm:text-sm font-bold text-[#78350f]">
                                     {cell.primaryLabel}
                                   </span>
-                                  <span className="text-[9px] text-[#57534e]">
+                                  <span className="text-[11px] font-medium text-[#92400e]">
                                     Age {cell.age}
                                   </span>
                                 </div>
-                                <div className="font-mono-ledger text-[10px] font-semibold text-[#b84a27] truncate">
+                                <div className="font-mono-ledger text-[11px] font-bold text-[#b45309] truncate">
                                   ✂ {cell.secondaryLabel}
                                 </div>
                               </button>
@@ -1403,7 +1411,7 @@ export function PlayerFateJourney({
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#dfd9cc]/60"
+                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
                             >
                               <button
                                 type="button"
@@ -1421,25 +1429,25 @@ export function PlayerFateJourney({
                                     ? `${player.name} projected extension window (${extensionLikelihoodPct}% likelihood, ~$${forecast.projectedMarketApy.toFixed(1)}M/yr). Click for Dossier.`
                                     : `Click to model an extension for ${player.name} (${extensionLikelihoodPct}% Extension Likelihood at ~$${forecast.projectedMarketApy.toFixed(1)}M/yr)`
                                 }
-                                className={`w-[calc(100%-4px)] h-12 bg-[#2d5a43]/15 border-y-2 border-dashed border-[#2d5a43] ${
+                                className={`w-[calc(100%-4px)] h-14 bg-[#dcfce7] border-y-2 border-dashed border-[#15803d] ${
                                   cell.isStartOfSpan ? 'border-l-2' : ''
                                 } ${
                                   cell.isEndOfSpan ? 'border-r-2' : ''
-                                } text-[#2d5a43] px-2.5 py-1.5 flex flex-col justify-between text-left hover:bg-[#2d5a43]/25 transition-colors cursor-pointer ${roundedClass}`}
+                                } text-[#14532d] px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#bbf7d0] transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-[11px] font-bold">
+                                  <span className="text-xs font-bold text-[#14532d]">
                                     {cell.isStartOfSpan
                                       ? `${extensionLikelihoodPct}% Ext. Box`
                                       : `Ext. Yr (Age ${cell.age})`}
                                   </span>
                                   {cell.isStartOfSpan && (
-                                    <span className="text-[9px] text-[#2d5a43]/80">
+                                    <span className="text-[11px] font-medium text-[#166534]">
                                       Age {cell.age}
                                     </span>
                                   )}
                                 </div>
-                                <div className="font-mono-ledger text-[10px] font-medium text-[#1c1917] truncate">
+                                <div className="font-mono-ledger text-[11px] font-semibold text-[#14532d] truncate">
                                   {cell.secondaryLabel}
                                 </div>
                               </button>
@@ -1451,7 +1459,7 @@ export function PlayerFateJourney({
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#dfd9cc]/60"
+                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
                             >
                               <button
                                 type="button"
@@ -1464,17 +1472,17 @@ export function PlayerFateJourney({
                                         row.lastActiveContractYear
                                       )
                                 }
-                                className={`w-[calc(100%-4px)] h-12 bg-[#b84a27]/12 border border-dashed border-[#b84a27] px-2.5 py-1.5 flex flex-col justify-between text-left hover:bg-[#b84a27]/20 transition-colors cursor-pointer ${roundedClass}`}
+                                className={`w-[calc(100%-4px)] h-14 bg-[#fee2e2] border border-dashed border-[#dc2626] px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#fecaca] transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-[11px] font-semibold text-[#b84a27]">
+                                  <span className="text-xs font-bold text-[#991b1b]">
                                     {cell.primaryLabel}
                                   </span>
-                                  <span className="text-[9px] text-[#57534e]">
+                                  <span className="text-[11px] text-[#7f1d1d]">
                                     Age {cell.age}
                                   </span>
                                 </div>
-                                <div className="font-mono-ledger text-[9px] text-[#57534e] truncate">
+                                <div className="font-mono-ledger text-[11px] font-medium text-[#991b1b] truncate">
                                   Ghost Bill Accelerates
                                 </div>
                               </button>
@@ -1486,13 +1494,13 @@ export function PlayerFateJourney({
                         return (
                           <td
                             key={cell.year}
-                            className="py-2.5 px-1 align-middle border-l border-[#dfd9cc]/60"
+                            className="py-2.5 px-1 align-middle border-l border-[#e2e8f0]"
                           >
-                            <div className="h-12 border border-dotted border-[#dfd9cc] bg-[#f6f3ec]/60 px-2 py-1.5 flex flex-col justify-between text-left opacity-70">
-                              <div className="flex items-baseline justify-between font-mono-ledger text-[10px] text-[#8a8379]">
+                            <div className="h-14 border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-2.5 py-1.5 flex flex-col justify-between text-left">
+                              <div className="flex items-baseline justify-between font-mono-ledger text-[11px] font-medium text-[#475569]">
                                 <span>{cell.primaryLabel}</span>
                               </div>
-                              <div className="font-mono-ledger text-[9px] text-[#8a8379]">
+                              <div className="font-mono-ledger text-[10px] text-[#64748b]">
                                 {cell.secondaryLabel}
                               </div>
                             </div>
@@ -1529,18 +1537,18 @@ export function PlayerFateJourney({
 
               const extBadgeColor =
                 extensionLikelihoodTier === 'HIGH'
-                  ? 'text-[#2d5a43] bg-[#2d5a43]/15 border-[#2d5a43]/40'
+                  ? 'text-[#14532d] bg-[#dcfce7] border-[#16a34a]'
                   : extensionLikelihoodTier === 'MEDIUM'
-                  ? 'text-[#b57c1e] bg-[#b57c1e]/15 border-[#b57c1e]/40'
-                  : 'text-[#8a8379] bg-[#ede8dd] border-[#c7bfb0]';
+                  ? 'text-[#92400e] bg-[#fef3c7] border-[#d97706]'
+                  : 'text-[#334155] bg-[#f1f5f9] border-[#94a3b8]';
 
               return (
                 <div
                   key={`mob-${player.id}`}
                   className={`border p-3.5 space-y-3 transition-colors ${
                     isNewlySignedFa
-                      ? 'border-2 border-[#2d5a43] bg-[#eef5f0]'
-                      : 'border-[#dfd9cc] bg-[#f6f3ec]'
+                      ? 'border-2 border-[#15803d] bg-[#f0fdf4]'
+                      : 'border-[#d6d0c4] bg-white'
                   }`}
                 >
                   {/* Card Row 1: Identity + Extension Probability Pill + Dossier */}
@@ -1564,16 +1572,16 @@ export function PlayerFateJourney({
                         size="sm"
                       />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate font-editorial text-base text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate font-editorial text-base font-bold text-[#111827] underline decoration-[#94a3b8] underline-offset-2">
                             {player.name}
                           </span>
-                          <span className="shrink-0 border border-[#dfd9cc] bg-[#fcfaf6] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#1c1917]">
-                            {player.position} · Age {player.ageIn2026} · OVR{' '}
-                            {player.overallRating}
+                          <span className="shrink-0 border border-[#cbd5e1] bg-[#f8fafc] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#111827]">
+                            {player.position} · Age {player.ageIn2026} · Rating{' '}
+                            {player.overallRating}/99
                           </span>
                         </div>
-                        <div className="mt-0.5 font-mono-ledger text-[10px] text-[#57534e]">
+                        <div className="mt-0.5 font-mono-ledger text-xs font-medium text-[#334155]">
                           ~{career.expectedRemainingStarterYears} starter yr
                           {career.expectedRemainingStarterYears === 1
                             ? ''
@@ -1586,16 +1594,16 @@ export function PlayerFateJourney({
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       {isNewlySignedFa ? (
-                        <span className="border border-[#2d5a43] bg-[#2d5a43] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#f6f3ec]">
+                        <span className="border border-[#15803d] bg-[#15803d] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-white">
                           ★ NEW FA
                         </span>
                       ) : activePlayerTx ? (
-                        <span className="border border-[#2d5a43] bg-[#2d5a43]/15 px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#2d5a43]">
+                        <span className="border border-[#16a34a] bg-[#dcfce7] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#14532d]">
                           ✓ {activePlayerTx.type}
                         </span>
                       ) : (
                         <span
-                          className={`border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${extBadgeColor}`}
+                          className={`border px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${extBadgeColor}`}
                         >
                           {extensionLikelihoodPct}% Ext.
                         </span>
@@ -1603,7 +1611,7 @@ export function PlayerFateJourney({
                       <button
                         type="button"
                         onClick={() => openPlayerDossier(player, baseTeam.id)}
-                        className="border border-[#dfd9cc] bg-[#fcfaf6] px-1.5 py-0.5 font-mono-ledger text-[9px] text-[#57534e]"
+                        className="border border-[#cbd5e1] bg-[#f8fafc] px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-[#334155]"
                       >
                         Dossier
                       </button>
@@ -1618,26 +1626,26 @@ export function PlayerFateJourney({
                       const shortYr = `'${String(cell.year).slice(2)}`;
 
                       let boxStyle =
-                        'border border-dotted border-[#dfd9cc] bg-[#fcfaf6]/70 text-[#8a8379]';
+                        'border border-dashed border-[#cbd5e1] bg-[#f8fafc] text-[#475569]';
                       let statusShort = 'UFA';
 
                       if (cell.segmentType === 'LOCKED_CONTRACT') {
                         boxStyle =
-                          'bg-[#1c1917] text-[#f6f3ec] border border-[#1c1917]';
+                          'bg-[#1e3a5f] text-white border border-[#1e3a5f]';
                         statusShort = `$${(cell.capHit ?? 0).toFixed(1)}M`;
                       } else if (cell.segmentType === 'PAPER_CUT_RISK') {
                         boxStyle =
-                          'bg-[#b57c1e]/20 text-[#1c1917] border-2 border-[#b57c1e]';
+                          'bg-[#fef3c7] text-[#78350f] border-2 border-[#d97706]';
                         statusShort = `✂$${(cell.capHit ?? 0).toFixed(0)}M`;
                       } else if (cell.segmentType === 'EXTENSION_WINDOW') {
                         boxStyle =
-                          'bg-[#2d5a43]/15 text-[#2d5a43] border-2 border-dashed border-[#2d5a43]';
+                          'bg-[#dcfce7] text-[#14532d] border-2 border-dashed border-[#15803d]';
                         statusShort = cell.isStartOfSpan
                           ? `${extensionLikelihoodPct}% Ext`
                           : `~$${forecast.projectedMarketApy.toFixed(0)}M`;
                       } else if (cell.segmentType === 'VOID_GHOST_BILL') {
                         boxStyle =
-                          'bg-[#b84a27]/15 text-[#b84a27] border border-dashed border-[#b84a27]';
+                          'bg-[#fee2e2] text-[#991b1b] border border-dashed border-[#dc2626]';
                         statusShort = `Void`;
                       } else if (cell.isAtOrPastCliff) {
                         statusShort = `Cliff`;
@@ -1660,12 +1668,12 @@ export function PlayerFateJourney({
                                   targetActionYear
                                 )
                           }
-                          className={`flex flex-col items-center justify-between py-1.5 px-1 text-center font-mono-ledger transition-opacity active:opacity-80 cursor-pointer ${boxStyle}`}
+                          className={`flex flex-col items-center justify-between py-2 px-1 text-center font-mono-ledger transition-opacity active:opacity-80 cursor-pointer ${boxStyle}`}
                         >
-                          <span className="text-[9px] opacity-75">
+                          <span className="text-[10px] opacity-85">
                             {shortYr} · {cell.age}y
                           </span>
-                          <span className="mt-0.5 text-[10px] font-bold leading-tight truncate max-w-full">
+                          <span className="mt-0.5 text-[11px] font-bold leading-tight truncate max-w-full">
                             {statusShort}
                           </span>
                         </button>
@@ -2286,16 +2294,16 @@ export function PlayerFateJourney({
                   <tr
                     key={row.position}
                     className={`transition-colors ${
-                      isSelectedPos ? 'bg-[#ede8dd]' : 'hover:bg-[#f6f3ec]'
+                      isSelectedPos ? 'bg-[#ebe6dc]' : 'hover:bg-[#f8fafc]'
                     }`}
                   >
-                    <th scope="row" className="py-3 pr-4 align-middle">
+                    <th scope="row" className="py-3.5 pr-4 align-middle">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <div className="font-mono-ledger text-xs font-bold text-[#1c1917]">
+                          <div className="font-mono-ledger text-sm font-bold text-[#111827]">
                             {row.label}
                           </div>
-                          <div className="font-mono-ledger text-[10px] font-normal text-[#8a8379]">
+                          <div className="font-mono-ledger text-xs font-medium text-[#475569]">
                             Target: {row.targetStarters} Starter
                             {row.targetStarters > 1 ? 's' : ''} /{' '}
                             {row.targetDepth} Total
@@ -2308,15 +2316,15 @@ export function PlayerFateJourney({
                       const cell = row.cellsByYear[yr];
                       const cellStyle =
                         cell.urgency === 'CRITICAL_NEED'
-                          ? 'bg-[#b84a27]/14 border-[#b84a27] text-[#b84a27]'
+                          ? 'bg-[#fee2e2] border-[#dc2626] text-[#991b1b]'
                           : cell.urgency === 'DEPTH_NEED'
-                          ? 'bg-[#b57c1e]/15 border-[#b57c1e] text-[#9a6512]'
-                          : 'bg-[#2d5a43]/12 border-[#2d5a43]/50 text-[#2d5a43]';
+                          ? 'bg-[#fef3c7] border-[#d97706] text-[#92400e]'
+                          : 'bg-[#dcfce7] border-[#16a34a] text-[#14532d]';
 
                       return (
                         <td
                           key={yr}
-                          className="py-2 px-2 align-top border-l border-[#dfd9cc]"
+                          className="py-2 px-2 align-top border-l border-[#d6d0c4]"
                         >
                           <button
                             type="button"
@@ -2336,31 +2344,31 @@ export function PlayerFateJourney({
                                   el.scrollIntoView({ behavior: 'smooth' });
                               }
                             }}
-                            className={`w-full border p-2 text-left transition-all hover:border-[#1c1917] cursor-pointer ${cellStyle}`}
+                            className={`w-full border p-2.5 text-left transition-all hover:border-[#111827] cursor-pointer ${cellStyle}`}
                           >
                             <div className="flex items-center justify-between gap-1 font-mono-ledger">
-                              <span className="text-[11px] font-bold uppercase tracking-[0.04em]">
+                              <span className="text-xs font-bold uppercase tracking-[0.04em]">
                                 {cell.badgeLabel}
                               </span>
-                              <span className="text-[10px] font-semibold text-[#1c1917]">
+                              <span className="text-xs font-bold text-[#111827]">
                                 {cell.startersUnderContract}/
                                 {cell.targetStarters} St
                               </span>
                             </div>
-                            <div className="mt-0.5 font-mono-ledger text-[10px] text-[#57534e]">
+                            <div className="mt-1 font-mono-ledger text-[11px] font-medium text-[#1e293b]">
                               {cell.subLabel}
                             </div>
                             {cell.topPlayers.length > 0 ? (
-                              <div className="mt-1 truncate font-mono-ledger text-[9px] text-[#44403c]">
+                              <div className="mt-1 truncate font-mono-ledger text-[11px] font-medium text-[#1e293b]">
                                 {cell.topPlayers.slice(0, 2).join(', ')}
                               </div>
                             ) : (
-                              <div className="mt-1 font-mono-ledger text-[9px] font-semibold text-[#b84a27]">
+                              <div className="mt-1 font-mono-ledger text-[11px] font-bold text-[#991b1b]">
                                 0 Players Signed!
                               </div>
                             )}
                             {cell.expiringAfterPrevYear.length > 0 && (
-                              <div className="mt-0.5 truncate font-mono-ledger text-[9px] text-[#b84a27]">
+                              <div className="mt-0.5 truncate font-mono-ledger text-[11px] font-semibold text-[#991b1b]">
                                 Lost: {cell.expiringAfterPrevYear[0]}
                                 {cell.expiringAfterPrevYear.length > 1
                                   ? ` +${cell.expiringAfterPrevYear.length - 1}`
@@ -2487,15 +2495,15 @@ export function PlayerFateJourney({
                   )}
                 </div>
 
-                <div className="grid grid-cols-4 gap-1">
+                <div className="grid grid-cols-4 gap-1.5">
                   {LEAGUE_YEARS.map((yr) => {
                     const cell = row.cellsByYear[yr];
                     const cellStyle =
                       cell.urgency === 'CRITICAL_NEED'
-                        ? 'bg-[#b84a27]/15 border-[#b84a27] text-[#b84a27]'
+                        ? 'bg-[#fee2e2] border-[#dc2626] text-[#991b1b]'
                         : cell.urgency === 'DEPTH_NEED'
-                        ? 'bg-[#b57c1e]/15 border-[#b57c1e] text-[#9a6512]'
-                        : 'bg-[#2d5a43]/15 border-[#2d5a43]/50 text-[#2d5a43]';
+                        ? 'bg-[#fef3c7] border-[#d97706] text-[#92400e]'
+                        : 'bg-[#dcfce7] border-[#16a34a] text-[#14532d]';
                     return (
                       <button
                         key={yr}
@@ -2515,13 +2523,13 @@ export function PlayerFateJourney({
                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                           }
                         }}
-                        className={`flex flex-col items-center justify-between border py-1.5 px-1 text-center font-mono-ledger ${cellStyle}`}
+                        className={`flex flex-col items-center justify-between border py-2 px-1 text-center font-mono-ledger ${cellStyle}`}
                       >
-                        <span className="text-[9px] font-bold text-[#1c1917]">
+                        <span className="text-[10px] font-bold text-[#111827]">
                           {yr} ({cell.startersUnderContract}/
                           {cell.targetStarters} St)
                         </span>
-                        <span className="mt-0.5 text-[9px] font-bold uppercase leading-tight truncate max-w-full">
+                        <span className="mt-0.5 text-[10px] font-bold uppercase leading-tight truncate max-w-full">
                           {cell.urgency === 'CRITICAL_NEED'
                             ? 'Need Starter'
                             : cell.urgency === 'DEPTH_NEED'
@@ -2845,29 +2853,29 @@ export function PlayerFateJourney({
                         />
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-semibold text-xs text-[#1c1917]">
+                            <span className="font-bold text-sm text-[#111827]">
                               {fa.name}
                             </span>
-                            <span className="border border-[#dfd9cc] bg-[#f6f3ec] px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-[#1c1917]">
-                              {fa.position} · Age {fa.ageIn2026} · OVR{' '}
-                              {fa.overallRating}
+                            <span className="border border-[#cbd5e1] bg-[#f8fafc] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#334155]">
+                              {fa.position} · Age {fa.ageIn2026} · Rating{' '}
+                              {fa.overallRating}/99
                             </span>
                             {isNeedPos && (
-                              <span className="border border-[#b84a27] bg-[#b84a27]/10 px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#b84a27]">
+                              <span className="border border-[#dc2626] bg-[#fee2e2] px-2 py-0.5 font-mono-ledger text-[11px] font-bold text-[#991b1b]">
                                 Fills {fa.position} Need
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 font-mono-ledger text-[10px]">
-                            <span className="text-[#57534e]">
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 font-mono-ledger text-xs">
+                            <span className="text-[#334155] font-medium">
                               From {fa.previousTeam}
                             </span>
                             <span>·</span>
                             <span
                               className={
                                 evalResult.countsTowardCompFormula
-                                  ? 'text-[#b57c1e] font-semibold'
-                                  : 'text-[#2d5a43] font-semibold'
+                                  ? 'text-[#b45309] font-semibold'
+                                  : 'text-[#15803d] font-semibold'
                               }
                             >
                               {evalResult.countsTowardCompFormula
@@ -2879,16 +2887,16 @@ export function PlayerFateJourney({
                       </div>
                     </th>
 
-                    <td className="py-2.5 px-3 align-middle border-l border-[#dfd9cc] font-mono-ledger">
-                      <div className="text-xs font-bold text-[#1c1917]">
+                    <td className="py-2.5 px-3 align-middle border-l border-[#d6d0c4] font-mono-ledger">
+                      <div className="text-xs sm:text-sm font-bold text-[#111827]">
                         {fa.marketYears} yrs · $
                         {(fa.marketYears * fa.marketApy).toFixed(1)}M
                       </div>
-                      <div className="text-[10px] text-[#57534e]">
+                      <div className="text-xs font-medium text-[#334155]">
                         ${fa.marketApy.toFixed(1)}M/yr ·{' '}
                         {Math.round(fa.marketGuaranteedPct * 100)}% Gtd
                       </div>
-                      <div className="mt-0.5 text-[9px] text-[#2d5a43] font-semibold">
+                      <div className="mt-0.5 text-[11px] text-[#15803d] font-semibold">
                         {evalResult.availabilityProbability}% Market Prob.
                       </div>
                     </td>
@@ -2900,9 +2908,9 @@ export function PlayerFateJourney({
                         return (
                           <td
                             key={yr}
-                            className="py-2 px-1.5 align-middle border-l border-[#dfd9cc] text-center"
+                            className="py-2 px-1.5 align-middle border-l border-[#d6d0c4] text-center"
                           >
-                            <div className="h-10 border border-dotted border-[#dfd9cc] bg-[#f6f3ec]/50 flex items-center justify-center font-mono-ledger text-[9px] text-[#8a8379]">
+                            <div className="h-12 border border-dashed border-[#cbd5e1] bg-[#f8fafc] flex items-center justify-center font-mono-ledger text-[11px] font-medium text-[#475569]">
                               Off Deal
                             </div>
                           </td>
@@ -2911,19 +2919,19 @@ export function PlayerFateJourney({
                       return (
                         <td
                           key={yr}
-                          className="py-2 px-1 align-middle border-l border-[#dfd9cc]"
+                          className="py-2 px-1 align-middle border-l border-[#d6d0c4]"
                         >
                           <div
-                            className={`h-10 px-2 py-1 flex flex-col justify-between font-mono-ledger ${
+                            className={`h-12 px-2.5 py-1.5 flex flex-col justify-between font-mono-ledger ${
                               isAdded
-                                ? 'bg-[#2d5a43] text-[#f6f3ec]'
-                                : 'bg-[#1c1917]/90 text-[#f6f3ec]'
+                                ? 'bg-[#15803d] text-white'
+                                : 'bg-[#1e3a5f] text-white'
                             }`}
                           >
-                            <span className="text-[11px] font-bold">
+                            <span className="text-xs font-bold">
                               ${hit.toFixed(1)}M
                             </span>
-                            <span className="text-[9px] text-[#f6f3ec]/75">
+                            <span className="text-[11px] text-[#e2e8f0]">
                               {cy.guaranteedSalary > 0 ? 'Gtd Yr' : 'Ungtd Yr'}
                             </span>
                           </div>
@@ -3005,26 +3013,26 @@ export function PlayerFateJourney({
                     />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-semibold text-sm text-[#1c1917]">
+                        <span className="font-bold text-sm text-[#111827]">
                           {fa.name}
                         </span>
-                        <span className="border border-[#dfd9cc] bg-[#fcfaf6] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#1c1917]">
-                          {fa.position} · Age {fa.ageIn2026} · OVR{' '}
-                          {fa.overallRating}
+                        <span className="border border-[#cbd5e1] bg-[#f8fafc] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#334155]">
+                          {fa.position} · Age {fa.ageIn2026} · Rating{' '}
+                          {fa.overallRating}/99
                         </span>
                         {isNeedPos && (
-                          <span className="border border-[#b84a27] bg-[#b84a27]/10 px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#b84a27]">
+                          <span className="border border-[#dc2626] bg-[#fee2e2] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#991b1b]">
                             Fills {fa.position} Need
                           </span>
                         )}
                       </div>
-                      <div className="mt-0.5 font-mono-ledger text-[10px] text-[#57534e]">
+                      <div className="mt-0.5 font-mono-ledger text-xs font-medium text-[#334155]">
                         From {fa.previousTeam} ·{' '}
                         <span
                           className={
                             evalResult.countsTowardCompFormula
-                              ? 'text-[#b57c1e] font-semibold'
-                              : 'text-[#2d5a43] font-semibold'
+                              ? 'text-[#b45309] font-semibold'
+                              : 'text-[#15803d] font-semibold'
                           }
                         >
                           {evalResult.countsTowardCompFormula
@@ -3036,11 +3044,11 @@ export function PlayerFateJourney({
                   </div>
 
                   <div className="text-right font-mono-ledger shrink-0">
-                    <div className="text-xs font-bold text-[#1c1917]">
+                    <div className="text-xs font-bold text-[#111827]">
                       {fa.marketYears}yr · $
                       {(fa.marketYears * fa.marketApy).toFixed(1)}M
                     </div>
-                    <div className="text-[10px] text-[#2d5a43] font-semibold">
+                    <div className="text-[11px] text-[#15803d] font-semibold">
                       ${fa.marketApy.toFixed(1)}M/yr
                     </div>
                   </div>
@@ -3055,7 +3063,7 @@ export function PlayerFateJourney({
                       return (
                         <div
                           key={yr}
-                          className="border border-dotted border-[#dfd9cc] bg-[#fcfaf6]/60 py-1 px-1 text-center font-mono-ledger text-[9px] text-[#8a8379]"
+                          className="border border-dashed border-[#cbd5e1] bg-[#f8fafc] py-1.5 px-1 text-center font-mono-ledger text-[10px] font-medium text-[#475569]"
                         >
                           <div>{yr}</div>
                           <div>Off Deal</div>
@@ -3065,10 +3073,10 @@ export function PlayerFateJourney({
                     return (
                       <div
                         key={yr}
-                        className={`py-1 px-1.5 text-center font-mono-ledger ${
+                        className={`py-1.5 px-1.5 text-center font-mono-ledger ${
                           isAdded
-                            ? 'bg-[#2d5a43] text-[#f6f3ec]'
-                            : 'bg-[#1c1917] text-[#f6f3ec]'
+                            ? 'bg-[#15803d] text-white'
+                            : 'bg-[#1e3a5f] text-white'
                         }`}
                       >
                         <div className="text-[9px] opacity-75">{yr}</div>

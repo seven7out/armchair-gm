@@ -2,17 +2,17 @@
 
 :root {
   color-scheme: light;
-  --paper: #f6f3ec;
-  --paper-elevated: #fcfaf6;
-  --paper-muted: #ede8dd;
-  --ink: #1c1917;
-  --ink-secondary: #57534e;
-  --ink-muted: #8a8379;
-  --rule: #dfd9cc;
-  --rule-strong: #c7bfb0;
-  --forest: #2d5a43;
-  --terracotta: #b84a27;
-  --ochre: #b57c1e;
+  --paper: #f7f5f0;
+  --paper-elevated: #ffffff;
+  --paper-muted: #ebe6dc;
+  --ink: #111827;
+  --ink-secondary: #334155;
+  --ink-muted: #475569;
+  --rule: #d6d0c4;
+  --rule-strong: #94a3b8;
+  --forest: #15803d;
+  --terracotta: #b91c1c;
+  --ochre: #b45309;
 }
 
 body {

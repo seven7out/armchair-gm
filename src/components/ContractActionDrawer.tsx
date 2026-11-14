@@ -206,9 +206,10 @@ export function ContractActionDrawer() {
             size="lg"
           />
           <div>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[#8a8379]">
-              {player.position} · Age {player.ageIn2026} · OVR {player.overallRating}{' '}
-              · {player.accruedSeasons} Accrued Seasons
+            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#475569]">
+              {player.position} · Age {player.ageIn2026} · Rating{' '}
+              {player.overallRating}/99 · {player.accruedSeasons} Accrued
+              Seasons
             </div>
             <h2 id={titleId} className="font-editorial mt-1 text-2xl text-[#1c1917]">
               {player.name}

@@ -159,23 +159,23 @@ export function CapHorizonHeader() {
           {/* Center Navigation — 2 Primary Modes Switcher (Desktop md+) */}
           <nav
             aria-label="Primary Modes"
-            className="hidden md:flex items-center border-2 border-[#1c1917] bg-[#fcfaf6] p-0.5"
+            className="hidden md:flex items-center border-2 border-[#111827] bg-white p-0.5"
           >
             <button
               type="button"
               onClick={() => setActiveTab('player-fate')}
               className={`flex flex-col items-start px-3.5 py-1.5 text-left transition-colors cursor-pointer ${
                 isCurrentStateMode
-                  ? 'bg-[#1c1917] text-[#f6f3ec]'
-                  : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                  ? 'bg-[#1e3a5f] text-white'
+                  : 'text-[#111827] hover:bg-[#f1f5f9]'
               }`}
             >
-              <div className="flex items-center gap-1.5 text-xs font-semibold tracking-tight">
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold tracking-tight">
                 <span
-                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full font-mono-ledger text-[10px] ${
+                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full font-mono-ledger text-xs ${
                     isCurrentStateMode
-                      ? 'bg-[#f6f3ec] text-[#1c1917]'
-                      : 'bg-[#ede8dd] text-[#57534e]'
+                      ? 'bg-white text-[#1e3a5f]'
+                      : 'bg-[#e2e8f0] text-[#334155]'
                   }`}
                 >
                   1
@@ -183,8 +183,8 @@ export function CapHorizonHeader() {
                 <span>Roster Grid &amp; Needs</span>
               </div>
               <span
-                className={`text-[9px] uppercase tracking-[0.08em] ${
-                  isCurrentStateMode ? 'text-[#f6f3ec]/75' : 'text-[#8a8379]'
+                className={`text-[11px] font-medium tracking-[0.02em] ${
+                  isCurrentStateMode ? 'text-[#e2e8f0]' : 'text-[#475569]'
                 }`}
               >
                 Current State (2026–2031)
@@ -198,18 +198,18 @@ export function CapHorizonHeader() {
                   setActiveTab('team-builder');
                 }
               }}
-              className={`flex flex-col items-start px-3.5 py-1.5 text-left transition-colors cursor-pointer border-l border-[#dfd9cc] ${
+              className={`flex flex-col items-start px-3.5 py-1.5 text-left transition-colors cursor-pointer border-l border-[#d6d0c4] ${
                 !isCurrentStateMode
-                  ? 'bg-[#1c1917] text-[#f6f3ec]'
-                  : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                  ? 'bg-[#15803d] text-white'
+                  : 'text-[#111827] hover:bg-[#f1f5f9]'
               }`}
             >
-              <div className="flex items-center gap-1.5 text-xs font-semibold tracking-tight">
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold tracking-tight">
                 <span
-                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full font-mono-ledger text-[10px] ${
+                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full font-mono-ledger text-xs ${
                     !isCurrentStateMode
-                      ? 'bg-[#2d5a43] text-[#f6f3ec]'
-                      : 'bg-[#2d5a43]/15 text-[#2d5a43]'
+                      ? 'bg-white text-[#15803d]'
+                      : 'bg-[#dcfce7] text-[#15803d]'
                   }`}
                 >
                   2
@@ -217,10 +217,10 @@ export function CapHorizonHeader() {
                 <span>Team Builder</span>
                 {enabledCount > 0 && (
                   <span
-                    className={`ml-1 px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${
+                    className={`ml-1 px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${
                       !isCurrentStateMode
-                        ? 'bg-[#2d5a43] text-[#f6f3ec]'
-                        : 'bg-[#2d5a43] text-[#f6f3ec]'
+                        ? 'bg-white text-[#15803d]'
+                        : 'bg-[#15803d] text-white'
                     }`}
                   >
                     {enabledCount} Move{enabledCount === 1 ? '' : 's'}
@@ -228,8 +228,8 @@ export function CapHorizonHeader() {
                 )}
               </div>
               <span
-                className={`text-[9px] uppercase tracking-[0.08em] ${
-                  !isCurrentStateMode ? 'text-[#f6f3ec]/75' : 'text-[#8a8379]'
+                className={`text-[11px] font-medium tracking-[0.02em] ${
+                  !isCurrentStateMode ? 'text-[#dcfce7]' : 'text-[#475569]'
                 }`}
               >
                 Modify Roster, Add FAs, Trade &amp; Project Cap
@@ -401,8 +401,8 @@ export function CapHorizonHeader() {
         )}
 
         {/* MOBILE COMPACT 4-YEAR CAP PILL STRIP (Visible on Phone <768px so sticky header stays slim) */}
-        <div className="md:hidden px-3 py-1.5 bg-[#fcfaf6] border-b border-[#dfd9cc]">
-          <div className="grid grid-cols-5 items-center gap-1">
+        <div className="md:hidden px-3 py-2 bg-white border-b border-[#d6d0c4]">
+          <div className="grid grid-cols-5 items-center gap-1.5">
             {LEAGUE_YEARS.map((year) => {
               const yData = displayCapState.years[year];
               const isOverCap = yData.effectiveCapSpace < 0;
@@ -414,15 +414,15 @@ export function CapHorizonHeader() {
                     setShowMobileCapDetails(true);
                     setReceiptYear((prev) => (prev === year ? null : year));
                   }}
-                  className="flex flex-col items-center border border-[#dfd9cc] bg-[#f6f3ec] py-1 px-1 text-center"
+                  className="flex flex-col items-center border border-[#d6d0c4] bg-[#f7f5f0] py-1.5 px-1 text-center"
                 >
-                  <span className="font-mono-ledger text-[9px] font-semibold text-[#8a8379]">
+                  <span className="font-mono-ledger text-[11px] font-semibold text-[#334155]">
                     &apos;{String(year).slice(2)}{' '}
                     {isCurrentStateMode ? 'Now' : 'Proj'}
                   </span>
                   <span
-                    className={`font-mono-ledger text-[11px] font-bold ${
-                      isOverCap ? 'text-[#b84a27]' : 'text-[#2d5a43]'
+                    className={`font-mono-ledger text-xs font-bold ${
+                      isOverCap ? 'text-[#b91c1c]' : 'text-[#15803d]'
                     }`}
                   >
                     {isOverCap ? '−$' : '+$'}
@@ -434,7 +434,7 @@ export function CapHorizonHeader() {
             <button
               type="button"
               onClick={() => setShowMobileCapDetails((v) => !v)}
-              className="flex flex-col items-center justify-center h-full border border-[#1c1917] bg-[#1c1917] py-1 px-1 text-[9px] font-semibold text-[#f6f3ec]"
+              className="flex flex-col items-center justify-center h-full border border-[#111827] bg-[#1e3a5f] py-1.5 px-1 text-[11px] font-semibold text-white"
             >
               <span>Details</span>
               <span>{showMobileCapDetails ? '▲' : '▼'}</span>
@@ -448,8 +448,8 @@ export function CapHorizonHeader() {
             showMobileCapDetails ? 'block' : 'hidden md:block'
           }`}
         >
-        <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-[#dfd9cc]">
-          {LEAGUE_YEARS.map((year, idx) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 py-3">
+          {LEAGUE_YEARS.map((year) => {
             const yData = displayCapState.years[year];
             const baseYearData = baselineState.years[year];
             const deltaVsCurrent =
@@ -470,20 +470,14 @@ export function CapHorizonHeader() {
             return (
               <div
                 key={year}
-                className={`py-3 ${
-                  idx === 0
-                    ? 'lg:pr-6'
-                    : idx === 3
-                    ? 'lg:pl-6'
-                    : 'lg:px-6'
-                }`}
+                className="border border-[#d6d0c4] bg-white px-4 py-3 shadow-2xs"
               >
-                <div className="flex items-baseline justify-between">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-editorial text-lg text-[#1c1917]">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="flex items-baseline gap-2 min-w-0">
+                    <span className="font-editorial text-xl font-bold text-[#111827]">
                       {year}
                     </span>
-                    <span className="font-mono-ledger text-[11px] text-[#8a8379]">
+                    <span className="font-mono-ledger text-xs font-medium text-[#475569]">
                       <JargonTip term="ADJUSTED_CAP">
                         Limit ${yData.adjustedCapCeiling.toFixed(1)}M
                       </JargonTip>
@@ -491,21 +485,21 @@ export function CapHorizonHeader() {
                   </div>
 
                   {ledgerMode === 'CAP' ? (
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <button
                         type="button"
                         onClick={() =>
                           setReceiptYear((prev) => (prev === year ? null : year))
                         }
                         title="Click to see exact Spendable Now math receipt & why sites disagree"
-                        className={`font-mono-ledger text-base font-semibold underline decoration-dotted underline-offset-4 cursor-pointer ${
-                          isOverCap ? 'text-[#b84a27]' : 'text-[#2d5a43]'
+                        className={`font-mono-ledger text-lg sm:text-xl font-bold underline decoration-dotted underline-offset-4 cursor-pointer ${
+                          isOverCap ? 'text-[#b91c1c]' : 'text-[#15803d]'
                         }`}
                       >
                         {isOverCap ? '−$' : '+$'}
                         {Math.abs(yData.effectiveCapSpace).toFixed(2)}M
                       </button>
-                      <div className="text-[9px] uppercase tracking-[0.1em] text-[#8a8379]">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#475569]">
                         {isReceiptOpen
                           ? 'Hide Receipt ▲'
                           : isCurrentStateMode
@@ -516,10 +510,10 @@ export function CapHorizonHeader() {
                         enabledCount > 0 &&
                         Math.abs(deltaVsCurrent) >= 0.05 && (
                           <div
-                            className={`mt-0.5 font-mono-ledger text-[10px] font-semibold ${
+                            className={`mt-0.5 font-mono-ledger text-[11px] font-semibold ${
                               deltaVsCurrent >= 0
-                                ? 'text-[#2d5a43]'
-                                : 'text-[#b84a27]'
+                                ? 'text-[#15803d]'
+                                : 'text-[#b91c1c]'
                             }`}
                           >
                             Was {baseYearData.effectiveCapSpace >= 0 ? '+$' : '−$'}
@@ -530,7 +524,7 @@ export function CapHorizonHeader() {
                         )}
                     </div>
                   ) : (
-                    <span className="font-mono-ledger text-base font-semibold text-[#1c1917]">
+                    <span className="font-mono-ledger text-lg font-bold text-[#111827]">
                       <JargonTip term="CASH_SPEND">
                         Cash ${yData.totalCashSpend.toFixed(1)}M
                       </JargonTip>
@@ -539,24 +533,24 @@ export function CapHorizonHeader() {
                 </div>
 
                 {/* Single hairline progress rule */}
-                <div className="mt-1.5 h-1.5 w-full bg-[#e5dfd3] overflow-hidden flex">
+                <div className="mt-2 h-2 w-full bg-[#e2e8f0] rounded-xs overflow-hidden flex">
                   <motion.div
                     className={`h-full ${
-                      isOverCap ? 'bg-[#b84a27]' : 'bg-[#1c1917]'
+                      isOverCap ? 'bg-[#b91c1c]' : 'bg-[#1e3a5f]'
                     }`}
                     initial={false}
                     animate={{ width: `${activePct}%` }}
                     transition={{ type: 'spring', stiffness: 260, damping: 30 }}
                   />
                   <motion.div
-                    className="h-full bg-[#b57c1e]"
+                    className="h-full bg-[#d97706]"
                     initial={false}
                     animate={{ width: `${deadPct}%` }}
                     transition={{ type: 'spring', stiffness: 260, damping: 30 }}
                   />
                 </div>
 
-                <div className="mt-1.5 flex items-center justify-between font-mono-ledger text-[11px] text-[#57534e]">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-1 font-mono-ledger text-xs font-medium text-[#334155]">
                   <span>
                     <JargonTip term="TOP_51_RULE">
                       Top-51 ${yData.activeTop51Cap.toFixed(1)}M
@@ -567,7 +561,7 @@ export function CapHorizonHeader() {
                     </JargonTip>
                   </span>
                   {year === 2026 ? (
-                    <span className="text-[10px] text-[#8a8379]">
+                    <span className="text-[11px] font-semibold text-[#475569]">
                       <JargonTip term="COMP_PICK">
                         Comp: {compSummary.netProjectedCompPicks.length}
                       </JargonTip>{' '}
@@ -577,7 +571,7 @@ export function CapHorizonHeader() {
                         <strong
                           className={
                             compSummary.postJune1DesignationsUsed > 2
-                              ? 'text-[#b84a27]'
+                              ? 'text-[#b91c1c]'
                               : ''
                           }
                         >
@@ -586,13 +580,13 @@ export function CapHorizonHeader() {
                       </JargonTip>
                     </span>
                   ) : yData.rolloverFromPriorYear > 0 ? (
-                    <span className="text-[#2d5a43]">
+                    <span className="text-[#15803d] font-semibold">
                       <JargonTip term="ROLLOVER">
                         +${yData.rolloverFromPriorYear.toFixed(1)}M roll
                       </JargonTip>
                     </span>
                   ) : (
-                    <span className="text-[#8a8379]">
+                    <span className="text-[#475569]">
                       {yData.activeRosterCount} contracts
                     </span>
                   )}
@@ -604,7 +598,7 @@ export function CapHorizonHeader() {
 
         {/* Expandable "Spendable Now" Math Receipt ("Why Cap Sites Disagree") */}
         {receiptYear !== null && (
-          <div className="border-t border-[#dfd9cc] bg-[#fcfaf6] py-3.5 px-4 mb-2 text-xs">
+          <div className="border border-[#d6d0c4] bg-white py-3.5 px-4 mb-3 text-sm shadow-2xs">
             {(() => {
               const rData = displayCapState.years[receiptYear];
               const rawCapSpaceBeforeRookies =
@@ -614,17 +608,17 @@ export function CapHorizonHeader() {
               return (
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
+                    <div className="text-xs font-bold uppercase tracking-[0.1em] text-[#475569]">
                       {receiptYear} Exact Cap Accounting Receipt · Why Sites Disagree
                     </div>
-                    <p className="mt-0.5 text-[11px] text-[#57534e]">
+                    <p className="mt-1 text-xs text-[#334155]">
                       Basic cap trackers show{' '}
-                      <strong className="font-mono-ledger text-[#1c1917]">
+                      <strong className="font-mono-ledger text-[#111827]">
                         {rawCapSpaceBeforeRookies >= 0 ? '+$' : '−$'}
                         {Math.abs(rawCapSpaceBeforeRookies).toFixed(2)}M
                       </strong>{' '}
                       (Raw Top-51 Space). True{' '}
-                      <strong className="text-[#2d5a43]">Spendable Now</strong>{' '}
+                      <strong className="text-[#15803d]">Spendable Now</strong>{' '}
                       subtracts the net rookie class reserve (gross rookie pool
                       minus{' '}
                       <span className="font-mono-ledger">
@@ -634,7 +628,7 @@ export function CapHorizonHeader() {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3 font-mono-ledger text-[11px] bg-[#ede8dd]/70 px-3 py-2 border border-[#dfd9cc]">
+                  <div className="flex flex-wrap items-center gap-3 font-mono-ledger text-xs bg-[#f1f5f9] px-3 py-2 border border-[#cbd5e1] text-[#111827]">
                     <span>
                       League Cap{' '}
                       <strong>${rData.baseLeagueCap.toFixed(1)}M</strong>
@@ -642,7 +636,7 @@ export function CapHorizonHeader() {
                     <span>+</span>
                     <span>
                       Rollover{' '}
-                      <strong className="text-[#2d5a43]">
+                      <strong className="text-[#15803d]">
                         ${rData.rolloverFromPriorYear.toFixed(1)}M
                       </strong>
                     </span>
@@ -654,7 +648,7 @@ export function CapHorizonHeader() {
                     <span>−</span>
                     <span>
                       Dead{' '}
-                      <strong className="text-[#b84a27]">
+                      <strong className="text-[#b91c1c]">
                         ${rData.deadMoneyTotal.toFixed(1)}M
                       </strong>
                     </span>
@@ -665,10 +659,10 @@ export function CapHorizonHeader() {
                     </span>
                     <span>=</span>
                     <span
-                      className={`font-semibold ${
+                      className={`font-bold ${
                         rData.effectiveCapSpace < 0
-                          ? 'text-[#b84a27]'
-                          : 'text-[#2d5a43]'
+                          ? 'text-[#b91c1c]'
+                          : 'text-[#15803d]'
                       }`}
                     >
                       Spendable: {rData.effectiveCapSpace < 0 ? '−$' : '+$'}
@@ -677,7 +671,7 @@ export function CapHorizonHeader() {
                     <button
                       type="button"
                       onClick={() => setReceiptYear(null)}
-                      className="ml-2 text-[#8a8379] hover:text-[#1c1917] cursor-pointer"
+                      className="ml-2 text-[#475569] hover:text-[#111827] cursor-pointer"
                     >
                       ✕
                     </button>
@@ -693,24 +687,24 @@ export function CapHorizonHeader() {
     {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — 2 Primary Modes */}
     <nav
       aria-label="Mobile Primary Mode Switcher"
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-[#1c1917] bg-[#fcfaf6]/98 backdrop-blur-md pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_12px_rgba(28,25,23,0.08)]"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-[#111827] bg-white/98 backdrop-blur-md pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_12px_rgba(17,24,39,0.1)]"
     >
-      <div className="grid grid-cols-2 divide-x divide-[#dfd9cc]">
+      <div className="grid grid-cols-2 divide-x divide-[#d6d0c4]">
         <button
           type="button"
           onClick={() => setActiveTab('player-fate')}
           className={`flex flex-col items-center justify-center py-2.5 px-2 text-center transition-colors ${
             isCurrentStateMode
-              ? 'bg-[#1c1917] text-[#f6f3ec]'
-              : 'text-[#1c1917] hover:bg-[#ede8dd]'
+              ? 'bg-[#1e3a5f] text-white'
+              : 'text-[#111827] hover:bg-[#f1f5f9]'
           }`}
         >
-          <span className="text-xs font-bold leading-tight">
+          <span className="text-xs sm:text-sm font-bold leading-tight">
             1. Roster Grid &amp; Needs
           </span>
           <span
-            className={`mt-0.5 font-mono-ledger text-[9px] uppercase tracking-wider ${
-              isCurrentStateMode ? 'text-[#f6f3ec]/80' : 'text-[#8a8379]'
+            className={`mt-0.5 font-mono-ledger text-[11px] font-medium tracking-wide ${
+              isCurrentStateMode ? 'text-[#e2e8f0]' : 'text-[#475569]'
             }`}
           >
             Current State
@@ -726,17 +720,17 @@ export function CapHorizonHeader() {
           }}
           className={`flex flex-col items-center justify-center py-2.5 px-2 text-center transition-colors ${
             !isCurrentStateMode
-              ? 'bg-[#1c1917] text-[#f6f3ec]'
-              : 'text-[#1c1917] hover:bg-[#ede8dd]'
+              ? 'bg-[#15803d] text-white'
+              : 'text-[#111827] hover:bg-[#f1f5f9]'
           }`}
         >
-          <span className="text-xs font-bold leading-tight">
+          <span className="text-xs sm:text-sm font-bold leading-tight">
             2. Team Builder
             {enabledCount > 0 ? ` (${enabledCount})` : ''}
           </span>
           <span
-            className={`mt-0.5 font-mono-ledger text-[9px] uppercase tracking-wider ${
-              !isCurrentStateMode ? 'text-[#f6f3ec]/80' : 'text-[#2d5a43]'
+            className={`mt-0.5 font-mono-ledger text-[11px] font-medium tracking-wide ${
+              !isCurrentStateMode ? 'text-[#dcfce7]' : 'text-[#15803d]'
             }`}
           >
             Modify &amp; Project

@@ -166,9 +166,9 @@ export function GlobalPlayerSearch({
                             {entry.teamAbbr} · {entry.player.position}
                           </span>
                         </div>
-                        <div className="mt-0.5 font-mono-ledger text-[10px] text-[#57534e]">
-                          Age {entry.player.ageIn2026} · OVR{' '}
-                          {entry.player.overallRating} · ~
+                        <div className="mt-0.5 font-mono-ledger text-[11px] font-medium text-[#334155]">
+                          Age {entry.player.ageIn2026} · Rating{' '}
+                          {entry.player.overallRating}/99 · ~
                           {career.expectedRemainingStarterYears} starter yr
                           {career.expectedRemainingStarterYears === 1
                             ? ''
@@ -283,8 +283,9 @@ export function PlayerDossierModal() {
                 <span className="border border-[#1c1917] bg-[#1c1917] px-2 py-0.5 font-semibold text-[#f6f3ec]">
                   {player.position} · {player.tier} Tier
                 </span>
-                <span className="border border-[#dfd9cc] bg-[#fcfaf6] px-2 py-0.5 text-[#1c1917]">
-                  Overall Rating: <strong>{player.overallRating} OVR</strong>
+                <span className="border border-[#cbd5e1] bg-white px-2.5 py-0.5 text-xs text-[#111827]">
+                  Skill Rating:{' '}
+                  <strong>{player.overallRating}/99 OVR Grade</strong>
                 </span>
                 <span className="border border-[#dfd9cc] bg-[#fcfaf6] px-2 py-0.5 text-[#1c1917]">
                   Age <strong>{player.ageIn2026}</strong> ({player.accruedSeasons}{' '}
