@@ -23,22 +23,32 @@ import {
 import { SEED_TEAMS } from '@/data/seed/teams';
 
 export type ActiveTab =
-  | 'cap-checkup'
   | 'player-fate'
+  | 'team-builder'
+  | 'cap-checkup'
   | 'free-agency'
   | 'draft'
   | 'matrix'
   | 'predictor';
+
+export type TeamBuilderSubTab =
+  | 'fa-dock'
+  | 'cap-fixes'
+  | 'draft-trade'
+  | 'ledger';
 
 interface GMStoreState {
   selectedTeamId: string;
   baseTeam: TeamSeedData;
   capGrowthRate: number;
   transactions: Transaction[];
+  baselineState: DerivedTeamCapState;
   derivedState: DerivedTeamCapState;
 
   // UI Navigation & Drawers
   activeTab: ActiveTab;
+  teamBuilderSubTab: TeamBuilderSubTab;
+  teamBuilderPosFilter: PositionGroup | 'ALL';
   navHistory: ActiveTab[];
   ledgerMode: 'CAP' | 'CASH';
   selectedPlayerId: string | null;
@@ -56,6 +66,15 @@ interface GMStoreState {
   selectTeam: (teamId: string) => void;
   setCapGrowthRate: (rate: number) => void;
   setActiveTab: (tab: ActiveTab) => void;
+  setTeamBuilderSubTab: (sub: TeamBuilderSubTab) => void;
+  setTeamBuilderPosFilter: (pos: PositionGroup | 'ALL') => void;
+  openInTeamBuilder: (options?: {
+    subTab?: TeamBuilderSubTab;
+    position?: PositionGroup | 'ALL';
+    playerId?: string | null;
+    drawerTab?: 'cut' | 'restructure' | 'extend' | 'trade' | null;
+    actionYear?: LeagueYear | null;
+  }) => void;
   goBack: () => void;
   goHome: () => void;
   setLedgerMode: (mode: 'CAP' | 'CASH') => void;
@@ -158,9 +177,12 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     baseTeam: initialTeam,
     capGrowthRate: DEFAULT_CAP_GROWTH_RATE,
     transactions: [],
+    baselineState: initialDerived,
     derivedState: initialDerived,
 
     activeTab: 'player-fate',
+    teamBuilderSubTab: 'fa-dock',
+    teamBuilderPosFilter: 'ALL',
     navHistory: [],
     ledgerMode: 'CAP',
     selectedPlayerId: null,
@@ -177,13 +199,15 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     selectTeam: (teamId) => {
       const nextTeam = SEED_TEAMS[teamId] ?? SEED_TEAMS['DET'];
       const rate = get().capGrowthRate;
+      const freshBaseline = recompute(nextTeam, [], rate);
       set({
         selectedTeamId: nextTeam.id,
         baseTeam: nextTeam,
         transactions: [],
         selectedPlayerId: null,
         initialDrawerTab: null,
-        derivedState: recompute(nextTeam, [], rate),
+        baselineState: freshBaseline,
+        derivedState: freshBaseline,
       });
     },
 
@@ -191,6 +215,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
       const { baseTeam, transactions } = get();
       set({
         capGrowthRate: rate,
+        baselineState: recompute(baseTeam, [], rate),
         derivedState: recompute(baseTeam, transactions, rate),
       });
     },
@@ -204,6 +229,34 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       set({ activeTab: tab, navHistory: nextHistory });
+    },
+    setTeamBuilderSubTab: (sub) => set({ teamBuilderSubTab: sub }),
+    setTeamBuilderPosFilter: (pos) => set({ teamBuilderPosFilter: pos }),
+    openInTeamBuilder: (options) => {
+      const current = get().activeTab;
+      const nextHistory =
+        current !== 'team-builder'
+          ? [...get().navHistory, current]
+          : get().navHistory;
+      if (typeof window !== 'undefined' && current !== 'team-builder') {
+        window.history.pushState({ tab: 'team-builder' }, '', '#team-builder');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      set({
+        activeTab: 'team-builder',
+        navHistory: nextHistory,
+        teamBuilderSubTab: options?.subTab ?? get().teamBuilderSubTab,
+        teamBuilderPosFilter:
+          options?.position !== undefined
+            ? options.position
+            : get().teamBuilderPosFilter,
+        selectedPlayerId:
+          options?.playerId !== undefined ? options.playerId : null,
+        initialDrawerTab:
+          options?.drawerTab !== undefined ? options.drawerTab : null,
+        initialActionYear:
+          options?.actionYear !== undefined ? options.actionYear : null,
+      });
     },
     goBack: () => {
       const history = get().navHistory;

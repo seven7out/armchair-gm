@@ -31,12 +31,14 @@ export function CapHorizonHeader() {
     baseTeam,
     capGrowthRate,
     transactions,
+    baselineState,
     derivedState,
     activeTab,
     ledgerMode,
     selectTeam,
     setCapGrowthRate,
     setActiveTab,
+    openInTeamBuilder,
     goBack,
     goHome,
     setLedgerMode,
@@ -50,7 +52,9 @@ export function CapHorizonHeader() {
   const [showMobileCapDetails, setShowMobileCapDetails] = useState(false);
 
   const enabledCount = transactions.filter((t) => t.enabled).length;
-  const compSummary = derivedState.compPickSummary;
+  const isCurrentStateMode = activeTab === 'player-fate';
+  const displayCapState = isCurrentStateMode ? baselineState : derivedState;
+  const compSummary = displayCapState.compPickSummary;
 
   const teamsByDivision = useMemo(() => {
     const allTeams = Object.values(SEED_TEAMS);
@@ -152,80 +156,86 @@ export function CapHorizonHeader() {
             </div>
           </div>
 
-          {/* Center Navigation Links — Hidden on Phone (moved to Bottom Tab Bar), Visible on md+ */}
+          {/* Center Navigation — 2 Primary Modes Switcher (Desktop md+) */}
           <nav
-            aria-label="Customer Journeys"
-            className="hidden md:flex flex-wrap items-center gap-1.5 lg:gap-2"
+            aria-label="Primary Modes"
+            className="hidden md:flex items-center border-2 border-[#1c1917] bg-[#fcfaf6] p-0.5"
           >
-          {[
-            {
-              id: 'player-fate' as const,
-              step: '1',
-              label: 'Roster Grid & Needs (Home)',
-              subtitle: '2026–2031 Bars + Add FAs',
-            },
-            {
-              id: 'cap-checkup' as const,
-              step: '2',
-              label: 'Cap Checkup & Clear Space',
-              subtitle: 'Fix Cap Crunch',
-            },
-            {
-              id: 'free-agency' as const,
-              step: '3',
-              label: 'Full FA Market',
-              subtitle: 'Market & Comp Picks',
-            },
-            {
-              id: 'draft' as const,
-              step: '4',
-              label: 'Trade & Draft',
-              subtitle: 'Fit Targets & Picks',
-            },
-            {
-              id: 'matrix' as const,
-              step: '5',
-              label: 'Full Spreadsheet',
-              subtitle: '4-Yr Ledger & Lab',
-            },
-          ].map((item) => {
-            const isActive =
-              activeTab === item.id ||
-              (item.id === 'matrix' && activeTab === 'predictor');
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveTab(item.id)}
-                className={`group flex flex-col items-start border px-3 py-1.5 text-left transition-colors cursor-pointer ${
-                  isActive
-                    ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
-                    : 'border-[#dfd9cc] bg-[#fcfaf6] text-[#1c1917] hover:border-[#1c1917] hover:bg-[#ede8dd]'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-tight">
-                  <span
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded-full font-mono-ledger text-[10px] ${
-                      isActive
-                        ? 'bg-[#f6f3ec] text-[#1c1917]'
-                        : 'bg-[#ede8dd] text-[#57534e]'
-                    }`}
-                  >
-                    {item.step}
-                  </span>
-                  <span>{item.label}</span>
-                </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('player-fate')}
+              className={`flex flex-col items-start px-3.5 py-1.5 text-left transition-colors cursor-pointer ${
+                isCurrentStateMode
+                  ? 'bg-[#1c1917] text-[#f6f3ec]'
+                  : 'text-[#1c1917] hover:bg-[#ede8dd]'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold tracking-tight">
                 <span
-                  className={`hidden xl:inline text-[9px] uppercase tracking-[0.08em] ${
-                    isActive ? 'text-[#f6f3ec]/75' : 'text-[#8a8379]'
+                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full font-mono-ledger text-[10px] ${
+                    isCurrentStateMode
+                      ? 'bg-[#f6f3ec] text-[#1c1917]'
+                      : 'bg-[#ede8dd] text-[#57534e]'
                   }`}
                 >
-                  {item.subtitle}
+                  1
                 </span>
-              </button>
-            );
-          })}
-        </nav>
+                <span>Roster Grid &amp; Needs</span>
+              </div>
+              <span
+                className={`text-[9px] uppercase tracking-[0.08em] ${
+                  isCurrentStateMode ? 'text-[#f6f3ec]/75' : 'text-[#8a8379]'
+                }`}
+              >
+                Current State (2026–2031)
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (activeTab !== 'team-builder') {
+                  setActiveTab('team-builder');
+                }
+              }}
+              className={`flex flex-col items-start px-3.5 py-1.5 text-left transition-colors cursor-pointer border-l border-[#dfd9cc] ${
+                !isCurrentStateMode
+                  ? 'bg-[#1c1917] text-[#f6f3ec]'
+                  : 'text-[#1c1917] hover:bg-[#ede8dd]'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold tracking-tight">
+                <span
+                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full font-mono-ledger text-[10px] ${
+                    !isCurrentStateMode
+                      ? 'bg-[#2d5a43] text-[#f6f3ec]'
+                      : 'bg-[#2d5a43]/15 text-[#2d5a43]'
+                  }`}
+                >
+                  2
+                </span>
+                <span>Team Builder</span>
+                {enabledCount > 0 && (
+                  <span
+                    className={`ml-1 px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${
+                      !isCurrentStateMode
+                        ? 'bg-[#2d5a43] text-[#f6f3ec]'
+                        : 'bg-[#2d5a43] text-[#f6f3ec]'
+                    }`}
+                  >
+                    {enabledCount} Move{enabledCount === 1 ? '' : 's'}
+                  </span>
+                )}
+              </div>
+              <span
+                className={`text-[9px] uppercase tracking-[0.08em] ${
+                  !isCurrentStateMode ? 'text-[#f6f3ec]/75' : 'text-[#8a8379]'
+                }`}
+              >
+                Modify Roster, Add FAs, Trade &amp; Project Cap
+              </span>
+            </button>
+          </nav>
 
           {/* Right Controls: Global Player Lookup, Cap vs Cash Toggle, Growth & Scenario Notebook */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-xs">
@@ -281,7 +291,12 @@ export function CapHorizonHeader() {
 
             <button
               type="button"
-              onClick={() => openFreeAgencyModal({ position: 'ALL' })}
+              onClick={() => {
+                if (isCurrentStateMode) {
+                  openInTeamBuilder({ subTab: 'fa-dock' });
+                }
+                openFreeAgencyModal({ position: 'ALL' });
+              }}
               className="hidden sm:inline-flex border border-[#1c1917] px-3 py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
             >
               + Sign Free Agent
@@ -389,7 +404,7 @@ export function CapHorizonHeader() {
         <div className="md:hidden px-3 py-1.5 bg-[#fcfaf6] border-b border-[#dfd9cc]">
           <div className="grid grid-cols-5 items-center gap-1">
             {LEAGUE_YEARS.map((year) => {
-              const yData = derivedState.years[year];
+              const yData = displayCapState.years[year];
               const isOverCap = yData.effectiveCapSpace < 0;
               return (
                 <button
@@ -402,7 +417,8 @@ export function CapHorizonHeader() {
                   className="flex flex-col items-center border border-[#dfd9cc] bg-[#f6f3ec] py-1 px-1 text-center"
                 >
                   <span className="font-mono-ledger text-[9px] font-semibold text-[#8a8379]">
-                    &apos;{String(year).slice(2)} Cap
+                    &apos;{String(year).slice(2)}{' '}
+                    {isCurrentStateMode ? 'Now' : 'Proj'}
                   </span>
                   <span
                     className={`font-mono-ledger text-[11px] font-bold ${
@@ -434,7 +450,12 @@ export function CapHorizonHeader() {
         >
         <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-[#dfd9cc]">
           {LEAGUE_YEARS.map((year, idx) => {
-            const yData = derivedState.years[year];
+            const yData = displayCapState.years[year];
+            const baseYearData = baselineState.years[year];
+            const deltaVsCurrent =
+              Math.round(
+                (yData.effectiveCapSpace - baseYearData.effectiveCapSpace) * 100
+              ) / 100;
             const isOverCap = yData.effectiveCapSpace < 0;
             const activePct = Math.min(
               100,
@@ -485,8 +506,28 @@ export function CapHorizonHeader() {
                         {Math.abs(yData.effectiveCapSpace).toFixed(2)}M
                       </button>
                       <div className="text-[9px] uppercase tracking-[0.1em] text-[#8a8379]">
-                        {isReceiptOpen ? 'Hide Receipt ▲' : 'Spendable Now ▼'}
+                        {isReceiptOpen
+                          ? 'Hide Receipt ▲'
+                          : isCurrentStateMode
+                          ? 'Current Space ▼'
+                          : 'Projected Space ▼'}
                       </div>
+                      {!isCurrentStateMode &&
+                        enabledCount > 0 &&
+                        Math.abs(deltaVsCurrent) >= 0.05 && (
+                          <div
+                            className={`mt-0.5 font-mono-ledger text-[10px] font-semibold ${
+                              deltaVsCurrent >= 0
+                                ? 'text-[#2d5a43]'
+                                : 'text-[#b84a27]'
+                            }`}
+                          >
+                            Was {baseYearData.effectiveCapSpace >= 0 ? '+$' : '−$'}
+                            {Math.abs(baseYearData.effectiveCapSpace).toFixed(1)}M
+                            {' ('}Δ {deltaVsCurrent >= 0 ? '+' : '−'}$
+                            {Math.abs(deltaVsCurrent).toFixed(1)}M{')'}
+                          </div>
+                        )}
                     </div>
                   ) : (
                     <span className="font-mono-ledger text-base font-semibold text-[#1c1917]">
@@ -565,7 +606,7 @@ export function CapHorizonHeader() {
         {receiptYear !== null && (
           <div className="border-t border-[#dfd9cc] bg-[#fcfaf6] py-3.5 px-4 mb-2 text-xs">
             {(() => {
-              const rData = derivedState.years[receiptYear];
+              const rData = displayCapState.years[receiptYear];
               const rawCapSpaceBeforeRookies =
                 rData.adjustedCapCeiling -
                 rData.activeTop51Cap -
@@ -649,71 +690,58 @@ export function CapHorizonHeader() {
       </div>
     </header>
 
-    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) */}
+    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — 2 Primary Modes */}
     <nav
-      aria-label="Mobile Bottom Navigation"
+      aria-label="Mobile Primary Mode Switcher"
       className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-[#1c1917] bg-[#fcfaf6]/98 backdrop-blur-md pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_12px_rgba(28,25,23,0.08)]"
     >
-      <div className="grid grid-cols-5 divide-x divide-[#dfd9cc]">
-        {[
-          {
-            id: 'player-fate' as const,
-            step: '1',
-            shortLabel: 'Roster Grid',
-            subLabel: 'Home & Needs',
-          },
-          {
-            id: 'cap-checkup' as const,
-            step: '2',
-            shortLabel: 'Cap Checkup',
-            subLabel: 'Fix Space',
-          },
-          {
-            id: 'free-agency' as const,
-            step: '3',
-            shortLabel: 'FA Market',
-            subLabel: 'Sign Targets',
-          },
-          {
-            id: 'draft' as const,
-            step: '4',
-            shortLabel: 'Trade/Draft',
-            subLabel: 'Mock Picks',
-          },
-          {
-            id: 'matrix' as const,
-            step: '5',
-            shortLabel: 'Full Ledger',
-            subLabel: '4-Yr Table',
-          },
-        ].map((item) => {
-          const isActive =
-            activeTab === item.id ||
-            (item.id === 'matrix' && activeTab === 'predictor');
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center py-2 px-1 text-center transition-colors ${
-                isActive
-                  ? 'bg-[#1c1917] text-[#f6f3ec]'
-                  : 'text-[#1c1917] hover:bg-[#ede8dd]'
-              }`}
-            >
-              <span className="text-[11px] font-bold leading-tight truncate max-w-full">
-                {item.shortLabel}
-              </span>
-              <span
-                className={`mt-0.5 font-mono-ledger text-[8px] uppercase tracking-wider truncate max-w-full ${
-                  isActive ? 'text-[#f6f3ec]/80' : 'text-[#8a8379]'
-                }`}
-              >
-                {item.subLabel}
-              </span>
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-2 divide-x divide-[#dfd9cc]">
+        <button
+          type="button"
+          onClick={() => setActiveTab('player-fate')}
+          className={`flex flex-col items-center justify-center py-2.5 px-2 text-center transition-colors ${
+            isCurrentStateMode
+              ? 'bg-[#1c1917] text-[#f6f3ec]'
+              : 'text-[#1c1917] hover:bg-[#ede8dd]'
+          }`}
+        >
+          <span className="text-xs font-bold leading-tight">
+            1. Roster Grid &amp; Needs
+          </span>
+          <span
+            className={`mt-0.5 font-mono-ledger text-[9px] uppercase tracking-wider ${
+              isCurrentStateMode ? 'text-[#f6f3ec]/80' : 'text-[#8a8379]'
+            }`}
+          >
+            Current State
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (activeTab !== 'team-builder') {
+              setActiveTab('team-builder');
+            }
+          }}
+          className={`flex flex-col items-center justify-center py-2.5 px-2 text-center transition-colors ${
+            !isCurrentStateMode
+              ? 'bg-[#1c1917] text-[#f6f3ec]'
+              : 'text-[#1c1917] hover:bg-[#ede8dd]'
+          }`}
+        >
+          <span className="text-xs font-bold leading-tight">
+            2. Team Builder
+            {enabledCount > 0 ? ` (${enabledCount})` : ''}
+          </span>
+          <span
+            className={`mt-0.5 font-mono-ledger text-[9px] uppercase tracking-wider ${
+              !isCurrentStateMode ? 'text-[#f6f3ec]/80' : 'text-[#2d5a43]'
+            }`}
+          >
+            Modify &amp; Project
+          </span>
+        </button>
       </div>
     </nav>
     </>

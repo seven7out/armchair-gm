@@ -19,7 +19,9 @@ import { ActiveTab, useGMStore } from '@/store/useGMStore';
 
 const JOURNEY_LABELS: Record<ActiveTab, string> = {
   'player-fate':
-    'Home Hub · Multi-Year Roster Grid (2026–2031), Positional Needs & Add Free Agents',
+    'Mode 01 · Roster Grid & Positional Needs (Current Unmodified State)',
+  'team-builder':
+    'Mode 02 · Interactive Team Builder (FAs, Cuts, Trades, Draft & Cap Projector)',
   'cap-checkup': 'Journey 02 · Cap Checkup & Clear Space',
   'free-agency': 'Journey 03 · Sign 2026 Free Agents & Comp-Pick Guard',
   draft: 'Journey 04 · Trade Wizard & 2026 Mock Draft',
@@ -88,7 +90,12 @@ export default function ArmchairGMApp() {
       {/* 3. Main Workspace View — Organized by Customer Journey */}
       <main className="flex-1 pb-24">
         {activeTab === 'cap-checkup' && <CapCheckupJourney />}
-        {activeTab === 'player-fate' && <PlayerFateJourney />}
+        {activeTab === 'player-fate' && (
+          <PlayerFateJourney mode="CURRENT_STATE" />
+        )}
+        {activeTab === 'team-builder' && (
+          <PlayerFateJourney mode="TEAM_BUILDER" />
+        )}
         {activeTab === 'free-agency' && <FreeAgencySimulatorView />}
         {activeTab === 'draft' && <DraftTradeSandbox />}
         {activeTab === 'matrix' && <RosterMatrix />}
