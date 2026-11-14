@@ -187,7 +187,7 @@ export function CapHorizonHeader() {
                   isCurrentStateMode ? 'text-[#e2e8f0]' : 'text-[#475569]'
                 }`}
               >
-                Current State (2026–2031)
+                Current Roster (2026–2031)
               </span>
             </button>
 
@@ -232,7 +232,7 @@ export function CapHorizonHeader() {
                   !isCurrentStateMode ? 'text-[#dcfce7]' : 'text-[#475569]'
                 }`}
               >
-                Modify Roster, Add FAs, Trade &amp; Project Cap
+                Sign FAs, Cut, Trade &amp; Draft
               </span>
             </button>
           </nav>
@@ -596,42 +596,19 @@ export function CapHorizonHeader() {
           })}
         </div>
 
-        {/* Expandable "Spendable Now" Math Receipt ("Why Cap Sites Disagree") */}
+        {/* Expandable "Spendable Now" Math Receipt */}
         {receiptYear !== null && (
-          <div className="border border-[#d6d0c4] bg-white py-3.5 px-4 mb-3 text-sm shadow-2xs">
+          <div className="border border-[#d6d0c4] bg-white px-3.5 py-2 mb-3 text-xs shadow-2xs">
             {(() => {
               const rData = displayCapState.years[receiptYear];
-              const rawCapSpaceBeforeRookies =
-                rData.adjustedCapCeiling -
-                rData.activeTop51Cap -
-                rData.deadMoneyTotal;
               return (
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <div className="text-xs font-bold uppercase tracking-[0.1em] text-[#475569]">
-                      {receiptYear} Exact Cap Accounting Receipt · Why Sites Disagree
-                    </div>
-                    <p className="mt-1 text-xs text-[#334155]">
-                      Basic cap trackers show{' '}
-                      <strong className="font-mono-ledger text-[#111827]">
-                        {rawCapSpaceBeforeRookies >= 0 ? '+$' : '−$'}
-                        {Math.abs(rawCapSpaceBeforeRookies).toFixed(2)}M
-                      </strong>{' '}
-                      (Raw Top-51 Space). True{' '}
-                      <strong className="text-[#15803d]">Spendable Now</strong>{' '}
-                      subtracts the net rookie class reserve (gross rookie pool
-                      minus{' '}
-                      <span className="font-mono-ledger">
-                        ${rData.replacementLevelCutoff.toFixed(2)}M
-                      </span>{' '}
-                      displaced 51st contract per pick).
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3 font-mono-ledger text-xs bg-[#f1f5f9] px-3 py-2 border border-[#cbd5e1] text-[#111827]">
+                <div className="flex flex-wrap items-center justify-between gap-2 font-mono-ledger text-xs text-[#111827]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold uppercase tracking-wider text-[#475569] mr-1">
+                      {receiptYear} Math:
+                    </span>
                     <span>
-                      League Cap{' '}
-                      <strong>${rData.baseLeagueCap.toFixed(1)}M</strong>
+                      Cap <strong>${rData.baseLeagueCap.toFixed(1)}M</strong>
                     </span>
                     <span>+</span>
                     <span>
@@ -642,7 +619,7 @@ export function CapHorizonHeader() {
                     </span>
                     <span>−</span>
                     <span>
-                      Top-51 Active{' '}
+                      Top-51{' '}
                       <strong>${rData.activeTop51Cap.toFixed(1)}M</strong>
                     </span>
                     <span>−</span>
@@ -653,8 +630,10 @@ export function CapHorizonHeader() {
                       </strong>
                     </span>
                     <span>−</span>
-                    <span title={`Gross Rookie Pool: $${rData.rookiePoolReserve.toFixed(2)}M minus Top-51 displacement`}>
-                      Net Rookies{' '}
+                    <span
+                      title={`Gross Rookie Pool: $${rData.rookiePoolReserve.toFixed(2)}M minus Top-51 displacement`}
+                    >
+                      Rookies{' '}
                       <strong>${rData.netRookiePoolImpact.toFixed(2)}M</strong>
                     </span>
                     <span>=</span>
@@ -665,17 +644,18 @@ export function CapHorizonHeader() {
                           : 'text-[#15803d]'
                       }`}
                     >
-                      Spendable: {rData.effectiveCapSpace < 0 ? '−$' : '+$'}
-                      {Math.abs(rData.effectiveCapSpace).toFixed(2)}M
+                      {rData.effectiveCapSpace < 0 ? '−$' : '+$'}
+                      {Math.abs(rData.effectiveCapSpace).toFixed(2)}M Spendable
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setReceiptYear(null)}
-                      className="ml-2 text-[#475569] hover:text-[#111827] cursor-pointer"
-                    >
-                      ✕
-                    </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setReceiptYear(null)}
+                    className="text-[#475569] hover:text-[#111827] cursor-pointer px-1"
+                    aria-label="Close math breakdown"
+                  >
+                    ✕
+                  </button>
                 </div>
               );
             })()}

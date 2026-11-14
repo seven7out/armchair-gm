@@ -2,14 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  ArrowRight,
   CheckCircle2,
   ChevronDown,
   Scissors,
-  Sparkles,
-  TrendingUp,
-  UserCheck,
-  Users,
   Wand2,
 } from 'lucide-react';
 import {
@@ -24,11 +19,9 @@ import { JargonTip } from './JargonTooltip';
 
 export function CapCheckupJourney() {
   const {
-    baseTeam,
     derivedState,
     transactions,
     selectPlayer,
-    setActiveTab,
     applyMaxTopRestructures,
     addRestructureTransaction,
     addCutTransaction,
@@ -123,132 +116,13 @@ export function CapCheckupJourney() {
   }[capHealth.tier];
 
   return (
-    <div className="mx-auto max-w-[1440px] px-6 py-8 space-y-8">
-      {/* 1. Guided "Choose Your Mission" Hub Banner */}
-      <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-baseline md:justify-between border-b border-[#dfd9cc] pb-4">
-          <div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a8379]">
-              Welcome to the Front Office · Choose Your Journey
-            </span>
-            <h1 className="mt-1 font-editorial text-2xl sm:text-3xl text-[#1c1917]">
-              What do you want to do with the {baseTeam.city} {baseTeam.name}{' '}
-              today?
-            </h1>
-          </div>
-          <p className="text-xs text-[#57534e]">
-            Pick any workflow below — every move updates your live 2026–2029 cap
-            books automatically.
-          </p>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Mission 1 (Current) */}
-          <div className="flex flex-col justify-between border-2 border-[#1c1917] bg-[#1c1917] p-4 text-[#f6f3ec]">
-            <div>
-              <div className="flex items-center justify-between text-[10px] font-mono-ledger uppercase tracking-[0.14em] text-[#f6f3ec]/70">
-                <span>Journey 01 · Active</span>
-                <Sparkles className="h-3.5 w-3.5 text-[#f6f3ec]" />
-              </div>
-              <div className="mt-1.5 font-editorial text-lg">
-                Cap Checkup & Clear Space
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-[#f6f3ec]/80">
-                See if {baseTeam.abbreviation} is in cap trouble and clear tens
-                of millions in 1 click via restructures or cuts.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#f6f3ec]/20 text-[11px] font-semibold text-[#f6f3ec]">
-              You are here ↓
-            </div>
-          </div>
-
-          {/* Mission 2: Player Fate & X-Ray */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('player-fate')}
-            className="group flex flex-col justify-between border border-[#dfd9cc] bg-[#f6f3ec] p-4 text-left transition-all hover:border-[#1c1917] hover:bg-[#ede8dd] cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between text-[10px] font-mono-ledger uppercase tracking-[0.14em] text-[#8a8379]">
-                <span>Journey 02</span>
-                <UserCheck className="h-3.5 w-3.5 text-[#57534e]" />
-              </div>
-              <div className="mt-1.5 font-editorial text-lg text-[#1c1917]">
-                Player Fate & Future Roster (2026–2029)
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-[#57534e]">
-                View your projected roster in 2026, 2027, 2028, or 2029: who is
-                under contract, likely cap cuts, and expiring FAs.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#dfd9cc] flex items-center justify-between text-[11px] font-semibold text-[#1c1917] group-hover:translate-x-0.5 transition-transform">
-              <span>Inspect Players & Deals</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </button>
-
-          {/* Mission 3: Sign Free Agents */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('free-agency')}
-            className="group flex flex-col justify-between border border-[#dfd9cc] bg-[#f6f3ec] p-4 text-left transition-all hover:border-[#1c1917] hover:bg-[#ede8dd] cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between text-[10px] font-mono-ledger uppercase tracking-[0.14em] text-[#8a8379]">
-                <span>Journey 03</span>
-                <Users className="h-3.5 w-3.5 text-[#57534e]" />
-              </div>
-              <div className="mt-1.5 font-editorial text-lg text-[#1c1917]">
-                Sign 2026 Free Agents
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-[#57534e]">
-                Shop top free agents & cap casualties, structure contracts, and
-                guard your 2027 Comp Picks.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#dfd9cc] flex items-center justify-between text-[11px] font-semibold text-[#1c1917] group-hover:translate-x-0.5 transition-transform">
-              <span>Open Free Agent Market</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </button>
-
-          {/* Mission 4: Trade & Draft */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('draft')}
-            className="group flex flex-col justify-between border border-[#dfd9cc] bg-[#f6f3ec] p-4 text-left transition-all hover:border-[#1c1917] hover:bg-[#ede8dd] cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between text-[10px] font-mono-ledger uppercase tracking-[0.14em] text-[#8a8379]">
-                <span>Journey 04</span>
-                <TrendingUp className="h-3.5 w-3.5 text-[#57534e]" />
-              </div>
-              <div className="mt-1.5 font-editorial text-lg text-[#1c1917]">
-                Trade Wizard & Mock Draft
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-[#57534e]">
-                Check if a trade target fits under today&apos;s cap and simulate
-                the 2026 NFL Draft rookie scale.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#dfd9cc] flex items-center justify-between text-[11px] font-semibold text-[#1c1917] group-hover:translate-x-0.5 transition-transform">
-              <span>Run Trades & Draft</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </button>
-        </div>
-      </section>
-
-      {/* 2. Step 1: Plain-English Team Cap Verdict Card */}
+    <div className="mx-auto max-w-[1440px] px-6 py-6 space-y-6">
+      {/* 2026 Team Cap Verdict Card */}
       <section
         className={`border border-[#dfd9cc] bg-[#fcfaf6] p-6 ${tierStyles.borderAccent}`}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
-              Step 1 · Plain-English Cap Diagnosis
-            </span>
             <span
               className={`border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] ${tierStyles.badgeBg}`}
             >
@@ -262,8 +136,7 @@ export function CapCheckupJourney() {
             className="flex items-center gap-1.5 border border-[#dfd9cc] bg-[#f6f3ec] px-3 py-1 text-xs font-medium text-[#1c1917] hover:border-[#1c1917] cursor-pointer"
           >
             <span>
-              Why do cap sites show different numbers?{' '}
-              {showMathReceipt ? 'Hide Math Receipt' : 'Show Math Receipt'}
+              {showMathReceipt ? 'Hide Math Receipt' : '2026 Cap Math'}
             </span>
             <ChevronDown
               className={`h-3.5 w-3.5 transition-transform ${
@@ -276,9 +149,6 @@ export function CapCheckupJourney() {
         <h2 className="mt-2 font-editorial text-xl text-[#1c1917]">
           {capHealth.headlineAnswer}
         </h2>
-        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-[#44403c]">
-          {capHealth.subheadlineAnswer}
-        </p>
 
         {/* 3 Big One-Glance Answers */}
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -343,23 +213,18 @@ export function CapCheckupJourney() {
         {/* Progressive Disclosure: Exact Math Receipt */}
         {showMathReceipt && (
           <div className="mt-4 border border-[#dfd9cc] bg-[#f6f3ec] p-4 text-xs">
-            <div className="font-semibold uppercase tracking-[0.12em] text-[#1c1917]">
-              The Exact 2026 Cap Math Receipt (Why Over The Cap, Spotrac & TV
-              Broadcasts Differ)
-            </div>
-            <p className="mt-1 text-[#57534e]">
-              TV graphics usually show{' '}
-              <strong>
-                Raw Top-51 Cap Space ({rawCapSpaceBeforeRookies >= 0 ? '+$' : '−$'}
-                {Math.abs(rawCapSpaceBeforeRookies).toFixed(2)}M)
-              </strong>
-              . Armchair GM shows{' '}
-              <strong className="text-[#2d5a43]">
-                Spendable Now ({y26.effectiveCapSpace >= 0 ? '+$' : '−$'}
-                {Math.abs(y26.effectiveCapSpace).toFixed(2)}M)
+            <div className="font-mono-ledger text-xs text-[#57534e]">
+              Raw Top-51 Space:{' '}
+              <strong className="text-[#1c1917]">
+                {rawCapSpaceBeforeRookies >= 0 ? '+$' : '−$'}
+                {Math.abs(rawCapSpaceBeforeRookies).toFixed(2)}M
               </strong>{' '}
-              because a GM cannot spend money reserved for incoming draft picks.
-            </p>
+              · Net After Rookies:{' '}
+              <strong className="text-[#2d5a43]">
+                {y26.effectiveCapSpace >= 0 ? '+$' : '−$'}
+                {Math.abs(y26.effectiveCapSpace).toFixed(2)}M
+              </strong>
+            </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-6 font-mono-ledger text-xs">
               <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-2.5">
                 <div className="text-[10px] text-[#8a8379]">League Cap</div>
@@ -469,21 +334,12 @@ export function CapCheckupJourney() {
         )}
       </section>
 
-      {/* 3. Step 2: "Clear Cap Space Fast" Two-Column Action Board */}
+      {/* "Clear Cap Space Fast" Two-Column Action Board */}
       <section className="space-y-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
-              Step 2 · Create Cap Space in 1 Click
-            </span>
-            <h2 className="font-editorial text-2xl text-[#1c1917]">
-              Two Ways NFL GMs Clear Cap Room Today
-            </h2>
-          </div>
-          <p className="text-xs text-[#57534e]">
-            Click any action button below to test the move live, or click a
-            player&apos;s name to open their full 4-Door comparison card.
-          </p>
+        <div>
+          <h2 className="font-editorial text-2xl text-[#1c1917]">
+            Clear Cap Room Today
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -494,18 +350,13 @@ export function CapCheckupJourney() {
                 <div>
                   <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#2d5a43]">
                     <Wand2 className="h-3.5 w-3.5" />
-                    Option A · Painless Cap Relief (Player Stays)
+                    Player Stays
                   </span>
                   <h3 className="mt-1 font-editorial text-xl text-[#1c1917]">
                     Simple Contract Restructures
                   </h3>
-                  <p className="mt-1 text-xs leading-relaxed text-[#57534e]">
-                    Converts 2026 base salary into a bonus spread across future
-                    years.{' '}
-                    <strong className="text-[#1c1917]">
-                      The player does not take a pay cut
-                    </strong>{' '}
-                    — you just push part of today&apos;s cap bill into 2027–2029.
+                  <p className="mt-1 text-xs text-[#57534e]">
+                    Convert 2026 salary into signing bonus spread across future years.
                   </p>
                 </div>
 
@@ -611,15 +462,13 @@ export function CapCheckupJourney() {
               <div className="border-b border-[#dfd9cc] pb-3.5">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#b84a27]">
                   <Scissors className="h-3.5 w-3.5" />
-                  Option B · Clean the Books (Player Leaves Roster)
+                  Player Leaves Roster
                 </span>
                 <h3 className="mt-1 font-editorial text-xl text-[#1c1917]">
                   Top Veteran Release / Cut Candidates
                 </h3>
-                <p className="mt-1 text-xs leading-relaxed text-[#57534e]">
-                  Wipes out unguaranteed 2026 salary, though any remaining
-                  unpaid signing bonus stays on your cap as{' '}
-                  <JargonTip term="DEAD_MONEY">Dead Money</JargonTip>.
+                <p className="mt-1 text-xs text-[#57534e]">
+                  Release non-guaranteed salary to clear immediate 2026 cap space.
                 </p>
               </div>
 
@@ -707,44 +556,6 @@ export function CapCheckupJourney() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* 4. Guided Next-Step Footer Callout */}
-      <section className="flex flex-wrap items-center justify-between gap-4 border border-[#1c1917] bg-[#ede8dd] px-6 py-4">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#57534e]">
-            Ready for the Next Step?
-          </div>
-          <div className="font-editorial text-lg text-[#1c1917]">
-            You currently have{' '}
-            <span
-              className={`font-mono-ledger font-semibold ${
-                y26.effectiveCapSpace < 0 ? 'text-[#b84a27]' : 'text-[#2d5a43]'
-              }`}
-            >
-              {y26.effectiveCapSpace >= 0 ? '+$' : '−$'}
-              {Math.abs(y26.effectiveCapSpace).toFixed(2)}M
-            </span>{' '}
-            in 2026 Spendable Cap Space. Where to next?
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setActiveTab('player-fate')}
-            className="border border-[#1c1917] bg-[#fcfaf6] px-4 py-2 text-xs font-semibold text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
-          >
-            Go to Step 2: Check Player Fates & X-Ray →
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('free-agency')}
-            className="bg-[#1c1917] px-4 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
-          >
-            Go to Step 3: Sign Free Agents →
-          </button>
         </div>
       </section>
     </div>

@@ -351,24 +351,14 @@ export function DraftTradeSandbox() {
 
   return (
     <section className="mx-auto max-w-[1440px] px-6 py-8 space-y-8">
-      {/* Journey 04 Intro & Sub-Tab Switcher */}
-      <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-6">
+      {/* Trade Machine & 2026 Mock Draft Switcher */}
+      <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
-              Journey 04 · Trade Wizard &amp; 2026 Rookie Draft
-            </span>
-            <h1 className="mt-1 font-editorial text-2xl sm:text-3xl text-[#1c1917]">
-              {subTab === 'trade'
-                ? 'Can We Fit This Trade Target Under Today’s Cap?'
-                : '2026 NFL Draft Picks & Rookie Wage Scale'}
-            </h1>
-            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[#57534e]">
-              {subTab === 'trade'
-                ? 'Remember the #1 NFL trade rule: the old team keeps any unpaid signing bonus, while your team only takes on the player’s remaining base salary—and must fit his cap hit on the day of the trade.'
-                : 'Every draft pick gets a fixed 4-year rookie contract and displaces your 51st-lowest contract, so the net cap cost is much smaller than the gross salary.'}
-            </p>
-          </div>
+          <h2 className="font-editorial text-2xl sm:text-3xl text-[#1c1917]">
+            {subTab === 'trade'
+              ? 'Trade Machine & Cap Fit'
+              : '2026 Mock Draft & Rookie Scale'}
+          </h2>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -380,7 +370,7 @@ export function DraftTradeSandbox() {
                   : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
               }`}
             >
-              4A. &ldquo;Can We Fit Him?&rdquo; Trade Wizard
+              Trade Machine
             </button>
             <button
               type="button"
@@ -391,7 +381,7 @@ export function DraftTradeSandbox() {
                   : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
               }`}
             >
-              4B. 2026 Mock Draft &amp; Rookie Scale ({derivedState.draftPicks.length} Picks)
+              2026 Mock Draft ({derivedState.draftPicks.length} Picks)
             </button>
           </div>
         </div>
@@ -400,20 +390,10 @@ export function DraftTradeSandbox() {
       {/* PART 1: Rookie Wage Scale Ledger (Shown when subTab === 'draft') */}
       {subTab === 'draft' && (
       <div>
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-[#dfd9cc] pb-5">
-          <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-[#8a8379]">
-              CBA Rookie Pool Schedule
-            </p>
-            <h2 className="font-editorial mt-1 text-3xl text-[#1c1917]">
-              Draft Pick Wage Scale & Top-51 Displacement
-            </h2>
-            <p className="mt-1 text-sm text-[#57534e]">
-              Signing a draft pick displaces the 51st-lowest contract ($
-              {replacementCutoff2026.toFixed(2)}M), so net marginal cap impact is
-              substantially lower than gross Year-1 cap hit.
-            </p>
-          </div>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-[#dfd9cc] pb-4">
+          <h3 className="font-editorial text-2xl text-[#1c1917]">
+            Rookie Wage Scale &amp; Top-51 Net Cost
+          </h3>
 
           <div className="flex items-baseline gap-6 font-mono-ledger text-xs">
             <div>
@@ -684,16 +664,9 @@ export function DraftTradeSandbox() {
 
         {/* Minimalist Parity Scale + 3-Chart Comparison + "Can We Fit Him?" Trade Wizard */}
         <div className="mb-8 border-y border-[#d6d0c4] py-4 space-y-4">
-          <div className="border border-[#cbd5e1] bg-[#f8fafc] px-4 py-2.5 text-xs leading-relaxed text-[#334155]">
-            <strong className="text-[#1e3a5f]">
-              What are &ldquo;Trade Value pts&rdquo;?
-            </strong>{' '}
-            NFL front offices value trades using Draft Value Charts (Pick #1 =
-            1,000 pts, Late 1st Rd = ~200 pts, 3rd Rd = ~60 pts on the Rich
-            Hill scale). A player&apos;s points represent their estimated trade
-            value in draft-pick points based on their 0–99 skill rating, age
-            vs. positional cliff, and contract surplus.
-          </div>
+          <p className="font-mono-ledger text-xs text-[#44403c]">
+            <strong className="text-[#1e3a5f]">Trade Value pts:</strong> NFL Draft Chart scale (#1 pick = 1,000 pts · Late 1st = ~200 pts · 3rd Rd = ~60 pts). Aim for 90–110% parity.
+          </p>
 
           <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs sm:text-sm">
             <span className="font-mono-ledger text-[#1e3a5f]">

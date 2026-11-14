@@ -34,7 +34,6 @@ export function RosterMatrix() {
     setSearchQuery,
     selectPlayer,
     openFreeAgencyModal,
-    setActiveTab,
   } = useGMStore();
 
   const [viewMode, setViewMode] = useState<MatrixViewMode>('POSITION');
@@ -337,17 +336,10 @@ export function RosterMatrix() {
               />
             )}
             <div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
-                Journey 05 · Power-User 4-Year Ledger &amp; Backtest Lab
-              </span>
-              <h1 className="font-editorial mt-1 text-2xl sm:text-3xl font-normal text-[#1c1917]">
-                {baseTeam.city} {baseTeam.name} Multi-Year Contract Spreadsheet
+              <h1 className="font-editorial text-2xl sm:text-3xl font-normal text-[#1c1917]">
+                {baseTeam.city} {baseTeam.name} 4-Year Contract Ledger
                 (2026–2029)
               </h1>
-              <p className="mt-1 max-w-2xl text-xs text-[#57534e] leading-relaxed">
-                Click any player row to open their 4-Door GM Drawer, or click an
-                unprotected future cell to model an extension.
-              </p>
             </div>
           </div>
 
@@ -363,14 +355,6 @@ export function RosterMatrix() {
                 className="w-52 border border-[#1c1917] bg-[#f6f3ec] py-1.5 pl-8 pr-2 text-xs text-[#1c1917] placeholder-[#8a8379] focus:outline-none"
               />
             </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('predictor')}
-              className="border border-[#1c1917] bg-[#f6f3ec] px-3.5 py-1.5 text-xs font-semibold text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
-            >
-              5B. Open FA Predictor &amp; Backtest Lab →
-            </button>
           </div>
         </div>
       </div>

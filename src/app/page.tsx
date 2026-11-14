@@ -18,15 +18,13 @@ import { PlayerDossierModal } from '@/components/PlayerDossierModal';
 import { ActiveTab, useGMStore } from '@/store/useGMStore';
 
 const JOURNEY_LABELS: Record<ActiveTab, string> = {
-  'player-fate':
-    'Mode 01 · Roster Grid & Positional Needs (Current Unmodified State)',
-  'team-builder':
-    'Mode 02 · Interactive Team Builder (FAs, Cuts, Trades, Draft & Cap Projector)',
-  'cap-checkup': 'Journey 02 · Cap Checkup & Clear Space',
-  'free-agency': 'Journey 03 · Sign 2026 Free Agents & Comp-Pick Guard',
-  draft: 'Journey 04 · Trade Wizard & 2026 Mock Draft',
-  matrix: 'Journey 05A · Full 4-Year Contract Spreadsheet',
-  predictor: 'Journey 05B · FA Predictor & Historical Backtest Lab',
+  'player-fate': 'Roster Grid & Needs',
+  'team-builder': 'Team Builder',
+  'cap-checkup': 'Cap Fixes',
+  'free-agency': 'Free Agents',
+  draft: 'Trades & Draft',
+  matrix: '4-Year Cap Ledger',
+  predictor: 'FA Predictor & Backtest',
 };
 
 export default function ArmchairGMApp() {
@@ -52,8 +50,8 @@ export default function ArmchairGMApp() {
       {/* 1. Sticky 4-Year Cap Horizon Header */}
       <CapHorizonHeader />
 
-      {/* 2. Prominent Journey Back / Home Breadcrumb Bar when inside secondary tabs */}
-      {activeTab !== 'player-fate' && (
+      {/* 2. Compact Back / Home Bar when inside deep standalone sub-views */}
+      {activeTab !== 'player-fate' && activeTab !== 'team-builder' && (
         <div className="border-b border-[#dfd9cc] bg-[#ede8dd]">
           <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-6 py-2.5 text-xs">
             <div className="flex flex-wrap items-center gap-2">

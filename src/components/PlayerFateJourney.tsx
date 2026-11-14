@@ -443,36 +443,29 @@ export function PlayerFateJourney({
 
         <div className="mt-4 pt-3 border-t border-[#dfd9cc] flex flex-wrap items-center justify-between gap-2">
           {isCurrentState ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-              <span className="text-[11px] text-[#57534e]">
-                Read-only current baseline · Switch to{' '}
-                <strong className="text-[#1c1917]">Team Builder</strong> to
-                cut, restructure, extend, or trade.
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => openPlayerDossier(player, baseTeam.id)}
-                  className="border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-1.5 text-[11px] font-semibold text-[#1c1917] hover:border-[#1c1917] cursor-pointer"
-                >
-                  Scouting &amp; Longevity Dossier
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    openInTeamBuilder({
-                      playerId: player.id,
-                      drawerTab: item.recommendedActionTab,
-                      actionYear: targetYear,
-                    })
-                  }
-                  className="inline-flex items-center gap-1 bg-[#1c1917] px-3 py-1.5 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
-                >
-                  <Wrench className="h-3 w-3" />
-                  <span>Modify in Team Builder</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => openPlayerDossier(player, baseTeam.id)}
+                className="border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-1.5 text-xs font-semibold text-[#1c1917] hover:border-[#1c1917] cursor-pointer"
+              >
+                Dossier
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openInTeamBuilder({
+                    playerId: player.id,
+                    drawerTab: item.recommendedActionTab,
+                    actionYear: targetYear,
+                  })
+                }
+                className="inline-flex items-center gap-1 bg-[#1e40af] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1e3a8a] transition-colors cursor-pointer"
+              >
+                <Wrench className="h-3 w-3" />
+                <span>Modify</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           ) : (
             <>
@@ -602,42 +595,20 @@ export function PlayerFateJourney({
     <div className="mx-auto max-w-[1440px] px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
       {/* 1. Mode Header (Current State vs Team Builder) + View Mode Switcher */}
       <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-4 sm:pb-5">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6f3ec] ${
-                  isCurrentState ? 'bg-[#1c1917]' : 'bg-[#2d5a43]'
-                }`}
-              >
-                {isCurrentState
-                  ? `Mode 01 · Current State (${activeCapState.roster.length}-Man Roster)`
-                  : `Mode 02 · Interactive Team Builder (${activeCapState.roster.length}-Man Roster)`}
-              </span>
-              <span className="hidden sm:inline text-xs font-semibold uppercase tracking-[0.12em] text-[#475569]">
-                {isCurrentState
-                  ? '2026–2031 Unmodified Contract Horizon & Positional Needs'
-                  : 'Modify Contracts, Add FAs, Trade, Draft & Project 2026–2031 Cap'}
-              </span>
-            </div>
-            <h1 className="mt-1.5 font-editorial text-[clamp(1.4rem,1rem+1.6vw,2.05rem)] font-bold leading-tight text-[#111827]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-4">
+          <div className="flex items-center gap-3">
+            <span
+              className={`px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6f3ec] shrink-0 ${
+                isCurrentState ? 'bg-[#1e3a5f]' : 'bg-[#15803d]'
+              }`}
+            >
+              {isCurrentState ? 'Mode 01' : 'Mode 02'}
+            </span>
+            <h1 className="font-editorial text-[clamp(1.4rem,1rem+1.6vw,2.05rem)] font-bold leading-tight text-[#111827]">
               {isCurrentState
-                ? viewMode === 'TIMELINE_BARS'
-                  ? `${baseTeam.city} ${baseTeam.name} — Current Roster Grid & Future Needs (${activeCapState.roster.length} Players)`
-                  : `${baseTeam.city} ${baseTeam.name} — ${targetYear} Current Roster By Status`
-                : viewMode === 'TIMELINE_BARS'
-                  ? `${baseTeam.city} ${baseTeam.name} — Interactive Roster & Cap Projector (${activeCapState.roster.length} Players)`
-                  : `${baseTeam.city} ${baseTeam.name} — ${targetYear} Projected Roster Sandbox`}
+                ? `${baseTeam.city} ${baseTeam.name} · ${activeCapState.roster.length}-Man Roster`
+                : `${baseTeam.city} ${baseTeam.name} · Team Builder`}
             </h1>
-            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-[#334155]">
-              {isCurrentState
-                ? viewMode === 'TIMELINE_BARS'
-                  ? 'Read-only view of the unmodified 2026–2031 roster trajectory: solid bars show locked years, amber boxes flag likely cut/restructure checkpoints, and dashed green boxes show projected extension windows. Scroll down for positional needs by year, or switch to Team Builder to test moves.'
-                  : `Inspect the unmodified ${targetYear} roster grouped into 4 clear buckets: Safe Under Contract, Likely ${targetYear} Cap Cuts, Off-Contract Free Agents, and Void-Year Ghost Bills.`
-                : viewMode === 'TIMELINE_BARS'
-                  ? 'Live projection sandbox: cut, restructure, extend, sign free agents, trade, or draft players below. Every change updates the 2026–2031 roster grid, cap space deltas, and projected positional needs in real time.'
-                  : `Inspect the projected ${targetYear} roster with your simulated GM moves applied across all 4 status buckets.`}
-            </p>
           </div>
 
           {/* Primary View Mode Switcher + Phone/Desktop Toggle + Mode Action */}
@@ -744,69 +715,32 @@ export function PlayerFateJourney({
           </div>
         </div>
 
-        {/* Mode Context Strip: Deep Links in Current State vs Baseline-vs-Projected Scorecard in Team Builder */}
+        {/* Mode Context Strip: Saved Moves Reminder in Current State vs Quick-Jump + Scorecard in Team Builder */}
         {isCurrentState ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#dfd9cc] pb-4 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
-                Launch Team Builder To:
+          enabledMovesCount > 0 ? (
+            <div className="mt-3 flex items-center justify-between gap-3 border-b border-[#dfd9cc] pb-3 text-xs">
+              <span className="font-mono-ledger font-semibold text-[#15803d]">
+                {enabledMovesCount} saved move{enabledMovesCount === 1 ? '' : 's'} in Team Builder
               </span>
               <button
                 type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'fa-dock' })}
-                className="border border-[#2d5a43]/50 bg-[#2d5a43]/10 px-2.5 py-1 text-[11px] font-semibold text-[#2d5a43] hover:bg-[#2d5a43] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+                onClick={() => openInTeamBuilder()}
+                className="border border-[#15803d] bg-[#dcfce7] px-3 py-1 font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
               >
-                + Sign 2026 Free Agents →
-              </button>
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'cap-fixes' })}
-                className="border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-1 text-[11px] font-medium text-[#1c1917] hover:border-[#1c1917] cursor-pointer"
-              >
-                Cut &amp; Restructure Cap Fixes →
-              </button>
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'draft-trade' })}
-                className="border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-1 text-[11px] font-medium text-[#1c1917] hover:border-[#1c1917] cursor-pointer"
-              >
-                Trades &amp; 2026 Mock Draft →
-              </button>
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'ledger' })}
-                className="border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-1 text-[11px] font-medium text-[#1c1917] hover:border-[#1c1917] cursor-pointer"
-              >
-                Full 4-Year Cap Ledger →
+                Resume →
               </button>
             </div>
-
-            {enabledMovesCount > 0 && (
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder()}
-                className="inline-flex items-center gap-1.5 border border-[#2d5a43]/40 bg-[#2d5a43]/10 px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-[#2d5a43] hover:bg-[#2d5a43] hover:text-[#f6f3ec] transition-colors cursor-pointer"
-              >
-                <span>
-                  {enabledMovesCount} Active Sandbox Move
-                  {enabledMovesCount === 1 ? '' : 's'} Saved in Team Builder →
-                </span>
-              </button>
-            )}
-          </div>
+          ) : null
         ) : (
           <div className="mt-4 space-y-3 border-b border-[#dfd9cc] pb-4 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2d5a43]">
-                  Baseline vs. Projected Outlook (2026–2029)
-                </span>
-                <span className="text-[11px] text-[#57534e]">
-                  Jump to workbench:
+                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#475569]">
+                  Jump to:
                 </span>
                 {(
                   [
-                    ['fa-dock', '+ Add FAs'],
+                    ['fa-dock', '+ Free Agents'],
                     ['cap-fixes', 'Cap Fixes'],
                     ['draft-trade', 'Trades & Draft'],
                     ['ledger', '4-Yr Ledger'],
@@ -988,25 +922,25 @@ export function PlayerFateJourney({
               <div className="flex items-center gap-2">
                 <span className="inline-block h-4 w-7 bg-[#1e3a5f] border border-[#1e3a5f] rounded-xs" />
                 <span className="text-[#111827] font-semibold">
-                  Locked Contract Year
+                  Locked Year
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-block h-4 w-7 bg-[#fef3c7] border-2 border-[#d97706] rounded-xs" />
                 <span className="text-[#78350f] font-semibold">
-                  Cut-Risk / Fake Back-End Year
+                  Cut / Restructure Risk
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-block h-4 w-7 bg-[#dcfce7] border-2 border-dashed border-[#15803d] rounded-xs" />
                 <span className="text-[#14532d] font-semibold">
-                  Projected Extension Window (% Likelihood)
+                  Extension Window
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-block h-4 w-7 bg-[#fee2e2] border border-dashed border-[#dc2626] rounded-xs" />
                 <span className="text-[#991b1b] font-semibold">
-                  Void Ghost Bill / Age Cliff
+                  Dead Cap / Age Cliff
                 </span>
               </div>
               <div className="flex items-center gap-1.5 border-l border-[#d6d0c4] pl-4 text-xs text-[#334155]">
@@ -2036,23 +1970,14 @@ export function PlayerFateJourney({
           {(bucketFilter === 'ALL_BUCKETS' ||
             bucketFilter === 'LIKELY_CAP_CUT') && (
             <section className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#b84a27] pb-3">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#b84a27]">
-                    Bucket 02 · {targetYear} Cap Casualty &amp; Paper-Year
-                    Watchlist
-                  </span>
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#b84a27] pb-2.5">
+                <div className="flex flex-wrap items-baseline gap-3">
                   <h2 className="font-editorial text-2xl text-[#1c1917]">
-                    Likely {targetYear} Cap Cuts / Restructure-or-Release
-                    Decisions ({filteredCuts.length})
+                    Likely {targetYear} Cap Cuts ({filteredCuts.length})
                   </h2>
-                  <p className="text-xs text-[#57534e]">
-                    These players are technically under contract in {targetYear}
-                    , but have unguaranteed back-end salaries where cutting them
-                    saves major cap space (+$
-                    {outlook.totals.likelyCutsPotentialSavings.toFixed(1)}M
-                    total).
-                  </p>
+                  <span className="font-mono-ledger text-xs font-semibold text-[#b84a27]">
+                    +${outlook.totals.likelyCutsPotentialSavings.toFixed(1)}M potential savings
+                  </span>
                 </div>
 
                 {filteredCuts.length > 0 &&
@@ -2106,23 +2031,10 @@ export function PlayerFateJourney({
           {(bucketFilter === 'ALL_BUCKETS' ||
             bucketFilter === 'OFF_CONTRACT_FA') && (
             <section className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#b57c1e] pb-3">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#b57c1e]">
-                    Bucket 03 · Off-Contract / Expiring Free Agents in{' '}
-                    {targetYear}
-                  </span>
-                  <h2 className="font-editorial text-2xl text-[#1c1917]">
-                    Players Off Contract by {targetYear} (
-                    {filteredOffContract.length})
-                  </h2>
-                  <p className="text-xs text-[#57534e]">
-                    Players from the current roster whose contracts expire
-                    before or entering the {targetYear} season. Click{' '}
-                    <strong>Re-Sign / Extend</strong> to lock them into your{' '}
-                    {targetYear} books.
-                  </p>
-                </div>
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#b57c1e] pb-2.5">
+                <h2 className="font-editorial text-2xl text-[#1c1917]">
+                  Off-Contract in {targetYear} ({filteredOffContract.length})
+                </h2>
               </div>
 
               {filteredOffContract.length === 0 ? (
@@ -2143,21 +2055,14 @@ export function PlayerFateJourney({
           {(bucketFilter === 'ALL_BUCKETS' ||
             bucketFilter === 'SAFE_UNDER_CONTRACT') && (
             <section className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#2d5a43] pb-3">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#2d5a43]">
-                    Bucket 01 · Protected Core &amp; Rookie-Scale Locks
-                  </span>
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#2d5a43] pb-2.5">
+                <div className="flex flex-wrap items-baseline gap-3">
                   <h2 className="font-editorial text-2xl text-[#1c1917]">
                     Safe Under Contract in {targetYear} ({filteredSafe.length})
                   </h2>
-                  <p className="text-xs text-[#57534e]">
-                    Core starters, cost-controlled rookies, and guaranteed deals
-                    projected to remain on the {baseTeam.name} roster in{' '}
-                    {targetYear} ($
-                    {outlook.totals.safeContractCapTotal.toFixed(1)}M combined
-                    cap hit).
-                  </p>
+                  <span className="font-mono-ledger text-xs font-semibold text-[#2d5a43]">
+                    ${outlook.totals.safeContractCapTotal.toFixed(1)}M combined cap hit
+                  </span>
                 </div>
               </div>
 
@@ -2179,20 +2084,10 @@ export function PlayerFateJourney({
             bucketFilter === 'VOID_GHOST_BILL') &&
             filteredVoid.length > 0 && (
               <section className="space-y-4">
-                <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#1c1917] pb-3">
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#57534e]">
-                      Bucket 04 · Deferred Bonus &ldquo;Ghost Bills&rdquo;
-                    </span>
-                    <h2 className="font-editorial text-2xl text-[#1c1917]">
-                      {targetYear} Void-Year Ghost Bills ({filteredVoid.length})
-                    </h2>
-                    <p className="text-xs text-[#57534e]">
-                      These players&apos; active contracts have ended, leaving
-                      dummy Void Years where past signing bonus restructures
-                      stay on your {targetYear} cap.
-                    </p>
-                  </div>
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-[#1c1917] pb-2.5">
+                  <h2 className="font-editorial text-2xl text-[#1c1917]">
+                    Void-Year Ghost Bills in {targetYear} ({filteredVoid.length})
+                  </h2>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -2210,23 +2105,14 @@ export function PlayerFateJourney({
         id="positional-needs-matrix"
         className="scroll-mt-24 border border-[#dfd9cc] bg-[#fcfaf6] p-6 space-y-5"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between border-b border-[#dfd9cc] pb-4">
-          <div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#b84a27]">
-              <Target className="h-3.5 w-3.5" />
-              <span>Multi-Year Roster Hole Radar (2026–2029)</span>
-            </div>
-            <h2 className="mt-1 font-editorial text-2xl sm:text-3xl text-[#1c1917]">
-              {baseTeam.city} {baseTeam.name} —{' '}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-3.5">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-[#b84a27] shrink-0" />
+            <h2 className="font-editorial text-2xl text-[#1c1917]">
               {isCurrentState
-                ? 'Current Positional Needs by Year (2026–2029)'
-                : 'Projected Positional Needs by Year (2026–2029)'}
+                ? 'Positional Needs by Year (2026–2029)'
+                : 'Projected Positional Needs (2026–2029)'}
             </h2>
-            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[#57534e]">
-              {isCurrentState
-                ? 'Compares your current unmodified under-contract starters and depth in each season against standard 53-man NFL positional targets. Click any position row or cell to jump straight into Team Builder filtered for that position.'
-                : 'Live projected depth after your simulated moves. Click any position row or cell to open the Free Agent Workbench below filtered to that position and plug the hole directly into your grid!'}
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-xs shrink-0">
@@ -2550,94 +2436,45 @@ export function PlayerFateJourney({
           MODE-SPECIFIC FOOTER: CTA IN CURRENT STATE vs 4-TAB WORKBENCH IN TEAM BUILDER
          ===================================================================== */}
       {isCurrentState ? (
-        <section className="border-2 border-[#1c1917] bg-[#fcfaf6] p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <span className="bg-[#2d5a43] px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6f3ec]">
-                Ready To Reshape The Roster?
-              </span>
-              <h2 className="mt-2 font-editorial text-2xl text-[#1c1917]">
-                Switch to Team Builder to Sign FAs, Cut/Restructure, Trade &amp;
-                Project Cap
-              </h2>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#57534e]">
-                Compare your unmodified 2026–2031 trajectory against custom GM
-                moves without losing sight of today&apos;s baseline.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'fa-dock' })}
-                className="inline-flex items-center gap-1.5 bg-[#2d5a43] px-4 py-2.5 text-xs font-semibold text-[#f6f3ec] hover:bg-[#234735] cursor-pointer"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>+ Add Free Agents →</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'cap-fixes' })}
-                className="border border-[#1c1917] bg-[#f6f3ec] px-3.5 py-2.5 text-xs font-semibold text-[#1c1917] hover:bg-[#ede8dd] cursor-pointer"
-              >
-                Cut &amp; Restructure Tools →
-              </button>
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'draft-trade' })}
-                className="border border-[#1c1917] bg-[#f6f3ec] px-3.5 py-2.5 text-xs font-semibold text-[#1c1917] hover:bg-[#ede8dd] cursor-pointer"
-              >
-                Trades &amp; 2026 Draft →
-              </button>
-            </div>
-          </div>
-        </section>
+        <div className="mt-6 border border-[#c7bfb0] bg-[#fcfaf6] px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
+          <span className="text-sm font-semibold text-[#111827]">
+            Ready to test cuts, restructures, free-agent signings, or trades?
+          </span>
+          <button
+            type="button"
+            onClick={() => openInTeamBuilder({ subTab: 'fa-dock' })}
+            className="inline-flex items-center gap-1.5 bg-[#1e40af] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#1e3a8a] transition-colors cursor-pointer"
+          >
+            <Wrench className="h-3.5 w-3.5" />
+            <span>Open Team Builder →</span>
+          </button>
+        </div>
       ) : (
         <div id="team-builder-workbench" className="scroll-mt-24 space-y-5">
           {/* 4-Tab Interactive Team Builder Workbench Selector */}
           <div className="border-2 border-[#1c1917] bg-[#fcfaf6] p-3 sm:p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2d5a43]">
-                  Mode 02 Workbench · Modify {baseTeam.name} Roster
-                </div>
-                <div className="font-editorial text-lg text-[#1c1917]">
-                  Choose a Roster Action Workbench Below
-                </div>
-              </div>
-              {enabledMovesCount > 0 && (
-                <button
-                  type="button"
-                  onClick={resetScenarioStack}
-                  className="inline-flex items-center gap-1 border border-[#b84a27]/40 bg-[#b84a27]/10 px-2.5 py-1 text-[11px] font-semibold text-[#b84a27] hover:bg-[#b84a27] hover:text-[#f6f3ec] cursor-pointer"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Reset {enabledMovesCount} Move(s)</span>
-                </button>
-              )}
-            </div>
-
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               {(
                 [
                   {
                     id: 'fa-dock',
-                    kicker: '01 · Free Agency',
-                    label: '+ Add Free Agents & Street FAs',
+                    kicker: '01',
+                    label: '+ Add Free Agents',
                   },
                   {
                     id: 'cap-fixes',
-                    kicker: '02 · Cap Compliance',
-                    label: 'Cut, Restructure & Cap Fixes',
+                    kicker: '02',
+                    label: 'Cut & Restructure',
                   },
                   {
                     id: 'draft-trade',
-                    kicker: '03 · Picks & Deals',
-                    label: 'Trades & 2026 Mock Draft',
+                    kicker: '03',
+                    label: 'Trades & 2026 Draft',
                   },
                   {
                     id: 'ledger',
-                    kicker: '04 · Deep Numbers',
-                    label: 'Full 4-Year Cap Spreadsheet',
+                    kicker: '04',
+                    label: '4-Yr Cap Ledger',
                   },
                 ] as { id: TeamBuilderSubTab; kicker: string; label: string }[]
               ).map((tab) => {
@@ -2674,29 +2511,10 @@ export function PlayerFateJourney({
               id="add-free-agents-dock"
               className="scroll-mt-24 border-2 border-[#1c1917] bg-[#fcfaf6] p-6 space-y-5"
             >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between border-b border-[#dfd9cc] pb-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-[#2d5a43] px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6f3ec]">
-                Interactive Roster Builder Dock
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
-                Click Any Free Agent to Add Directly Into Your Roster Grid Above
-              </span>
-            </div>
-            <h2 className="mt-1.5 font-editorial text-2xl sm:text-3xl text-[#1c1917]">
-              Potential Free Agents &amp; Street Cap Casualties — Click to Add
-              to Grid
-            </h2>
-            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[#57534e]">
-              Click <strong>+ Add to Roster Grid</strong> on any target below to
-              sign them at their projected market contract. They immediately
-              appear at the top of your{' '}
-              <strong>Player × Year Contract &amp; Extension Grid</strong> above
-              and update your <strong>Positional Needs Matrix</strong> and{' '}
-              <strong>2026–2029 Cap Space</strong> live!
-            </p>
-          </div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-3.5">
+          <h2 className="font-editorial text-2xl text-[#1c1917]">
+            Available Free Agents &amp; Street Cap Casualties
+          </h2>
 
           {/* Live 2026 & 2027 Cap Space Pill + Full FA Modal Button */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
