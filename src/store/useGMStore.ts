@@ -160,7 +160,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     transactions: [],
     derivedState: initialDerived,
 
-    activeTab: 'cap-checkup',
+    activeTab: 'player-fate',
     navHistory: [],
     ledgerMode: 'CAP',
     selectedPlayerId: null,
@@ -217,21 +217,21 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         set({ activeTab: prevTab, navHistory: nextHistory });
       } else {
         if (typeof window !== 'undefined') {
-          window.history.pushState({ tab: 'cap-checkup' }, '', '#cap-checkup');
+          window.history.pushState({ tab: 'player-fate' }, '', '#player-fate');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        set({ activeTab: 'cap-checkup', navHistory: [] });
+        set({ activeTab: 'player-fate', navHistory: [] });
       }
     },
     goHome: () => {
       const current = get().activeTab;
-      if (current === 'cap-checkup') return;
+      if (current === 'player-fate') return;
       const nextHistory = [...get().navHistory, current];
       if (typeof window !== 'undefined') {
-        window.history.pushState({ tab: 'cap-checkup' }, '', '#cap-checkup');
+        window.history.pushState({ tab: 'player-fate' }, '', '#player-fate');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      set({ activeTab: 'cap-checkup', navHistory: nextHistory });
+      set({ activeTab: 'player-fate', navHistory: nextHistory });
     },
     setLedgerMode: (mode) => set({ ledgerMode: mode }),
     selectPlayer: (playerId, initialTab = null, initialActionYear = null) =>

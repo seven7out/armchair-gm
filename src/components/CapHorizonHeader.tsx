@@ -73,7 +73,7 @@ export function CapHorizonHeader() {
       {/* Masthead Row */}
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-[#dfd9cc]">
         <div className="flex flex-wrap items-center gap-4">
-          {activeTab !== 'cap-checkup' && (
+          {activeTab !== 'player-fate' && (
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -87,11 +87,11 @@ export function CapHorizonHeader() {
               <button
                 type="button"
                 onClick={goHome}
-                title="Return to Home Mission Hub"
+                title="Return to Roster Grid & Needs (Home)"
                 className="flex items-center gap-1.5 border border-[#1c1917] bg-[#fcfaf6] px-2.5 py-1.5 text-xs font-semibold text-[#1c1917] hover:bg-[#ede8dd] transition-colors cursor-pointer"
               >
                 <Home className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Home Hub</span>
+                <span className="hidden sm:inline">Roster Grid (Home)</span>
               </button>
             </div>
           )}
@@ -156,21 +156,21 @@ export function CapHorizonHeader() {
         >
           {[
             {
-              id: 'cap-checkup' as const,
+              id: 'player-fate' as const,
               step: '1',
+              label: 'Roster Grid & Needs (Home)',
+              subtitle: '2026–2031 Bars + Add FAs',
+            },
+            {
+              id: 'cap-checkup' as const,
+              step: '2',
               label: 'Cap Checkup & Clear Space',
               subtitle: 'Fix Cap Crunch',
             },
             {
-              id: 'player-fate' as const,
-              step: '2',
-              label: 'Player Fate & Future Roster',
-              subtitle: '2026–2029 Outlook',
-            },
-            {
               id: 'free-agency' as const,
               step: '3',
-              label: 'Sign Free Agents',
+              label: 'Full FA Market',
               subtitle: 'Market & Comp Picks',
             },
             {

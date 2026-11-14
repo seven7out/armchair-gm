@@ -18,6 +18,7 @@ import {
   LEAGUE_YEARS,
   LeagueYear,
   Player,
+  POSITION_GROUPS,
   PositionGroup,
   PredictedMarketClassification,
 } from './types';
@@ -1364,5 +1365,179 @@ export function buildPlayerContractTimelineRow(
     cells,
   };
 }
+
+/**
+ * Standard 53-Man NFL Roster Starter & Total Depth Targets by Position Group.
+ */
+export const POSITIONAL_ROSTER_TARGETS: Record<
+  PositionGroup,
+  { starters: number; depth: number; label: string }
+> = {
+  QB: { starters: 1, depth: 2, label: 'Quarterback (QB)' },
+  RB: { starters: 1, depth: 3, label: 'Running Back (RB)' },
+  WR: { starters: 3, depth: 6, label: 'Wide Receiver (WR)' },
+  TE: { starters: 1, depth: 3, label: 'Tight End (TE)' },
+  OL: { starters: 5, depth: 9, label: 'Offensive Line (OL)' },
+  EDGE: { starters: 2, depth: 5, label: 'Edge Rusher (EDGE)' },
+  IDL: { starters: 2, depth: 5, label: 'Interior D-Line (IDL)' },
+  LB: { starters: 2, depth: 5, label: 'Linebacker (LB)' },
+  CB: { starters: 3, depth: 6, label: 'Cornerback (CB)' },
+  S: { starters: 2, depth: 4, label: 'Safety (S)' },
+  ST: { starters: 2, depth: 3, label: 'Special Teams (K/P/LS)' },
+};
+
+export type PositionalNeedUrgency = 'CRITICAL_NEED' | 'DEPTH_NEED' | 'SOLID' | 'LOADED';
+
+export interface PositionalYearNeedCell {
+  position: PositionGroup;
+  year: LeagueYear;
+  urgency: PositionalNeedUrgency;
+  startersUnderContract: number;
+  targetStarters: number;
+  totalUnderContract: number;
+  targetDepth: number;
+  starterDeficit: number;
+  depthDeficit: number;
+  totalCapSpend: number;
+  topPlayers: string[];
+  expiringAfterPrevYear: string[];
+  badgeLabel: string;
+  subLabel: string;
+}
+
+export interface PositionalNeedRow {
+  position: PositionGroup;
+  label: string;
+  targetStarters: number;
+  targetDepth: number;
+  cellsByYear: Record<LeagueYear, PositionalYearNeedCell>;
+  highestUrgency2026To2027: PositionalNeedUrgency;
+}
+
+/**
+ * Evaluates a team's multi-year positional needs (2026–2029) across all 11 position groups
+ * based on active non-void contracts in `derivedState.players`.
+ * Automatically updates whenever the user signs a Free Agent, extends a player, or cuts a player!
+ */
+export function evaluateTeamPositionalNeedsByYear(
+  derivedState: DerivedTeamCapState
+): PositionalNeedRow[] {
+  return POSITION_GROUPS.map((pos) => {
+    const target = POSITIONAL_ROSTER_TARGETS[pos];
+    const posPlayers = derivedState.roster.filter((p) => p.position === pos);
+
+    const cellsByYear = {} as Record<LeagueYear, PositionalYearNeedCell>;
+
+    for (const yr of LEAGUE_YEARS) {
+      // Players under real active contract in year `yr`
+      const activeInYear = posPlayers
+        .filter((p) => {
+          const cy = p.contractYears[yr];
+          return cy !== null && cy !== undefined && !cy.isVoidYear && getContractYearCapHit(cy) > 0;
+        })
+        .sort((a, b) => b.overallRating - a.overallRating);
+
+      // Quality starters under contract in year `yr` (considering aging decay)
+      const yearDelta = yr - 2026;
+      const startersInYear = activeInYear.filter((p) => {
+        const projectedRating = p.overallRating - Math.max(0, yearDelta * 1.2);
+        return (
+          projectedRating >= 76 ||
+          p.tier === 'Elite' ||
+          (p.tier === 'Starter' && projectedRating >= 73)
+        );
+      });
+
+      const totalCapSpend = roundCap(
+        activeInYear.reduce((sum, p) => {
+          const cy = p.contractYears[yr];
+          return sum + (cy ? getContractYearCapHit(cy) : 0);
+        }, 0)
+      );
+
+      // Players who were active in `yr - 1` (or 2026) and expire before `yr`
+      const prevYear = (yr > 2026 ? yr - 1 : 2026) as LeagueYear;
+      const expiringAfterPrevYear =
+        yr > 2026
+          ? posPlayers
+              .filter((p) => {
+                const prevCy = p.contractYears[prevYear];
+                const curCy = p.contractYears[yr];
+                const wasActivePrev =
+                  prevCy !== null && prevCy !== undefined && !prevCy.isVoidYear && getContractYearCapHit(prevCy) > 0;
+                const isActiveCur =
+                  curCy !== null && curCy !== undefined && !curCy.isVoidYear && getContractYearCapHit(curCy) > 0;
+                return wasActivePrev && !isActiveCur;
+              })
+              .map((p) => p.name)
+          : [];
+
+      const startersUnderContract = startersInYear.length;
+      const totalUnderContract = activeInYear.length;
+      const starterDeficit = Math.max(0, target.starters - startersUnderContract);
+      const depthDeficit = Math.max(0, target.depth - totalUnderContract);
+
+      let urgency: PositionalNeedUrgency;
+      let badgeLabel: string;
+
+      if (starterDeficit > 0) {
+        urgency = 'CRITICAL_NEED';
+        badgeLabel =
+          starterDeficit === 1
+            ? `Need 1 Starter`
+            : `Need ${starterDeficit} Starters`;
+      } else if (totalUnderContract < Math.ceil(target.depth * 0.65)) {
+        urgency = 'DEPTH_NEED';
+        badgeLabel = `Need Depth (${totalUnderContract}/${target.depth})`;
+      } else if (startersUnderContract > target.starters && totalUnderContract >= target.depth) {
+        urgency = 'LOADED';
+        badgeLabel = `Surplus (${startersUnderContract} Starters)`;
+      } else {
+        urgency = 'SOLID';
+        badgeLabel = `Solid (${startersUnderContract}/${target.starters} Starters)`;
+      }
+
+      const subLabel = `${totalUnderContract} signed · $${totalCapSpend.toFixed(1)}M`;
+
+      cellsByYear[yr] = {
+        position: pos,
+        year: yr,
+        urgency,
+        startersUnderContract,
+        targetStarters: target.starters,
+        totalUnderContract,
+        targetDepth: target.depth,
+        starterDeficit,
+        depthDeficit,
+        totalCapSpend,
+        topPlayers: activeInYear.slice(0, 3).map((p) => p.name),
+        expiringAfterPrevYear,
+        badgeLabel,
+        subLabel,
+      };
+    }
+
+    const rankOrder: Record<PositionalNeedUrgency, number> = {
+      CRITICAL_NEED: 3,
+      DEPTH_NEED: 2,
+      SOLID: 1,
+      LOADED: 0,
+    };
+    const highestUrgency2026To2027 =
+      rankOrder[cellsByYear[2026].urgency] >= rankOrder[cellsByYear[2027].urgency]
+        ? cellsByYear[2026].urgency
+        : cellsByYear[2027].urgency;
+
+    return {
+      position: pos,
+      label: target.label,
+      targetStarters: target.starters,
+      targetDepth: target.depth,
+      cellsByYear,
+      highestUrgency2026To2027,
+    };
+  });
+}
+
 
 

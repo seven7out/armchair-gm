@@ -153,6 +153,8 @@ def fetch_espn_roster(espn_slug: str):
         for a in g.get("items", []):
             nm = norm_name(a.get("fullName", ""))
             out[nm] = {
+                "id": a.get("id", ""),
+                "fullName": a.get("fullName", ""),
                 "headshot": a.get("headshot", {}).get("href"),
                 "pos": a.get("position", {}).get("abbreviation"),
                 "age": a.get("age"),
@@ -200,7 +202,7 @@ def parse_otc_team(team_cfg):
         if idx == -1:
             continue
         next_idx = html.find(f'id="y{yr+1}"')
-        block = html[idx:next_idx] if next_idx != -1 else html[idx : idx + 95000]
+        block = html[idx:next_idx] if next_idx != -1 else html[idx : idx + 220000]
 
         # Parse Active Roster table
         ar_start = block.find('table class="salary-cap-table contracted-players"')
@@ -278,8 +280,8 @@ def parse_otc_team(team_cfg):
                                 "amountsByYear": {2026: dm_val, 2027: 0, 2028: 0, 2029: 0},
                             })
 
-    # Keep top 32 highest-cap active contracts per team for fast, responsive rendering across all 32 teams
-    all_p = sorted(players_by_otc.values(), key=lambda x: x["cap_2026"], reverse=True)[:32]
+    # Keep all active OTC contracts (up to 65) + top up with ESPN active roster players so every team has 53+ players
+    all_p = sorted(players_by_otc.values(), key=lambda x: x["cap_2026"], reverse=True)[:65]
     roster_out = []
 
     for p in all_p:
@@ -361,6 +363,46 @@ def parse_otc_team(team_cfg):
             "isRookieContract": bool(is_rookie),
             "contractYears": p["years"],
         })
+
+    # If OTC had fewer than 53 players under 2026 contract, top up to 55 from ESPN active roster
+    existing_norm_names = {norm_name(p["name"]) for p in roster_out}
+    for nm, espn_p in espn_map.items():
+        if len(roster_out) >= 55:
+            break
+        if nm in existing_norm_names or not espn_p.get("fullName"):
+            continue
+        pos = POS_MAP.get(espn_p.get("pos") or "LB", "LB")
+        age_26 = int(espn_p.get("age") or 24)
+        exp_yrs = max(1, int(espn_p.get("exp") or 1))
+        vet_min = 0.985 if exp_yrs <= 1 else (1.10 if exp_yrs <= 3 else 1.255)
+        roster_out.append({
+            "id": f"{team_cfg['id'].lower()}-espn-{espn_p.get('id') or nm}",
+            "name": espn_p["fullName"],
+            "position": pos,
+            "ageIn2026": age_26,
+            "tier": "Depth",
+            "overallRating": 74,
+            "accruedSeasons": exp_yrs,
+            "headshotUrl": espn_p.get("headshot"),
+            "draftRound": None,
+            "draftPick": None,
+            "isRookieContract": exp_yrs <= 3,
+            "contractYears": {
+                2026: {
+                    "year": 2026,
+                    "baseSalary": vet_min,
+                    "guaranteedSalary": 0.0,
+                    "proratedBonus": 0.0,
+                    "rosterBonus": 0.0,
+                    "workoutBonus": 0.0,
+                    "isVoidYear": False,
+                },
+                2027: None,
+                2028: None,
+                2029: None,
+            },
+        })
+        existing_norm_names.add(nm)
 
     top_stars = ", ".join(p["name"] for p in roster_out[:4])
     print(f"   ✓ Synced {team_cfg['id']} ({team_cfg['city']} {team_cfg['name']}): {len(roster_out)} active contracts, {len(dead_money_entries)} dead-cap items")
