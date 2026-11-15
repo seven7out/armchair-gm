@@ -26,21 +26,29 @@ import {
   Zap,
 } from 'lucide-react';
 import {
+  auditFantasyRosterPlayers,
   buildPlayerContractTimelineRow,
   buildStructuredContract,
   computeRealContractXRay,
+  evaluateFantasyPlayerSignal,
   evaluateFreeAgentTarget,
   evaluateFutureSeasonRosterOutlook,
+  evaluateTeamFantasyEnvironment,
   evaluateTeamPositionalNeedsByYear,
+  FantasyPlayerEvaluation,
+  FantasySignalType,
   FutureRosterBucket,
   FutureSeasonPlayerEvaluation,
   generateRookieContract,
   getContractYearCapHit,
+  isFantasySkillPosition,
   LEAGUE_YEARS,
   LeagueYear,
   POSITION_GROUPS,
   PositionGroup,
   projectPlayerCareerHorizon,
+  SAMPLE_DYNASTY_ROSTER_NAMES,
+  scanLeagueFantasyLandingSpots,
   simulateCutOrTrade,
   simulateRestructure,
   TIMELINE_HORIZON_YEARS,
@@ -49,6 +57,7 @@ import {
   getLeagueWideFreeAgentPool,
   getTeamInternalFreeAgents,
 } from '@/data/seed/freeAgents';
+import { SEED_TEAMS } from '@/data/seed/teams';
 import {
   buildShareableScenarioUrl,
   TeamBuilderSubTab,
@@ -83,6 +92,31 @@ function formatCapDelta(val: number): string {
   return `${rounded >= 0 ? '+$' : '−$'}${Math.abs(rounded).toFixed(2)}M`;
 }
 
+type SleeperPlayerRecord = {
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+};
+
+let sleeperPlayersDirectoryCache: Record<string, SleeperPlayerRecord> | null =
+  null;
+
+function getFantasySignalBadgeClass(signal: FantasySignalType): string {
+  switch (signal) {
+    case 'INSULATED_ALPHA':
+      return 'border-[#16a34a] bg-[#dcfce7] text-[#14532d]';
+    case 'PAPER_TRAP':
+      return 'border-[#dc2626] bg-[#fee2e2] text-[#991b1b]';
+    case 'BREAKOUT_STASH':
+      return 'border-[#7c3aed] bg-[#ede9fe] text-[#4c1d95]';
+    case 'TAG_OR_UFA_WATCH':
+      return 'border-[#d97706] bg-[#fef3c7] text-[#92400e]';
+    default:
+      return 'border-[#94a3b8] bg-[#f1f5f9] text-[#334155]';
+  }
+}
+
 export function PlayerFateJourney({
   mode = 'CURRENT_STATE',
 }: {
@@ -101,6 +135,7 @@ export function PlayerFateJourney({
     setTeamBuilderPosFilter,
     setCompareOriginalBaseline,
     openInTeamBuilder,
+    selectTeam,
     selectPlayer,
     addCutTransaction,
     addRestructureTransaction,
@@ -144,6 +179,198 @@ export function PlayerFateJourney({
     'AUTO' | 'PHONE' | 'DESKTOP'
   >('AUTO');
   const [showAllMobileRoster, setShowAllMobileRoster] = useState(false);
+
+  // Fantasy Football Lens state
+  const [isFantasyLens, setIsFantasyLens] = useState(false);
+  const [fantasyHubTab, setFantasyHubTab] = useState<
+    'TEAM_INSULATION' | 'LANDING_SPOTS' | 'ROSTER_AUDIT'
+  >('TEAM_INSULATION');
+  const [fantasySignalFilter, setFantasySignalFilter] = useState<
+    'ALL' | FantasySignalType
+  >('ALL');
+  const [landingSpotPosFilter, setLandingSpotPosFilter] = useState<
+    'ALL' | 'QB' | 'RB' | 'WR' | 'TE'
+  >('ALL');
+  const [auditedPlayerNames, setAuditedPlayerNames] = useState<string[]>(
+    SAMPLE_DYNASTY_ROSTER_NAMES
+  );
+  const [auditPlayerInput, setAuditPlayerInput] = useState('');
+  const [sleeperUsername, setSleeperUsername] = useState('');
+  const [sleeperLeagues, setSleeperLeagues] = useState<
+    { league_id: string; name: string; season: string; userId: string }[]
+  >([]);
+  const [selectedSleeperLeagueId, setSelectedSleeperLeagueId] = useState<
+    string | null
+  >(null);
+  const [sleeperStatusMsg, setSleeperStatusMsg] = useState<string | null>(null);
+  const [sleeperLoading, setSleeperLoading] = useState(false);
+
+  const toggleFantasyLens = () => {
+    setIsFantasyLens((prev) => {
+      const next = !prev;
+      if (next && posFilter !== 'ALL' && !isFantasySkillPosition(posFilter)) {
+        setPosFilter('ALL');
+      }
+      return next;
+    });
+  };
+
+  const loadSleeperLeagueRoster = async (
+    leagueId: string,
+    userId: string,
+    leagueName?: string
+  ) => {
+    setSleeperLoading(true);
+    setSelectedSleeperLeagueId(leagueId);
+    setSleeperStatusMsg(`Loading roster from ${leagueName ?? 'Sleeper'}...`);
+    try {
+      const rostersRes = await fetch(
+        `https://api.sleeper.app/v1/league/${leagueId}/rosters`
+      );
+      if (!rostersRes.ok) {
+        throw new Error('Could not fetch league rosters from Sleeper.');
+      }
+      const rosters = (await rostersRes.json()) as {
+        owner_id?: string;
+        co_owners?: string[];
+        players?: string[];
+      }[];
+      const userRoster = rosters.find(
+        (r) =>
+          r.owner_id === userId || (r.co_owners ?? []).includes(userId)
+      );
+      const playerIds = userRoster?.players ?? [];
+      if (playerIds.length === 0) {
+        setSleeperStatusMsg(
+          `Found ${leagueName ?? 'league'}, but your roster has no players listed yet.`
+        );
+        return;
+      }
+
+      if (!sleeperPlayersDirectoryCache) {
+        setSleeperStatusMsg('Downloading Sleeper NFL player index (once)...');
+        const playersRes = await fetch('https://api.sleeper.app/v1/players/nfl');
+        if (!playersRes.ok) {
+          throw new Error('Could not load Sleeper NFL player directory.');
+        }
+        sleeperPlayersDirectoryCache =
+          (await playersRes.json()) as Record<string, SleeperPlayerRecord>;
+      }
+
+      const resolvedNames: string[] = [];
+      for (const pid of playerIds) {
+        const rec = sleeperPlayersDirectoryCache?.[pid];
+        if (!rec) continue;
+        if (
+          rec.position &&
+          !['QB', 'RB', 'WR', 'TE'].includes(rec.position)
+        ) {
+          continue;
+        }
+        const fullName =
+          rec.full_name ||
+          [rec.first_name, rec.last_name].filter(Boolean).join(' ').trim();
+        if (fullName) {
+          resolvedNames.push(fullName);
+        }
+      }
+
+      if (resolvedNames.length === 0) {
+        setSleeperStatusMsg(
+          `Found ${playerIds.length} roster spots in ${leagueName ?? 'league'}, but no skill players (QB/RB/WR/TE) resolved.`
+        );
+        return;
+      }
+
+      setAuditedPlayerNames(resolvedNames);
+      setSleeperStatusMsg(
+        `Imported ${resolvedNames.length} skill players from "${leagueName ?? leagueId}".`
+      );
+    } catch (err) {
+      setSleeperStatusMsg(
+        err instanceof Error
+          ? err.message
+          : 'Sleeper import failed — try adding players manually below.'
+      );
+    } finally {
+      setSleeperLoading(false);
+    }
+  };
+
+  const handleImportSleeper = async () => {
+    const cleanUser = sleeperUsername.trim();
+    if (!cleanUser) {
+      setSleeperStatusMsg('Enter a public Sleeper username first.');
+      return;
+    }
+    setSleeperLoading(true);
+    setSleeperStatusMsg(`Looking up Sleeper user "${cleanUser}"...`);
+    try {
+      const userRes = await fetch(
+        `https://api.sleeper.app/v1/user/${encodeURIComponent(cleanUser)}`
+      );
+      if (!userRes.ok) {
+        throw new Error(`Sleeper user "${cleanUser}" not found.`);
+      }
+      const userData = (await userRes.json()) as {
+        user_id?: string;
+        display_name?: string;
+      } | null;
+      if (!userData?.user_id) {
+        throw new Error(`Sleeper user "${cleanUser}" not found.`);
+      }
+
+      let foundLeagues: {
+        league_id: string;
+        name: string;
+        season: string;
+      }[] = [];
+      for (const season of ['2026', '2025', '2024']) {
+        const lgRes = await fetch(
+          `https://api.sleeper.app/v1/user/${userData.user_id}/leagues/nfl/${season}`
+        );
+        if (lgRes.ok) {
+          const list = (await lgRes.json()) as {
+            league_id: string;
+            name: string;
+            season: string;
+          }[];
+          if (Array.isArray(list) && list.length > 0) {
+            foundLeagues = list;
+            break;
+          }
+        }
+      }
+
+      if (foundLeagues.length === 0) {
+        setSleeperLeagues([]);
+        setSelectedSleeperLeagueId(null);
+        setSleeperStatusMsg(
+          `Found Sleeper user ${userData.display_name ?? cleanUser}, but no NFL leagues were found for 2024–2026.`
+        );
+        setSleeperLoading(false);
+        return;
+      }
+
+      const mapped = foundLeagues.slice(0, 8).map((l) => ({
+        ...l,
+        userId: userData.user_id!,
+      }));
+      setSleeperLeagues(mapped);
+      await loadSleeperLeagueRoster(
+        mapped[0].league_id,
+        userData.user_id,
+        mapped[0].name
+      );
+    } catch (err) {
+      setSleeperStatusMsg(
+        err instanceof Error
+          ? err.message
+          : 'Could not reach Sleeper API — use manual player add below.'
+      );
+      setSleeperLoading(false);
+    }
+  };
 
   const activeCapState = isCurrentState ? baselineState : derivedState;
   const space2026 = activeCapState.years[2026].effectiveCapSpace;
@@ -257,6 +484,78 @@ export function PlayerFateJourney({
       ? 'ACTIVE'
       : rosterCategoryTab;
 
+  // Fantasy Lens computed signals & league radars (lazy-computed when active)
+  const fantasyEvalByPlayerId = useMemo(() => {
+    const map = new Map<string, FantasyPlayerEvaluation>();
+    if (!isFantasyLens) return map;
+    for (const p of activeCapState.roster) {
+      if (isFantasySkillPosition(p.position)) {
+        map.set(
+          p.id,
+          evaluateFantasyPlayerSignal(p, activeCapState.roster, space2026)
+        );
+      }
+    }
+    return map;
+  }, [isFantasyLens, activeCapState.roster, space2026]);
+
+  const teamFantasyEnv = useMemo(
+    () => (isFantasyLens ? evaluateTeamFantasyEnvironment(activeCapState) : null),
+    [isFantasyLens, activeCapState]
+  );
+
+  const leagueLandingSpots = useMemo(
+    () => (isFantasyLens ? scanLeagueFantasyLandingSpots(SEED_TEAMS) : []),
+    [isFantasyLens]
+  );
+
+  const fantasyAuditReport = useMemo(
+    () =>
+      isFantasyLens
+        ? auditFantasyRosterPlayers(auditedPlayerNames, SEED_TEAMS)
+        : null,
+    [isFantasyLens, auditedPlayerNames]
+  );
+
+  const allSkillPlayerNames = useMemo(() => {
+    if (!isFantasyLens) return [] as string[];
+    const names = new Set<string>();
+    for (const t of Object.values(SEED_TEAMS)) {
+      for (const p of t.roster) {
+        if (isFantasySkillPosition(p.position)) {
+          names.add(p.name);
+        }
+      }
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [isFantasyLens]);
+
+  const renderFantasyRowSummary = (fEval: FantasyPlayerEvaluation) => (
+    <div className="mt-2 border-t border-dashed border-[#cbd5e1] pt-1.5 space-y-1 text-left">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="border border-[#1e3a5f] bg-[#1e3a5f] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-white">
+          {fEval.depthChartSlot}
+        </span>
+        <span
+          className={`border px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${getFantasySignalBadgeClass(
+            fEval.signal
+          )}`}
+        >
+          {fEval.badgeLabel}
+        </span>
+        <span className="font-mono-ledger text-[10px] font-semibold text-[#334155]">
+          Insulation {fEval.insulationScore}/99
+        </span>
+      </div>
+      <p className="text-[11px] leading-snug text-[#1e293b]">
+        {fEval.fantasyTakeaway}
+      </p>
+      <p className="font-mono-ledger text-[10px] text-[#475569]">
+        If Cut/Traded: {fEval.rippleIfCutOrTraded}
+      </p>
+    </div>
+  );
+
   const filteredTimelineRows = useMemo(() => {
     return timelineRows.filter((row) => {
       if (effectiveTab === 'MODIFIED') {
@@ -264,6 +563,17 @@ export function PlayerFateJourney({
           activePlayerTxMap.has(row.player.id) ||
           isNewFaPlayerId(row.player.id);
         if (!isModified) return false;
+      }
+      if (isFantasyLens) {
+        if (posFilter === 'ALL' && !isFantasySkillPosition(row.player.position)) {
+          return false;
+        }
+        if (fantasySignalFilter !== 'ALL') {
+          const fEval = fantasyEvalByPlayerId.get(row.player.id);
+          if (!fEval || fEval.signal !== fantasySignalFilter) {
+            return false;
+          }
+        }
       }
       if (posFilter !== 'ALL' && row.player.position !== posFilter) {
         return false;
@@ -297,6 +607,9 @@ export function PlayerFateJourney({
     timelineRows,
     effectiveTab,
     activePlayerTxMap,
+    isFantasyLens,
+    fantasySignalFilter,
+    fantasyEvalByPlayerId,
     posFilter,
     searchQuery,
     timelineFilter,
@@ -880,6 +1193,19 @@ export function PlayerFateJourney({
             >
               <Lock className="h-3.5 w-3.5" />
               <span>🔒 Extend Core Pillars</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleFantasyLens}
+              title="Focus on QB/RB/WR/TE contract insulation, paper-contract traps, rookie landing spots & Sleeper roster audit"
+              className={`inline-flex items-center gap-1 border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                isFantasyLens
+                  ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
+                  : 'border-[#7c3aed]/60 bg-[#f5f3ff] text-[#4c1d95] hover:bg-[#7c3aed] hover:text-white'
+              }`}
+            >
+              <span>🏈 Fantasy Lens{isFantasyLens ? ' · ON' : ''}</span>
             </button>
 
             <button
@@ -1500,6 +1826,17 @@ export function PlayerFateJourney({
             <span className="shrink-0 mr-1 text-xs font-bold uppercase tracking-[0.08em] text-[#475569]">
               Pos:
             </span>
+            <button
+              type="button"
+              onClick={toggleFantasyLens}
+              className={`shrink-0 snap-start min-h-[36px] border px-2.5 py-1 font-mono-ledger text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                isFantasyLens
+                  ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
+                  : 'border-[#7c3aed]/50 bg-[#f5f3ff] text-[#4c1d95] hover:bg-[#ede9fe]'
+              }`}
+            >
+              🏈 Fantasy{isFantasyLens ? ' (Skill)' : ''}
+            </button>
             {ALL_POSITIONS.map((pos) => (
               <button
                 key={pos}
@@ -1518,6 +1855,525 @@ export function PlayerFateJourney({
         </div>
         )}
       </section>
+
+      {/* =====================================================================
+          FANTASY FOOTBALL LENS HUB (INSULATION · LANDING SPOTS · SLEEPER AUDIT)
+         ===================================================================== */}
+      {isFantasyLens && teamFantasyEnv && (
+        <section className="border-2 border-[#7c3aed]/50 bg-[#fcfaf6] p-4 sm:p-5 space-y-4 shadow-2xs">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-3.5">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-[#7c3aed] px-2 py-0.5 font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                  🏈 Fantasy Football Lens
+                </span>
+                <span className="font-mono-ledger text-xs font-semibold text-[#334155]">
+                  {baseTeam.abbreviation} OL Grade {teamFantasyEnv.olGrade} ·{' '}
+                  {teamFantasyEnv.qbStability}
+                </span>
+              </div>
+              <h2 className="font-editorial text-lg sm:text-xl font-bold text-[#111827]">
+                Contract Insulation, Vacated Opportunities &amp; Dynasty Audit
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-xs">
+              {(
+                [
+                  {
+                    id: 'TEAM_INSULATION',
+                    label: `${baseTeam.abbreviation} Skill Insulation`,
+                  },
+                  {
+                    id: 'LANDING_SPOTS',
+                    label: `League Landing Spots (${leagueLandingSpots.length})`,
+                  },
+                  {
+                    id: 'ROSTER_AUDIT',
+                    label: 'Sleeper / My Dynasty Audit',
+                  },
+                ] as {
+                  id: 'TEAM_INSULATION' | 'LANDING_SPOTS' | 'ROSTER_AUDIT';
+                  label: string;
+                }[]
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFantasyHubTab(tab.id)}
+                  className={`shrink-0 whitespace-nowrap min-h-[36px] border px-3 py-1.5 font-mono-ledger text-xs font-semibold transition-colors cursor-pointer ${
+                    fantasyHubTab === tab.id
+                      ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
+                      : 'border-[#d6d0c4] bg-white text-[#1e293b] hover:border-[#7c3aed]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {fantasyHubTab === 'TEAM_INSULATION' && (
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="border border-[#d6d0c4] bg-white p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#475569]">
+                      1. OL Blocking &amp; Continuity
+                    </span>
+                    <span
+                      className={`border px-2 py-0.5 font-mono-ledger text-xs font-bold ${
+                        teamFantasyEnv.olGrade === 'A' ||
+                        teamFantasyEnv.olGrade === 'B'
+                          ? 'border-[#16a34a] bg-[#dcfce7] text-[#14532d]'
+                          : 'border-[#d97706] bg-[#fef3c7] text-[#92400e]'
+                      }`}
+                    >
+                      Grade {teamFantasyEnv.olGrade}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-[#111827]">
+                    {teamFantasyEnv.olSummary}
+                  </p>
+                  <p className="text-[11px] text-[#475569]">
+                    Strong OL continuity raises RB efficiency &amp; QB sack insulation across multi-year Dynasty windows.
+                  </p>
+                </div>
+
+                <div className="border border-[#d6d0c4] bg-white p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#475569]">
+                      2. QB Stability &amp; Floor
+                    </span>
+                    <span
+                      className={`border px-2 py-0.5 font-mono-ledger text-[10px] font-bold ${
+                        teamFantasyEnv.qbStability === 'Locked Franchise QB'
+                          ? 'border-[#16a34a] bg-[#dcfce7] text-[#14532d]'
+                          : 'border-[#d97706] bg-[#fef3c7] text-[#92400e]'
+                      }`}
+                    >
+                      {teamFantasyEnv.qbStability}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-[#111827]">
+                    {teamFantasyEnv.qbName}
+                  </p>
+                  <p className="text-[11px] text-[#475569]">
+                    {teamFantasyEnv.qbSummary}
+                  </p>
+                </div>
+
+                <div className="border border-[#d6d0c4] bg-white p-3.5 space-y-1.5">
+                  <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#b84a27]">
+                    3. Vacated Opportunity &amp; Cut Ripples
+                  </div>
+                  {teamFantasyEnv.vacatedTouchesSummary.length === 0 ? (
+                    <p className="text-[11px] text-[#14532d] font-medium">
+                      Locked skill core — no urgent 2026 starter cuts or expiring departures flagged.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1 text-[11px] text-[#1e293b]">
+                      {teamFantasyEnv.vacatedTouchesSummary.map((line, i) => (
+                        <li key={i} className="leading-snug">
+                          • {line}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* 1-Tap Signal Filter Strip for Active Roster Grid Below */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-xs">
+                <span className="shrink-0 font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-[#475569] mr-1">
+                  Signal Filter:
+                </span>
+                {(
+                  [
+                    { id: 'ALL', label: 'All Skill Players (QB/RB/WR/TE)' },
+                    { id: 'INSULATED_ALPHA', label: '🔒 Insulated Alphas' },
+                    { id: 'PAPER_TRAP', label: '⚠️ Paper Traps (Sell)' },
+                    { id: 'BREAKOUT_STASH', label: '🚀 Breakout Stashes (Buy)' },
+                    { id: 'TAG_OR_UFA_WATCH', label: '⏳ 2027 UFA / Tag' },
+                  ] as { id: 'ALL' | FantasySignalType; label: string }[]
+                ).map((sig) => (
+                  <button
+                    key={sig.id}
+                    type="button"
+                    onClick={() => setFantasySignalFilter(sig.id)}
+                    className={`shrink-0 whitespace-nowrap min-h-[34px] border px-2.5 py-1 font-mono-ledger text-xs font-semibold transition-colors cursor-pointer ${
+                      fantasySignalFilter === sig.id
+                        ? 'border-[#111827] bg-[#111827] text-white'
+                        : 'border-[#d6d0c4] bg-white text-[#334155] hover:border-[#111827]'
+                    }`}
+                  >
+                    {sig.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {fantasyHubTab === 'LANDING_SPOTS' && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs">
+                  {(['ALL', 'RB', 'WR', 'TE', 'QB'] as const).map((posOpt) => (
+                    <button
+                      key={posOpt}
+                      type="button"
+                      onClick={() => setLandingSpotPosFilter(posOpt)}
+                      className={`shrink-0 min-h-[34px] border px-3 py-1 font-mono-ledger text-xs font-bold transition-colors cursor-pointer ${
+                        landingSpotPosFilter === posOpt
+                          ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                          : 'border-[#d6d0c4] bg-white text-[#334155] hover:border-[#111827]'
+                      }`}
+                    >
+                      {posOpt === 'ALL' ? 'All Positions' : posOpt}
+                    </button>
+                  ))}
+                </div>
+                <span className="font-mono-ledger text-[11px] text-[#475569]">
+                  32-team scan combining vacating starters, OL grade, &apos;26 cap space &amp; Day 1–2 draft ammo
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
+                {leagueLandingSpots
+                  .filter(
+                    (spot) =>
+                      landingSpotPosFilter === 'ALL' ||
+                      spot.position === landingSpotPosFilter
+                  )
+                  .map((spot) => (
+                    <div
+                      key={spot.id}
+                      className="border border-[#d6d0c4] bg-white p-3.5 flex flex-col justify-between gap-2.5"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono-ledger text-xs font-bold text-[#111827]">
+                            {spot.teamAbbr} · {spot.position} Room
+                          </span>
+                          <span className="border border-[#7c3aed]/50 bg-[#f5f3ff] px-2 py-0.5 font-mono-ledger text-[10px] font-bold text-[#4c1d95]">
+                            Opp {spot.opportunityScore}/99
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="border border-[#1e3a5f]/30 bg-[#eff6ff] px-2 py-0.5 font-mono-ledger text-[10px] font-bold text-[#1e3a5f]">
+                            {spot.archetypeBadge}
+                          </span>
+                          <span className="font-mono-ledger text-[10px] text-[#475569]">
+                            OL Grade {spot.olGrade}
+                          </span>
+                        </div>
+                        <p className="font-semibold text-[#111827] leading-snug">
+                          {spot.headline}
+                        </p>
+                        {spot.vacatingOrAtRiskPlayers.length > 0 && (
+                          <div className="text-[11px] text-[#991b1b] font-medium">
+                            At Risk / Expiring:{' '}
+                            {spot.vacatingOrAtRiskPlayers.join(', ')}
+                          </div>
+                        )}
+                        {spot.inHouseBeneficiary && (
+                          <div className="text-[11px] text-[#4c1d95] font-medium">
+                            In-House Stash: {spot.inHouseBeneficiary}
+                          </div>
+                        )}
+                        <div className="font-mono-ledger text-[10px] text-[#475569]">
+                          {spot.capAndDraftAmmo}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectTeam(spot.teamId);
+                          setPosFilter(spot.position);
+                          setFantasyHubTab('TEAM_INSULATION');
+                        }}
+                        className="w-full border border-[#1e3a5f] bg-[#fcfaf6] px-2.5 py-1.5 font-mono-ledger text-xs font-semibold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors cursor-pointer"
+                      >
+                        View {spot.teamAbbr} {spot.position} Board →
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {fantasyHubTab === 'ROSTER_AUDIT' && fantasyAuditReport && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-xs">
+                {/* Sleeper Zero-Login Importer */}
+                <div className="border border-[#d6d0c4] bg-white p-3.5 space-y-2">
+                  <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#1e3a5f]">
+                    1. Import Sleeper Fantasy Roster (Zero Login)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={sleeperUsername}
+                      onChange={(e) => setSleeperUsername(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleImportSleeper();
+                      }}
+                      placeholder="Enter public Sleeper username..."
+                      className="flex-1 min-h-[38px] border border-[#111827] bg-white px-3 py-1.5 text-xs text-[#111827] placeholder:text-[#64748b] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={sleeperLoading}
+                      onClick={handleImportSleeper}
+                      className="shrink-0 min-h-[38px] bg-[#1e3a5f] px-3 py-1.5 font-mono-ledger text-xs font-semibold text-white hover:bg-[#152c4a] disabled:opacity-60 cursor-pointer"
+                    >
+                      {sleeperLoading ? 'Loading...' : 'Import Sleeper'}
+                    </button>
+                  </div>
+                  {sleeperLeagues.length > 1 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="font-mono-ledger text-[10px] text-[#475569]">
+                        Leagues:
+                      </span>
+                      {sleeperLeagues.map((lg) => (
+                        <button
+                          key={lg.league_id}
+                          type="button"
+                          onClick={() =>
+                            loadSleeperLeagueRoster(
+                              lg.league_id,
+                              lg.userId,
+                              lg.name
+                            )
+                          }
+                          className={`border px-2 py-0.5 font-mono-ledger text-[10px] font-semibold cursor-pointer ${
+                            selectedSleeperLeagueId === lg.league_id
+                              ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
+                              : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155]'
+                          }`}
+                        >
+                          {lg.name} ({lg.season})
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {sleeperStatusMsg && (
+                    <p className="font-mono-ledger text-[11px] text-[#1e3a5f]">
+                      {sleeperStatusMsg}
+                    </p>
+                  )}
+                </div>
+
+                {/* Manual Quick-Add Skill Player + Sample Reset */}
+                <div className="border border-[#d6d0c4] bg-white p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#1e3a5f]">
+                      2. Quick-Add / Customize Audited Roster
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuditedPlayerNames(SAMPLE_DYNASTY_ROSTER_NAMES);
+                        setSleeperStatusMsg('Loaded Sample Dynasty Roster.');
+                      }}
+                      className="font-mono-ledger text-[10px] font-semibold text-[#7c3aed] hover:underline cursor-pointer"
+                    >
+                      Reset to Sample Dynasty Team
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      list="fantasy-skill-players-datalist"
+                      value={auditPlayerInput}
+                      onChange={(e) => setAuditPlayerInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && auditPlayerInput.trim()) {
+                          setAuditedPlayerNames((prev) => [
+                            auditPlayerInput.trim(),
+                            ...prev,
+                          ]);
+                          setAuditPlayerInput('');
+                        }
+                      }}
+                      placeholder="Add QB / RB / WR / TE by name..."
+                      className="flex-1 min-h-[38px] border border-[#111827] bg-white px-3 py-1.5 text-xs text-[#111827] placeholder:text-[#64748b] focus:outline-none"
+                    />
+                    <datalist id="fantasy-skill-players-datalist">
+                      {allSkillPlayerNames.map((nm) => (
+                        <option key={nm} value={nm} />
+                      ))}
+                    </datalist>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!auditPlayerInput.trim()) return;
+                        setAuditedPlayerNames((prev) => [
+                          auditPlayerInput.trim(),
+                          ...prev,
+                        ]);
+                        setAuditPlayerInput('');
+                      }}
+                      className="shrink-0 min-h-[38px] border border-[#111827] bg-[#111827] px-3 py-1.5 font-mono-ledger text-xs font-semibold text-white hover:bg-[#334155] cursor-pointer"
+                    >
+                      + Add Player
+                    </button>
+                  </div>
+                  <div className="font-mono-ledger text-[11px] text-[#334155]">
+                    Dynasty Contract Insulation Score:{' '}
+                    <strong className="text-[#111827]">
+                      {fantasyAuditReport.overallInsulationScore}/99
+                    </strong>{' '}
+                    ({fantasyAuditReport.totalAudited} matched players)
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Actionable Dynasty Audit Columns */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 text-xs">
+                {/* Column 1: Paper Traps */}
+                <div className="border border-[#fca5a5] bg-[#fef2f2]/60 p-3.5 space-y-2.5">
+                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-[#991b1b]">
+                    ⚠️ Paper Traps — Sell Before Cut ({fantasyAuditReport.paperContractTraps.length})
+                  </div>
+                  {fantasyAuditReport.paperContractTraps.length === 0 ? (
+                    <p className="text-[11px] text-[#475569]">
+                      Zero high-risk cut candidates on your audited squad.
+                    </p>
+                  ) : (
+                    fantasyAuditReport.paperContractTraps.map((item) => (
+                      <div
+                        key={`aud-trap-${item.player.id}`}
+                        className="border border-[#fecaca] bg-white p-2.5 space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openPlayerDossier(item.player, item.teamId)
+                            }
+                            className="font-bold text-[#111827] hover:underline text-left cursor-pointer"
+                          >
+                            {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              selectTeam(item.teamId);
+                              setPosFilter(item.player.position);
+                              setFantasyHubTab('TEAM_INSULATION');
+                            }}
+                            className="font-mono-ledger text-[10px] font-bold text-[#991b1b] hover:underline cursor-pointer"
+                          >
+                            {item.teamAbbr} →
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-[#7f1d1d]">
+                          {item.evaluation.fantasyTakeaway}
+                        </p>
+                        <p className="font-mono-ledger text-[10px] text-[#475569]">
+                          Ripple: {item.evaluation.rippleIfCutOrTraded}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Column 2: Breakout Stashes */}
+                <div className="border border-[#c4b5fd] bg-[#f5f3ff]/70 p-3.5 space-y-2.5">
+                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-[#4c1d95]">
+                    🚀 Breakout Stashes — Buy Low ({fantasyAuditReport.breakoutStashes.length})
+                  </div>
+                  {fantasyAuditReport.breakoutStashes.length === 0 ? (
+                    <p className="text-[11px] text-[#475569]">
+                      No post-cut backup breakout stashes detected yet — try adding cheap backups behind veteran starters.
+                    </p>
+                  ) : (
+                    fantasyAuditReport.breakoutStashes.map((item) => (
+                      <div
+                        key={`aud-stash-${item.player.id}`}
+                        className="border border-[#ddd6fe] bg-white p-2.5 space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openPlayerDossier(item.player, item.teamId)
+                            }
+                            className="font-bold text-[#111827] hover:underline text-left cursor-pointer"
+                          >
+                            {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              selectTeam(item.teamId);
+                              setPosFilter(item.player.position);
+                              setFantasyHubTab('TEAM_INSULATION');
+                            }}
+                            className="font-mono-ledger text-[10px] font-bold text-[#4c1d95] hover:underline cursor-pointer"
+                          >
+                            {item.teamAbbr} →
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-[#4c1d95]">
+                          {item.evaluation.fantasyTakeaway}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Column 3: Insulated Cornerstones + UFA/Tag Watch */}
+                <div className="border border-[#86efac] bg-[#f0fdf4]/70 p-3.5 space-y-2.5">
+                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-[#14532d]">
+                    🔒 Insulated Core &amp; 2027 UFA Watch (
+                    {fantasyAuditReport.insulatedCornerstones.length +
+                      fantasyAuditReport.ufaTagWatch.length}
+                    )
+                  </div>
+                  {[
+                    ...fantasyAuditReport.insulatedCornerstones,
+                    ...fantasyAuditReport.ufaTagWatch,
+                    ...fantasyAuditReport.solidDepth,
+                  ]
+                    .slice(0, 8)
+                    .map((item) => (
+                      <div
+                        key={`aud-core-${item.player.id}`}
+                        className="border border-[#bbf7d0] bg-white p-2.5 space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openPlayerDossier(item.player, item.teamId)
+                            }
+                            className="font-bold text-[#111827] hover:underline text-left cursor-pointer"
+                          >
+                            {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                          </button>
+                          <span
+                            className={`border px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${getFantasySignalBadgeClass(
+                              item.evaluation.signal
+                            )}`}
+                          >
+                            {item.evaluation.insulationScore}/99
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#1e293b]">
+                          {item.evaluation.badgeLabel} · OL Grade{' '}
+                          {item.env.olGrade} · {item.evaluation.fantasyTakeaway}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* =====================================================================
           CATEGORY TAB VIEW: DEAD MONEY LEDGER (Prior + Session Cuts/Trades)
@@ -1867,6 +2723,9 @@ export function PlayerFateJourney({
                       : extensionLikelihoodTier === 'MEDIUM'
                       ? 'text-[#92400e] bg-[#fef3c7] border-[#d97706]'
                       : 'text-[#334155] bg-[#f1f5f9] border-[#94a3b8]';
+                  const fEval = isFantasyLens
+                    ? fantasyEvalByPlayerId.get(player.id)
+                    : undefined;
 
                   return (
                     <tr
@@ -2079,6 +2938,7 @@ export function PlayerFateJourney({
                                 </>
                               )}
                             </div>
+                            {fEval && renderFantasyRowSummary(fEval)}
                           </div>
                         </div>
                       </th>
@@ -2314,6 +3174,9 @@ export function PlayerFateJourney({
                   : extensionLikelihoodTier === 'MEDIUM'
                   ? 'text-[#92400e] bg-[#fef3c7] border-[#d97706]'
                   : 'text-[#334155] bg-[#f1f5f9] border-[#94a3b8]';
+              const fEval = isFantasyLens
+                ? fantasyEvalByPlayerId.get(player.id)
+                : undefined;
 
               return (
                 <div
@@ -2455,6 +3318,8 @@ export function PlayerFateJourney({
                       );
                     })}
                   </div>
+
+                  {fEval && renderFantasyRowSummary(fEval)}
 
                   {/* Card Row 3: Thumb-Friendly Mode-Aware Footer Actions */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#dfd9cc]">

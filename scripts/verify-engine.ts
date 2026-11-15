@@ -1,11 +1,16 @@
 import {
+  auditFantasyRosterPlayers,
   computeDerivedTeamCapState,
   DEFAULT_CAP_GROWTH_RATE,
+  evaluateFantasyPlayerSignal,
   evaluatePlayerLongevity,
+  evaluateTeamFantasyEnvironment,
   generateRookieContract,
   getContractYearCapHit,
   getDraftPickTradeValue,
   roundCap,
+  SAMPLE_DYNASTY_ROSTER_NAMES,
+  scanLeagueFantasyLandingSpots,
   simulateCutOrTrade,
   simulateRestructure,
   Transaction,
@@ -185,6 +190,40 @@ const branch = detBase.roster.find((p) => p.name === 'Brian Branch')!;
 const branchLongevity = evaluatePlayerLongevity(branch);
 console.log(
   `\n5. Rookie Scale & Aging Checks:\n   Pick #1 4-Yr Deal: $${pick1.totalFourYearValue}M (2026 Net Impact: -$${pick1.year1NetCapImpactAfterDisplacement}M, Rich Hill Value: ${getDraftPickTradeValue(1, 'RichHill')} pts)\n   Pick #28 4-Yr Deal: $${pick28.totalFourYearValue}M (2026 Net Impact: -$${pick28.year1NetCapImpactAfterDisplacement}M)\n   Brian Branch (Age ${branch.ageIn2026} S): ${branchLongevity.extensionRecommendation} (+${branchLongevity.postContractViableYears} viable post-contract starter yrs before Age-${branchLongevity.cliffAge} cliff)`
+);
+
+// 7. Fantasy Football Contract Insulation, Environment, Landing Spots & Audit Checks
+const gibbs = detBase.roster.find((p) => p.name === 'Jahmyr Gibbs')!;
+assert(Boolean(gibbs), 'Jahmyr Gibbs must exist on Detroit Lions roster');
+const gibbsEval = evaluateFantasyPlayerSignal(
+  gibbs,
+  detBase.roster,
+  baseState.years[2026].effectiveCapSpace
+);
+const detEnv = evaluateTeamFantasyEnvironment(baseState);
+const landingSpots = scanLeagueFantasyLandingSpots(SEED_TEAMS);
+const sampleAudit = auditFantasyRosterPlayers(
+  SAMPLE_DYNASTY_ROSTER_NAMES,
+  SEED_TEAMS
+);
+assert(
+  gibbsEval.insulationScore >= 50 && gibbsEval.depthChartSlot === 'RB1',
+  `Expected Jahmyr Gibbs to evaluate as insulated RB1, got ${gibbsEval.depthChartSlot} (${gibbsEval.insulationScore}/99)`
+);
+assert(
+  ['A', 'B', 'C', 'D'].includes(detEnv.olGrade),
+  'Detroit Fantasy Environment must return a valid OL Grade'
+);
+assert(
+  landingSpots.length >= 5,
+  `Expected >= 5 league-wide fantasy landing spots, found ${landingSpots.length}`
+);
+assert(
+  sampleAudit.totalAudited >= 5 && sampleAudit.overallInsulationScore > 0,
+  `Expected Sample Dynasty Roster audit to match >= 5 skill players, matched ${sampleAudit.totalAudited}`
+);
+console.log(
+  `\n6. Fantasy Football Contract Insulation & Landing Spot Checks:\n   ${gibbs.name} (${gibbsEval.depthChartSlot}): ${gibbsEval.badgeLabel} (Insulation ${gibbsEval.insulationScore}/99)\n   ${detEnv.teamName}: OL Grade ${detEnv.olGrade} | QB: ${detEnv.qbStability} (${detEnv.qbName})\n   League Landing Spots Detected: ${landingSpots.length} (Top: ${landingSpots[0].teamAbbr} ${landingSpots[0].position} — ${landingSpots[0].archetypeBadge})\n   Sample Dynasty Audit: ${sampleAudit.totalAudited} players matched, Avg Insulation ${sampleAudit.overallInsulationScore}/99 (Traps: ${sampleAudit.paperContractTraps.length}, Stashes: ${sampleAudit.breakoutStashes.length})`
 );
 
 console.log('\n✅ ALL DETERMINISTIC CAP ENGINE CHECKS PASSED!');
