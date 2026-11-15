@@ -50,6 +50,13 @@ export function ContractActionDrawer() {
 
   const [activeTab, setActiveTab] = useState<ActionTab>('restructure');
   const [actionYear, setActionYear] = useState<LeagueYear>(2026);
+  const [customSlidersKey, setCustomSlidersKey] = useState<string | null>(null);
+  const currentSlidersKey = `${player?.id ?? ''}:${activeTab}`;
+  const showCustomSliders = customSlidersKey === currentSlidersKey;
+  const toggleCustomSliders = () =>
+    setCustomSlidersKey((prev) =>
+      prev === currentSlidersKey ? null : currentSlidersKey
+    );
   const [restructurePct, setRestructurePct] = useState<number>(1.0);
   const [addVoidYears, setAddVoidYears] = useState<number>(1);
 
@@ -493,130 +500,239 @@ export function ContractActionDrawer() {
       {/* Body */}
       <div className="p-4 sm:p-7">
         {activeTab === 'restructure' && (
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-baseline justify-between mb-2">
-                <label
-                  htmlFor={restructureSliderId}
-                  className="text-xs font-medium text-[#1c1917]"
-                >
-                  Convert {actionYear} Base Salary Above Vet Minimum ($
-                  {restructureSim.vetMinimumFloor.toFixed(2)}M Floor)
-                </label>
-                <span className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
-                  {Math.round(restructurePct * 100)}% ($
-                  {restructureSim.convertedBonusAmount.toFixed(2)}M)
-                </span>
-              </div>
-
-              <input
-                id={restructureSliderId}
-                type="range"
-                min={10}
-                max={100}
-                step={5}
-                value={Math.round(restructurePct * 100)}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  e.currentTarget.style.setProperty('--control-value', String(val));
-                  setRestructurePct(val / 100);
-                }}
-                style={
+          <div className="space-y-5">
+            {/* 1-Tap Visual Restructure Choice Cards */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {(
+                [
                   {
-                    '--attr-min': 10,
-                    '--attr-max': 100,
-                    '--control-value': Math.round(restructurePct * 100),
-                  } as React.CSSProperties
-                }
-                className="gm-range-slider w-full"
-              />
-
-              <div className="mt-3 flex items-center justify-between text-xs text-[#57534e]">
-                <div className="flex items-center gap-3">
-                  <span>Void Years Added:</span>
-                  {[0, 1, 2].map((vCount) => (
-                    <button
-                      key={vCount}
-                      type="button"
-                      onClick={() => setAddVoidYears(vCount)}
-                      className={`px-2 py-0.5 font-mono-ledger cursor-pointer ${
-                        addVoidYears === vCount
-                          ? 'bg-[#1c1917] text-[#f6f3ec]'
-                          : 'border border-[#c7bfb0] text-[#57534e]'
-                      }`}
-                    >
-                      +{vCount}
-                    </button>
-                  ))}
-                </div>
-                <span className="font-mono-ledger">
-                  +{restructureSim.annualProrationAdded.toFixed(2)}M/yr across{' '}
-                  {restructureSim.prorationYearsCount} yrs
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-0 sm:divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
-              {LEAGUE_YEARS.map((yr, idx) => {
-                const delta = restructureSim.capDeltaByYear[yr];
-                const newHit = getContractYearCapHit(
-                  restructureSim.updatedPlayer.contractYears[yr]
+                    title: 'Max Cap Relief',
+                    badge: '100% + 2 Void Yrs',
+                    pct: 1.0,
+                    voidYrs: 2,
+                    btnLabel: 'Apply Max Relief',
+                    accent: 'border-[#15803d] bg-[#f0fdf4]',
+                    btnClass: 'bg-[#15803d] text-white hover:bg-[#14532d]',
+                  },
+                  {
+                    title: 'Standard Restructure',
+                    badge: '100% · 0 Void Yrs',
+                    pct: 1.0,
+                    voidYrs: 0,
+                    btnLabel: 'Apply Standard',
+                    accent: 'border-[#1e3a5f] bg-[#eff6ff]',
+                    btnClass: 'bg-[#1e3a5f] text-white hover:bg-[#152c4a]',
+                  },
+                  {
+                    title: 'Light Restructure',
+                    badge: '50% · 0 Void Yrs',
+                    pct: 0.5,
+                    voidYrs: 0,
+                    btnLabel: 'Apply Light',
+                    accent: 'border-[#dfd9cc] bg-[#fcfaf6]',
+                    btnClass: 'bg-[#1c1917] text-[#f6f3ec] hover:bg-[#332e2a]',
+                  },
+                ] as const
+              ).map((preset) => {
+                const sim = simulateRestructure(
+                  player,
+                  actionYear,
+                  preset.pct,
+                  preset.voidYrs
                 );
+                const disabled = sim.currentYearCapSavings <= 0.01;
                 return (
                   <div
-                    key={yr}
-                    className={idx === 0 ? 'sm:pr-3' : idx === 3 ? 'sm:pl-3' : 'sm:px-3'}
+                    key={preset.title}
+                    className={`flex flex-col justify-between border p-3.5 space-y-3 ${preset.accent}`}
                   >
-                    <div className="font-mono-ledger text-[11px] text-[#8a8379]">
-                      {yr} Revised
+                    <div>
+                      <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#475569]">
+                        {preset.badge}
+                      </div>
+                      <h3 className="mt-0.5 font-editorial text-base font-bold text-[#111827]">
+                        {preset.title}
+                      </h3>
+                      <div className="mt-2 font-mono-ledger text-lg font-bold text-[#15803d]">
+                        +${sim.currentYearCapSavings.toFixed(2)}M
+                        <span className="ml-1 text-[11px] font-normal text-[#475569]">
+                          in {actionYear}
+                        </span>
+                      </div>
+                      <div className="mt-1 font-mono-ledger text-[11px] text-[#475569]">
+                        +${sim.annualProrationAdded.toFixed(2)}M/yr across{' '}
+                        {sim.prorationYearsCount} yr
+                        {sim.prorationYearsCount === 1 ? '' : 's'}
+                      </div>
                     </div>
-                    <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
-                      ${newHit.toFixed(2)}M
-                    </div>
-                    <div
-                      className={`font-mono-ledger text-[11px] ${
-                        delta < 0
-                          ? 'text-[#2d5a43]'
-                          : delta > 0
-                          ? 'text-[#b84a27]'
-                          : 'text-[#8a8379]'
-                      }`}
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() =>
+                        addRestructureTransaction(
+                          player,
+                          preset.pct,
+                          preset.voidYrs,
+                          actionYear
+                        )
+                      }
+                      className={`w-full py-2 px-3 text-xs font-semibold transition-colors disabled:opacity-40 cursor-pointer ${preset.btnClass}`}
                     >
-                      {delta < 0
-                        ? `Saves $${Math.abs(delta).toFixed(2)}M`
-                        : delta > 0
-                        ? `+$${delta.toFixed(2)}M`
-                        : '—'}
-                    </div>
+                      {disabled ? 'No Salary Eligible' : preset.btnLabel}
+                    </button>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#57534e]">
-                Immediate {actionYear} relief:{' '}
-                <strong className="font-mono-ledger text-[#2d5a43]">
-                  +${restructureSim.currentYearCapSavings.toFixed(2)}M
-                </strong>
-              </span>
+            <div className="border-t border-[#dfd9cc] pt-3">
               <button
                 type="button"
-                disabled={restructureSim.currentYearCapSavings <= 0}
-                onClick={() =>
-                  addRestructureTransaction(
-                    player,
-                    restructurePct,
-                    addVoidYears,
-                    actionYear
-                  )
-                }
-                className="bg-[#1c1917] px-5 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] disabled:opacity-40 cursor-pointer"
+                onClick={toggleCustomSliders}
+                className="font-mono-ledger text-xs font-semibold text-[#1e3a5f] hover:underline cursor-pointer"
               >
-                Record Restructure (+$
-                {restructureSim.currentYearCapSavings.toFixed(2)}M)
+                {showCustomSliders
+                  ? 'Hide Custom Sliders ▲'
+                  : 'Customize Exact % & Void Years ▾'}
               </button>
             </div>
+
+            {showCustomSliders && (
+              <div className="space-y-5 border border-[#dfd9cc] bg-[#fcfaf6] p-4">
+                <div>
+                  <div className="flex items-baseline justify-between mb-2">
+                    <label
+                      htmlFor={restructureSliderId}
+                      className="text-xs font-medium text-[#1c1917]"
+                    >
+                      Convert {actionYear} Base Salary Above Vet Minimum ($
+                      {restructureSim.vetMinimumFloor.toFixed(2)}M Floor)
+                    </label>
+                    <span className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
+                      {Math.round(restructurePct * 100)}% ($
+                      {restructureSim.convertedBonusAmount.toFixed(2)}M)
+                    </span>
+                  </div>
+
+                  <input
+                    id={restructureSliderId}
+                    type="range"
+                    min={10}
+                    max={100}
+                    step={5}
+                    value={Math.round(restructurePct * 100)}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      e.currentTarget.style.setProperty(
+                        '--control-value',
+                        String(val)
+                      );
+                      setRestructurePct(val / 100);
+                    }}
+                    style={
+                      {
+                        '--attr-min': 10,
+                        '--attr-max': 100,
+                        '--control-value': Math.round(restructurePct * 100),
+                      } as React.CSSProperties
+                    }
+                    className="gm-range-slider w-full"
+                  />
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-[#57534e]">
+                    <div className="flex items-center gap-3">
+                      <span>Void Years Added:</span>
+                      {[0, 1, 2].map((vCount) => (
+                        <button
+                          key={vCount}
+                          type="button"
+                          onClick={() => setAddVoidYears(vCount)}
+                          className={`px-2 py-0.5 font-mono-ledger cursor-pointer ${
+                            addVoidYears === vCount
+                              ? 'bg-[#1c1917] text-[#f6f3ec]'
+                              : 'border border-[#c7bfb0] text-[#57534e]'
+                          }`}
+                        >
+                          +{vCount}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="font-mono-ledger">
+                      +{restructureSim.annualProrationAdded.toFixed(2)}M/yr across{' '}
+                      {restructureSim.prorationYearsCount} yrs
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-0 sm:divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
+                  {LEAGUE_YEARS.map((yr, idx) => {
+                    const delta = restructureSim.capDeltaByYear[yr];
+                    const newHit = getContractYearCapHit(
+                      restructureSim.updatedPlayer.contractYears[yr]
+                    );
+                    return (
+                      <div
+                        key={yr}
+                        className={
+                          idx === 0
+                            ? 'sm:pr-3'
+                            : idx === 3
+                            ? 'sm:pl-3'
+                            : 'sm:px-3'
+                        }
+                      >
+                        <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                          {yr} Revised
+                        </div>
+                        <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
+                          ${newHit.toFixed(2)}M
+                        </div>
+                        <div
+                          className={`font-mono-ledger text-[11px] ${
+                            delta < 0
+                              ? 'text-[#2d5a43]'
+                              : delta > 0
+                              ? 'text-[#b84a27]'
+                              : 'text-[#8a8379]'
+                          }`}
+                        >
+                          {delta < 0
+                            ? `Saves $${Math.abs(delta).toFixed(2)}M`
+                            : delta > 0
+                            ? `+$${delta.toFixed(2)}M`
+                            : '—'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#57534e]">
+                    Immediate {actionYear} relief:{' '}
+                    <strong className="font-mono-ledger text-[#2d5a43]">
+                      +${restructureSim.currentYearCapSavings.toFixed(2)}M
+                    </strong>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={restructureSim.currentYearCapSavings <= 0}
+                    onClick={() =>
+                      addRestructureTransaction(
+                        player,
+                        restructurePct,
+                        addVoidYears,
+                        actionYear
+                      )
+                    }
+                    className="bg-[#1c1917] px-5 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] disabled:opacity-40 cursor-pointer"
+                  >
+                    Record Custom Restructure (+$
+                    {restructureSim.currentYearCapSavings.toFixed(2)}M)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -849,138 +965,257 @@ export function ContractActionDrawer() {
               </div>
             </div>
 
-            {/* Real-World Positional Market Comps (% of Cap at Signing) */}
-            {marketComps.length > 0 && (
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-[#8a8379] mb-2">
-                  Real-World {player.position} Market Comps (Adjusted to $301.2M Cap)
-                </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  {marketComps.map((comp) => (
-                    <button
-                      key={comp.playerName}
-                      type="button"
-                      onClick={() => {
-                        setExtApy(comp.equivalent2026Apy);
-                        setExtYears(Math.min(3, comp.years));
-                        setExtGuaranteedPct(comp.guaranteedPct);
-                      }}
-                      className="border border-[#dfd9cc] p-2 text-left hover:border-[#1c1917] transition-colors cursor-pointer"
-                    >
-                      <div className="text-[11px] font-semibold text-[#1c1917]">
-                        {comp.tierLabel}
-                      </div>
-                      <div className="text-[10px] text-[#8a8379] truncate">
-                        {comp.playerName}
-                      </div>
-                      <div className="mt-1 font-mono-ledger text-xs font-semibold text-[#2d5a43]">
-                        ${comp.equivalent2026Apy.toFixed(1)}M/yr ({comp.pctOfCapAtSigning}% cap)
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-              <div>
-                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
-                  New Years Added
-                </label>
-                <div className="mt-2 flex gap-2">
-                  {[1, 2, 3].map((yrs) => (
-                    <button
-                      key={yrs}
-                      type="button"
-                      onClick={() => setExtYears(yrs)}
-                      className={`flex-1 py-1.5 font-mono-ledger text-xs cursor-pointer ${
-                        extYears === yrs
-                          ? 'bg-[#1c1917] text-[#f6f3ec]'
-                          : 'border border-[#c7bfb0] text-[#57534e]'
-                      }`}
-                    >
-                      +{yrs} yr
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
-                  APY (${extApy.toFixed(1)}M / yr)
-                </label>
-                <input
-                  type="range"
-                  min={2}
-                  max={65}
-                  step={0.5}
-                  value={extApy}
-                  onChange={(e) => setExtApy(parseFloat(e.target.value))}
-                  className="mt-3 w-full accent-[#1c1917]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
-                  Pacing Structure
-                </label>
-                <select
-                  value={extStructure}
-                  onChange={(e) =>
-                    setExtStructure(e.target.value as ContractStructureTemplate)
-                  }
-                  className="mt-2 w-full border-b border-[#1c1917] bg-transparent py-1.5 text-xs font-medium text-[#1c1917]"
-                >
-                  <option value="Backloaded">Team-Friendly Backload</option>
-                  <option value="Flat">Flat / Even</option>
-                  <option value="FrontLoaded">Front-Loaded</option>
-                  <option value="VoidHeavy">Void-Year Deferral</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
-              {LEAGUE_YEARS.map((yr, idx) => {
-                const newCy = extensionSim.updatedPlayer.contractYears[yr];
-                const newHit = getContractYearCapHit(newCy);
+            {/* 1-Tap Visual Extension Choice Cards */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {(
+                [
+                  {
+                    title: 'Team-Friendly Backload',
+                    badge: `+3 Yrs · $${fateForecast.projectedMarketApy.toFixed(1)}M/yr`,
+                    yearsAdded: 3,
+                    apyVal: fateForecast.projectedMarketApy,
+                    gtd: 0.55,
+                    structure: 'Backloaded' as ContractStructureTemplate,
+                    btnLabel: 'Sign +3 Yr Backload',
+                    accent: 'border-[#15803d] bg-[#f0fdf4]',
+                    btnClass: 'bg-[#15803d] text-white hover:bg-[#14532d]',
+                  },
+                  {
+                    title: 'Cap-Saver Void Deal',
+                    badge: `+3 Yrs · $${fateForecast.projectedMarketApy.toFixed(1)}M/yr`,
+                    yearsAdded: 3,
+                    apyVal: fateForecast.projectedMarketApy,
+                    gtd: 0.6,
+                    structure: 'VoidHeavy' as ContractStructureTemplate,
+                    btnLabel: 'Sign +3 Yr Void Deal',
+                    accent: 'border-[#1e3a5f] bg-[#eff6ff]',
+                    btnClass: 'bg-[#1e3a5f] text-white hover:bg-[#152c4a]',
+                  },
+                  {
+                    title: 'Short Bridge Deal',
+                    badge: `+1 Yr · $${Math.max(1.5, Math.round(fateForecast.projectedMarketApy * 0.9 * 10) / 10).toFixed(1)}M`,
+                    yearsAdded: 1,
+                    apyVal: Math.max(
+                      1.5,
+                      Math.round(fateForecast.projectedMarketApy * 0.9 * 10) / 10
+                    ),
+                    gtd: 0.7,
+                    structure: 'Flat' as ContractStructureTemplate,
+                    btnLabel: 'Sign +1 Yr Bridge',
+                    accent: 'border-[#dfd9cc] bg-[#fcfaf6]',
+                    btnClass: 'bg-[#1c1917] text-[#f6f3ec] hover:bg-[#332e2a]',
+                  },
+                ] as const
+              ).map((preset) => {
+                const sim = applyPlayerExtension(
+                  player,
+                  actionYear,
+                  preset.yearsAdded,
+                  preset.apyVal,
+                  preset.gtd,
+                  preset.structure
+                );
+                const deltaCurr = sim.capDeltaByYear[actionYear] ?? 0;
+                const hit27 = getContractYearCapHit(
+                  sim.updatedPlayer.contractYears[2027]
+                );
                 return (
                   <div
-                    key={yr}
-                    className={idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}
+                    key={preset.title}
+                    className={`flex flex-col justify-between border p-3.5 space-y-3 ${preset.accent}`}
                   >
-                    <div className="font-mono-ledger text-[11px] text-[#8a8379]">
-                      {yr} Extended
+                    <div>
+                      <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#475569]">
+                        {preset.badge}
+                      </div>
+                      <h3 className="mt-0.5 font-editorial text-base font-bold text-[#111827]">
+                        {preset.title}
+                      </h3>
+                      <div
+                        className={`mt-2 font-mono-ledger text-sm font-bold ${
+                          deltaCurr <= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
+                        }`}
+                      >
+                        {deltaCurr <= 0
+                          ? `Saves +$${Math.abs(deltaCurr).toFixed(1)}M`
+                          : `+$${deltaCurr.toFixed(1)}M`}{' '}
+                        <span className="text-[11px] font-normal text-[#475569]">
+                          in {actionYear}
+                        </span>
+                      </div>
+                      <div className="mt-1 font-mono-ledger text-[11px] text-[#475569]">
+                        2027 Cap Hit: ${hit27.toFixed(1)}M
+                      </div>
                     </div>
-                    <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
-                      ${newHit.toFixed(2)}M
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        addExtensionTransaction(
+                          player,
+                          preset.yearsAdded,
+                          preset.apyVal,
+                          preset.gtd,
+                          preset.structure,
+                          actionYear
+                        )
+                      }
+                      className={`w-full py-2 px-3 text-xs font-semibold transition-colors cursor-pointer ${preset.btnClass}`}
+                    >
+                      {preset.btnLabel}
+                    </button>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#57534e]">
-                {longevity.extensionRecommendation} ({longevity.postContractViableYears}{' '}
-                viable post-deal yrs)
-              </span>
+            <div>
               <button
                 type="button"
-                onClick={() =>
-                  addExtensionTransaction(
-                    player,
-                    extYears,
-                    extApy,
-                    extGuaranteedPct,
-                    extStructure,
-                    actionYear
-                  )
-                }
-                className="bg-[#1c1917] px-5 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] cursor-pointer"
+                onClick={toggleCustomSliders}
+                className="font-mono-ledger text-xs font-semibold text-[#1e3a5f] hover:underline cursor-pointer"
               >
-                Sign {extYears}-Yr Extension (${(extYears * extApy).toFixed(1)}M)
+                {showCustomSliders
+                  ? 'Hide Custom Terms ▲'
+                  : 'Customize Years, APY & Comps ▾'}
               </button>
             </div>
+
+            {showCustomSliders && (
+              <div className="space-y-5 border border-[#dfd9cc] bg-[#fcfaf6] p-4">
+                {/* Real-World Positional Market Comps (% of Cap at Signing) */}
+                {marketComps.length > 0 && (
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.12em] text-[#8a8379] mb-2">
+                      Real-World {player.position} Market Comps (Adjusted to $301.2M Cap)
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {marketComps.map((comp) => (
+                        <button
+                          key={comp.playerName}
+                          type="button"
+                          onClick={() => {
+                            setExtApy(comp.equivalent2026Apy);
+                            setExtYears(Math.min(3, comp.years));
+                            setExtGuaranteedPct(comp.guaranteedPct);
+                          }}
+                          className="border border-[#dfd9cc] bg-white p-2 text-left hover:border-[#1c1917] transition-colors cursor-pointer"
+                        >
+                          <div className="text-[11px] font-semibold text-[#1c1917]">
+                            {comp.tierLabel}
+                          </div>
+                          <div className="text-[10px] text-[#8a8379] truncate">
+                            {comp.playerName}
+                          </div>
+                          <div className="mt-1 font-mono-ledger text-xs font-semibold text-[#2d5a43]">
+                            ${comp.equivalent2026Apy.toFixed(1)}M/yr ({comp.pctOfCapAtSigning}% cap)
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                      New Years Added
+                    </label>
+                    <div className="mt-2 flex gap-2">
+                      {[1, 2, 3].map((yrs) => (
+                        <button
+                          key={yrs}
+                          type="button"
+                          onClick={() => setExtYears(yrs)}
+                          className={`flex-1 py-1.5 font-mono-ledger text-xs cursor-pointer ${
+                            extYears === yrs
+                              ? 'bg-[#1c1917] text-[#f6f3ec]'
+                              : 'border border-[#c7bfb0] text-[#57534e]'
+                          }`}
+                        >
+                          +{yrs} yr
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                      APY (${extApy.toFixed(1)}M / yr)
+                    </label>
+                    <input
+                      type="range"
+                      min={2}
+                      max={65}
+                      step={0.5}
+                      value={extApy}
+                      onChange={(e) => setExtApy(parseFloat(e.target.value))}
+                      className="mt-3 w-full accent-[#1c1917]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.12em] text-[#8a8379]">
+                      Pacing Structure
+                    </label>
+                    <select
+                      value={extStructure}
+                      onChange={(e) =>
+                        setExtStructure(e.target.value as ContractStructureTemplate)
+                      }
+                      className="mt-2 w-full border-b border-[#1c1917] bg-transparent py-1.5 text-xs font-medium text-[#1c1917]"
+                    >
+                      <option value="Backloaded">Team-Friendly Backload</option>
+                      <option value="Flat">Flat / Even</option>
+                      <option value="FrontLoaded">Front-Loaded</option>
+                      <option value="VoidHeavy">Void-Year Deferral</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
+                  {LEAGUE_YEARS.map((yr, idx) => {
+                    const newCy = extensionSim.updatedPlayer.contractYears[yr];
+                    const newHit = getContractYearCapHit(newCy);
+                    return (
+                      <div
+                        key={yr}
+                        className={idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}
+                      >
+                        <div className="font-mono-ledger text-[11px] text-[#8a8379]">
+                          {yr} Extended
+                        </div>
+                        <div className="font-mono-ledger text-sm font-semibold text-[#1c1917]">
+                          ${newHit.toFixed(2)}M
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#57534e]">
+                    {longevity.extensionRecommendation} ({longevity.postContractViableYears}{' '}
+                    viable post-deal yrs)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addExtensionTransaction(
+                        player,
+                        extYears,
+                        extApy,
+                        extGuaranteedPct,
+                        extStructure,
+                        actionYear
+                      )
+                    }
+                    className="bg-[#1c1917] px-5 py-2.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] cursor-pointer"
+                  >
+                    Sign Custom {extYears}-Yr Extension (${(extYears * extApy).toFixed(1)}M)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

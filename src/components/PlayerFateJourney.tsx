@@ -3,13 +3,14 @@
 import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  ArrowLeft,
   ArrowRight,
   BarChart3,
   Check,
   ChevronDown,
   Ghost,
   LayoutGrid,
+  Link2,
+  Lock,
   Monitor,
   Plus,
   RotateCcw,
@@ -17,12 +18,12 @@ import {
   Search,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   Target,
   UserMinus,
   UserPlus,
   Wrench,
   X,
+  Zap,
 } from 'lucide-react';
 import {
   buildPlayerContractTimelineRow,
@@ -48,7 +49,11 @@ import {
   getLeagueWideFreeAgentPool,
   getTeamInternalFreeAgents,
 } from '@/data/seed/freeAgents';
-import { TeamBuilderSubTab, useGMStore } from '@/store/useGMStore';
+import {
+  buildShareableScenarioUrl,
+  TeamBuilderSubTab,
+  useGMStore,
+} from '@/store/useGMStore';
 import { PlayerAvatar } from './PlayerAvatar';
 import { JargonTip } from './JargonTooltip';
 import { GlobalPlayerSearch } from './PlayerDossierModal';
@@ -94,6 +99,7 @@ export function PlayerFateJourney({
     teamBuilderPosFilter,
     setTeamBuilderSubTab,
     setTeamBuilderPosFilter,
+    setCompareOriginalBaseline,
     openInTeamBuilder,
     selectPlayer,
     addCutTransaction,
@@ -101,9 +107,11 @@ export function PlayerFateJourney({
     addExtensionTransaction,
     addSignFATransaction,
     addQuickTradeTransaction,
+    addDraftSigningTransaction,
+    applyAutoCapReliefPlaybook,
+    applyExtendCorePillarsPlaybook,
     removeTransaction,
     resetScenarioStack,
-    setActiveTab,
     openFreeAgencyModal,
     openPlayerDossier,
   } = useGMStore();
@@ -114,6 +122,9 @@ export function PlayerFateJourney({
   const [openActionMenuPlayerId, setOpenActionMenuPlayerId] = useState<
     string | null
   >(null);
+  const [selectedNeedSolverPos, setSelectedNeedSolverPos] =
+    useState<PositionGroup | null>(null);
+  const [copiedShareUrl, setCopiedShareUrl] = useState(false);
   const [timelineFilter, setTimelineFilter] =
     useState<TimelineQuickFilter>('ALL');
   const [targetYear, setTargetYear] = useState<LeagueYear>(2027);
@@ -835,42 +846,87 @@ export function PlayerFateJourney({
 
   return (
     <div className="mx-auto max-w-[1440px] px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
-      {/* 1. Mode Header (Current State vs Team Builder) + View Mode Switcher */}
+      {/* 1. Unified Header + Smart Playbooks + Mobile Layout Switch */}
       <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-4">
-          <div className="flex items-center gap-3">
-            <span
-              className={`px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6f3ec] shrink-0 ${
-                isCurrentState ? 'bg-[#1e3a5f]' : 'bg-[#15803d]'
-              }`}
-            >
-              {isCurrentState ? 'Mode 01' : 'Mode 02'}
-            </span>
-            <h1 className="font-editorial text-[clamp(1.4rem,1rem+1.6vw,2.05rem)] font-bold leading-tight text-[#111827]">
-              {isCurrentState
-                ? `${baseTeam.city} ${baseTeam.name} · ${activeCapState.roster.length}-Man Roster`
-                : `${baseTeam.city} ${baseTeam.name} · Team Builder`}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {isCurrentState && (
+              <span className="bg-[#b45309] px-2 py-0.5 font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-white shrink-0">
+                Original Baseline
+              </span>
+            )}
+            <h1 className="font-editorial text-[clamp(1.35rem,1rem+1.5vw,1.95rem)] font-bold leading-tight text-[#111827]">
+              {baseTeam.city} {baseTeam.name} · {activeCapState.roster.length}-Man Roster
             </h1>
           </div>
 
-          {/* Primary View Mode Switcher + Desktop Preview Toggle + Mode Action */}
+          {/* 1-Tap GM Playbooks, Share Build & Compact View Toggles */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Phone vs Desktop Layout Switcher (hidden on small screens already in Phone View) */}
-            <div className="hidden md:inline-flex border border-[#1c1917] bg-[#f6f3ec] p-0.5">
+            <button
+              type="button"
+              onClick={applyAutoCapReliefPlaybook}
+              title="Auto-apply up to 3 top restructures and clean casualty cuts to clear cap space"
+              className="inline-flex items-center gap-1 border border-[#15803d] bg-[#f0fdf4] px-2.5 py-1.5 text-xs font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              <span>⚡ Auto-Clear Cap</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={applyExtendCorePillarsPlaybook}
+              title="Extend up to 3 prime young core starters (85+ OVR, age <= 27) entering extension windows"
+              className="inline-flex items-center gap-1 border border-[#1e3a5f] bg-[#eff6ff] px-2.5 py-1.5 text-xs font-semibold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors cursor-pointer"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              <span>🔒 Extend Core Pillars</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const shareUrl = buildShareableScenarioUrl(
+                  window.location.href,
+                  baseTeam.id,
+                  transactions
+                );
+                window.history.replaceState(null, '', shareUrl);
+                navigator.clipboard?.writeText(shareUrl);
+                setCopiedShareUrl(true);
+                setTimeout(() => setCopiedShareUrl(false), 2500);
+              }}
+              title="Copy shareable link with your current team & offseason moves"
+              className="inline-flex items-center gap-1 border border-[#111827] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#111827] hover:bg-[#111827] hover:text-white transition-colors cursor-pointer"
+            >
+              {copiedShareUrl ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-[#15803d]" />
+                  <span>✓ Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Link2 className="h-3.5 w-3.5" />
+                  <span>🔗 Share Build</span>
+                </>
+              )}
+            </button>
+
+            {/* Phone vs Desktop Layout Switcher */}
+            <div className="hidden md:inline-flex border border-[#c7bfb0] bg-[#f6f3ec] p-0.5">
               <button
                 type="button"
                 onClick={() =>
                   setDeviceLayoutMode((m) => (m === 'PHONE' ? 'AUTO' : 'PHONE'))
                 }
-                title="Switch to iPhone / Pixel Mobile Card View"
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+                title="Preview iPhone / Pixel Mobile Card View"
+                className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
                   deviceLayoutMode === 'PHONE'
                     ? 'bg-[#1c1917] text-[#f6f3ec]'
                     : 'text-[#1c1917] hover:bg-[#ede8dd]'
                 }`}
               >
                 <Smartphone className="h-3.5 w-3.5" />
-                <span>Phone View</span>
+                <span>Phone</span>
               </button>
               <button
                 type="button"
@@ -879,106 +935,68 @@ export function PlayerFateJourney({
                     m === 'DESKTOP' ? 'AUTO' : 'DESKTOP'
                   )
                 }
-                title="Switch to Full Desktop Spreadsheet Grid"
-                className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+                title="Force Full Desktop Table"
+                className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
                   deviceLayoutMode === 'DESKTOP'
                     ? 'bg-[#1c1917] text-[#f6f3ec]'
                     : 'text-[#1c1917] hover:bg-[#ede8dd]'
                 }`}
               >
                 <Monitor className="h-3.5 w-3.5" />
-                <span>Full Table</span>
+                <span>Table</span>
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setViewMode('TIMELINE_BARS')}
-              className={`inline-flex items-center gap-1.5 border px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                viewMode === 'TIMELINE_BARS'
-                  ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
-                  : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
-              }`}
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span>2026–2031 Bars</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('BUCKET_CARDS')}
-              className={`inline-flex items-center gap-1.5 border px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                viewMode === 'BUCKET_CARDS'
-                  ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
-                  : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
-              }`}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              <span>By Bucket</span>
-            </button>
-            <a
-              href="#positional-needs-matrix"
-              className="inline-flex items-center gap-1 border border-[#dfd9cc] bg-[#f6f3ec] px-2.5 py-2 text-xs font-semibold text-[#1c1917] hover:border-[#1c1917]"
-            >
-              <Target className="h-3.5 w-3.5 text-[#b84a27]" />
-              <span>Needs ↓</span>
-            </a>
-
-            {isCurrentState ? (
+            <div className="inline-flex border border-[#dfd9cc] bg-[#f6f3ec] p-0.5">
               <button
                 type="button"
-                onClick={() => openInTeamBuilder({ subTab: 'fa-dock' })}
-                className="inline-flex items-center gap-1.5 border border-[#2d5a43] bg-[#2d5a43] px-3 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#234735] cursor-pointer"
+                onClick={() => setViewMode('TIMELINE_BARS')}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                  viewMode === 'TIMELINE_BARS'
+                    ? 'bg-[#1c1917] text-[#f6f3ec]'
+                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                }`}
               >
-                <Wrench className="h-3.5 w-3.5" />
-                <span>
-                  Open Team Builder
-                  {enabledMovesCount > 0 ? ` (${enabledMovesCount})` : ''} →
-                </span>
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span>Timeline</span>
               </button>
-            ) : (
-              <>
-                <a
-                  href="#team-builder-workbench"
-                  className="inline-flex items-center gap-1 border border-[#2d5a43] bg-[#2d5a43] px-2.5 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#234735]"
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  <span>+ Workbench ↓</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('player-fate')}
-                  className="inline-flex items-center gap-1 border border-[#1c1917] bg-[#f6f3ec] px-2.5 py-2 text-xs font-semibold text-[#1c1917] hover:bg-[#ede8dd] cursor-pointer"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  <span>Current State</span>
-                </button>
-              </>
-            )}
+              <button
+                type="button"
+                onClick={() => setViewMode('BUCKET_CARDS')}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                  viewMode === 'BUCKET_CARDS'
+                    ? 'bg-[#1c1917] text-[#f6f3ec]'
+                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span>Buckets</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Mode Context Strip: Saved Moves Reminder in Current State vs Quick-Jump + Scorecard in Team Builder */}
+        {/* Baseline Peek Banner OR Quick Workbench Jump + Move Log */}
         {isCurrentState ? (
-          enabledMovesCount > 0 ? (
-            <div className="mt-3 flex items-center justify-between gap-3 border-b border-[#dfd9cc] pb-3 text-xs">
-              <span className="font-mono-ledger font-semibold text-[#15803d]">
-                {enabledMovesCount} saved move{enabledMovesCount === 1 ? '' : 's'} in Team Builder
-              </span>
-              <button
-                type="button"
-                onClick={() => openInTeamBuilder()}
-                className="border border-[#15803d] bg-[#dcfce7] px-3 py-1 font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
-              >
-                Resume →
-              </button>
-            </div>
-          ) : null
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#dfd9cc] pb-3 text-xs">
+            <span className="font-mono-ledger font-semibold text-[#b45309]">
+              Comparing untouched baseline ({enabledMovesCount} move
+              {enabledMovesCount === 1 ? '' : 's'} paused from view)
+            </span>
+            <button
+              type="button"
+              onClick={() => setCompareOriginalBaseline(false)}
+              className="border border-[#15803d] bg-[#15803d] px-3 py-1 font-semibold text-white hover:bg-[#14532d] transition-colors cursor-pointer"
+            >
+              Return to Projected Moves →
+            </button>
+          </div>
         ) : (
-          <div className="mt-4 space-y-3 border-b border-[#dfd9cc] pb-4 text-xs">
+          <div className="mt-3 space-y-2.5 border-b border-[#dfd9cc] pb-3 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#475569]">
-                  Jump to:
+                  Tools:
                 </span>
                 {(
                   [
@@ -997,7 +1015,7 @@ export function PlayerFateJourney({
                         .getElementById('team-builder-workbench')
                         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className={`border px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+                    className={`border px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
                       teamBuilderSubTab === tabKey
                         ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
                         : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
@@ -1008,110 +1026,27 @@ export function PlayerFateJourney({
                 ))}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {enabledMovesCount > 0 ? (
-                  <>
-                    <span className="border border-[#2d5a43]/40 bg-[#2d5a43]/10 px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-[#2d5a43]">
-                      {enabledMovesCount} Active GM Move
-                      {enabledMovesCount === 1 ? '' : 's'} Applied
-                    </span>
-                    <button
-                      type="button"
-                      onClick={resetScenarioStack}
-                      className="inline-flex items-center gap-1 border border-[#b84a27]/40 bg-[#b84a27]/10 px-2.5 py-1 text-[11px] font-semibold text-[#b84a27] hover:bg-[#b84a27] hover:text-[#f6f3ec] cursor-pointer"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      <span>Reset All Moves</span>
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-[11px] text-[#8a8379]">
-                    No moves applied yet — edit any player row or open the
-                    workbench below.
+              {enabledMovesCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="border border-[#2d5a43]/40 bg-[#2d5a43]/10 px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-[#2d5a43]">
+                    {enabledMovesCount} Active Move
+                    {enabledMovesCount === 1 ? '' : 's'}
                   </span>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-              {LEAGUE_YEARS.map((yr) => {
-                const baseYr = baselineState.years[yr];
-                const projYr = derivedState.years[yr];
-                const deltaCap =
-                  projYr.effectiveCapSpace - baseYr.effectiveCapSpace;
-                const baseNeeds = baselinePositionalNeeds.filter(
-                  (r) =>
-                    r.cellsByYear[yr].urgency === 'CRITICAL_NEED' ||
-                    r.cellsByYear[yr].urgency === 'DEPTH_NEED'
-                ).length;
-                const projNeeds = positionalNeeds.filter(
-                  (r) =>
-                    r.cellsByYear[yr].urgency === 'CRITICAL_NEED' ||
-                    r.cellsByYear[yr].urgency === 'DEPTH_NEED'
-                ).length;
-                return (
-                  <div
-                    key={yr}
-                    className="border border-[#dfd9cc] bg-[#f6f3ec] px-3 py-2 flex items-center justify-between gap-2"
+                  <button
+                    type="button"
+                    onClick={resetScenarioStack}
+                    className="inline-flex items-center gap-1 border border-[#b84a27]/40 bg-[#b84a27]/10 px-2.5 py-1 text-[11px] font-semibold text-[#b84a27] hover:bg-[#b84a27] hover:text-[#f6f3ec] cursor-pointer"
                   >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono-ledger text-xs font-bold text-[#1c1917]">
-                          {yr}
-                        </span>
-                        <span className="font-mono-ledger text-[10px] text-[#8a8379]">
-                          Base {baseYr.effectiveCapSpace >= 0 ? '+$' : '-$'}
-                          {Math.abs(baseYr.effectiveCapSpace).toFixed(1)}M
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-baseline gap-1.5">
-                        <span
-                          className={`font-mono-ledger text-sm font-bold ${
-                            projYr.effectiveCapSpace < 0
-                              ? 'text-[#b84a27]'
-                              : 'text-[#2d5a43]'
-                          }`}
-                        >
-                          {projYr.effectiveCapSpace >= 0 ? '+$' : '-$'}
-                          {Math.abs(projYr.effectiveCapSpace).toFixed(1)}M
-                        </span>
-                        {Math.abs(deltaCap) >= 0.05 && (
-                          <span
-                            className={`font-mono-ledger text-[10px] font-semibold ${
-                              deltaCap >= 0
-                                ? 'text-[#2d5a43]'
-                                : 'text-[#b84a27]'
-                            }`}
-                          >
-                            ({deltaCap >= 0 ? '+' : '-'}$
-                            {Math.abs(deltaCap).toFixed(1)}M)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right font-mono-ledger text-[10px]">
-                      <div className="text-[#8a8379]">Starter Needs</div>
-                      <div className="font-semibold text-[#1c1917]">
-                        {projNeeds}
-                        {projNeeds !== baseNeeds && (
-                          <span className="ml-1 text-[#57534e]">
-                            (was {baseNeeds})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Reset</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Live Chronological Move Log with Per-Move 1-Tap Undo */}
             {transactions.length > 0 && (
-              <div className="pt-1">
-                <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.1em] text-[#475569]">
-                  <span>Chronological Move Log ({transactions.length})</span>
-                  <span>Tap ✕ to undo any single move</span>
-                </div>
+              <div className="pt-0.5">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                   {transactions.map((tx, idx) => (
                     <div
@@ -1145,7 +1080,7 @@ export function PlayerFateJourney({
                         title={`Undo move #${idx + 1}: ${tx.label}`}
                         className="inline-flex items-center gap-0.5 border border-[#b91c1c]/40 bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#b91c1c] hover:bg-[#b91c1c] hover:text-white transition-colors cursor-pointer"
                       >
-                        ✕ Undo
+                        ✕
                       </button>
                     </div>
                   ))}
@@ -1155,8 +1090,311 @@ export function PlayerFateJourney({
           </div>
         )}
 
-        {/* Spotrac-Style Roster Category Tabs (Active Roster · Dead Money · Draft Picks · Modified Moves) */}
-        <div className="mt-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-[#dfd9cc] pb-3 text-xs">
+        {/* Actionable "2026 Team Needs — Tap Any Need to Solve It" Strip */}
+        {(() => {
+          const urgent2026 = positionalNeeds.filter(
+            (r) =>
+              r.cellsByYear[2026].urgency === 'CRITICAL_NEED' ||
+              r.cellsByYear[2026].urgency === 'DEPTH_NEED'
+          );
+          const fallback2027 = positionalNeeds.filter(
+            (r) => r.cellsByYear[2027].urgency === 'CRITICAL_NEED'
+          );
+          const needRows = urgent2026.length > 0 ? urgent2026 : fallback2027;
+
+          const solverInternalFas = selectedNeedSolverPos
+            ? internalFaPool.filter(
+                (item) => item.fa.position === selectedNeedSolverPos
+              )
+            : [];
+          const solverLeagueFas = selectedNeedSolverPos
+            ? faPool
+                .filter((item) => item.fa.position === selectedNeedSolverPos)
+                .slice(0, 3)
+            : [];
+          const solverDraftPicks = activeCapState.draftPicks
+            .filter((pk) => pk.year === 2026 && !pk.selectedPlayerName)
+            .slice(0, 2);
+
+          return (
+            <div
+              id="need-solver-strip"
+              className="scroll-mt-24 mt-3 border-b border-[#dfd9cc] pb-3 space-y-2.5"
+            >
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.08em] text-[#b84a27] mr-1">
+                  2026 Needs (Tap to Fill):
+                </span>
+                {needRows.length === 0 ? (
+                  <span className="border border-[#16a34a] bg-[#f0fdf4] px-2.5 py-1 font-mono-ledger text-xs font-semibold text-[#14532d]">
+                    ✓ All 2026 Starter Spots Filled
+                  </span>
+                ) : (
+                  needRows.map((row) => {
+                    const isCritical =
+                      row.cellsByYear[2026].urgency === 'CRITICAL_NEED';
+                    const isOpen = selectedNeedSolverPos === row.position;
+                    return (
+                      <button
+                        key={row.position}
+                        type="button"
+                        onClick={() =>
+                          setSelectedNeedSolverPos(
+                            isOpen ? null : row.position
+                          )
+                        }
+                        className={`shrink-0 min-h-[34px] border px-2.5 py-1 font-mono-ledger text-xs font-bold transition-colors cursor-pointer ${
+                          isOpen
+                            ? 'border-[#111827] bg-[#111827] text-white'
+                            : isCritical
+                            ? 'border-[#dc2626] bg-[#fee2e2] text-[#991b1b] hover:bg-[#fecaca]'
+                            : 'border-[#d97706] bg-[#fef3c7] text-[#92400e] hover:bg-[#fde68a]'
+                        }`}
+                      >
+                        ★ Need {row.position}
+                      </button>
+                    );
+                  })
+                )}
+                <a
+                  href="#positional-needs-matrix"
+                  className="ml-auto font-mono-ledger text-[11px] font-semibold text-[#475569] hover:text-[#111827] underline"
+                >
+                  Full Needs Grid ↓
+                </a>
+              </div>
+
+              {selectedNeedSolverPos && (
+                <div className="border-2 border-[#111827] bg-white p-3.5 sm:p-4 space-y-3 shadow-md">
+                  <div className="flex items-center justify-between border-b border-[#dfd9cc] pb-2">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-[#b84a27]" />
+                      <h3 className="font-editorial text-base sm:text-lg font-bold text-[#111827]">
+                        Solve {selectedNeedSolverPos} Need in 1 Tap
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNeedSolverPos(null)}
+                      className="inline-flex items-center gap-1 border border-[#cbd5e1] bg-[#f8fafc] px-2 py-1 text-xs font-semibold text-[#334155] hover:border-[#111827] cursor-pointer"
+                    >
+                      <span>Close</span>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    {/* Column 1: Re-Sign Internal Pending FAs */}
+                    <div className="border border-[#d6d0c4] bg-[#f0fdf4]/50 p-3 space-y-2">
+                      <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#14532d]">
+                        1. Re-Sign {baseTeam.abbreviation} Pending FAs (Comp-Pick Safe)
+                      </div>
+                      {solverInternalFas.length === 0 ? (
+                        <div className="text-[11px] text-[#64748b] py-2">
+                          No pending {selectedNeedSolverPos} internal free agents listed.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {solverInternalFas.map(({ fa }) => {
+                            const existingTx = activeSignFaTxByPlayerId.get(fa.id);
+                            return (
+                              <div
+                                key={`solv-int-${fa.id}`}
+                                className="flex items-center justify-between gap-2 border border-[#bbf7d0] bg-white p-2"
+                              >
+                                <div className="min-w-0">
+                                  <div className="truncate font-bold text-[#111827]">
+                                    {fa.name}
+                                  </div>
+                                  <div className="font-mono-ledger text-[10px] text-[#475569]">
+                                    Age {fa.ageIn2026} · Mkt {fa.marketYears}yr / $
+                                    {fa.marketApy.toFixed(1)}M
+                                  </div>
+                                </div>
+                                {existingTx ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeTransaction(existingTx)}
+                                    className="shrink-0 border border-[#2563eb] bg-[#2563eb] px-2 py-1 font-mono-ledger text-[10px] font-semibold text-white cursor-pointer"
+                                  >
+                                    Undo
+                                  </button>
+                                ) : (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        addSignFATransaction(
+                                          fa,
+                                          fa.marketYears,
+                                          fa.marketApy,
+                                          fa.marketGuaranteedPct,
+                                          'Backloaded'
+                                        )
+                                      }
+                                      className="bg-[#15803d] px-2 py-1 font-mono-ledger text-[10px] font-bold text-white hover:bg-[#14532d] cursor-pointer"
+                                    >
+                                      Re-Sign
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        addSignFATransaction(fa, 1, 1.2, 0, 'Flat')
+                                      }
+                                      className="border border-[#15803d] bg-[#f0fdf4] px-1.5 py-1 font-mono-ledger text-[10px] font-bold text-[#14532d] cursor-pointer"
+                                    >
+                                      $1.2M
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Column 2: Sign Top Open-Market FAs */}
+                    <div className="border border-[#d6d0c4] bg-[#fcfaf6] p-3 space-y-2">
+                      <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#1e3a5f]">
+                        2. Sign Top League {selectedNeedSolverPos} Free Agents
+                      </div>
+                      {solverLeagueFas.length === 0 ? (
+                        <div className="text-[11px] text-[#64748b] py-2">
+                          No open-market {selectedNeedSolverPos} targets matched.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {solverLeagueFas.map(({ fa }) => {
+                            const existingTx = activeSignFaTxByPlayerId.get(fa.id);
+                            return (
+                              <div
+                                key={`solv-lg-${fa.id}`}
+                                className="flex items-center justify-between gap-2 border border-[#d6d0c4] bg-white p-2"
+                              >
+                                <div className="min-w-0">
+                                  <div className="truncate font-bold text-[#111827]">
+                                    {fa.name}{' '}
+                                    <span className="font-mono-ledger text-[10px] font-normal text-[#475569]">
+                                      ({fa.previousTeam})
+                                    </span>
+                                  </div>
+                                  <div className="font-mono-ledger text-[10px] text-[#475569]">
+                                    Age {fa.ageIn2026} · {fa.marketYears}yr / $
+                                    {fa.marketApy.toFixed(1)}M
+                                  </div>
+                                </div>
+                                {existingTx ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeTransaction(existingTx)}
+                                    className="shrink-0 border border-[#2563eb] bg-[#2563eb] px-2 py-1 font-mono-ledger text-[10px] font-semibold text-white cursor-pointer"
+                                  >
+                                    Undo
+                                  </button>
+                                ) : (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        addSignFATransaction(
+                                          fa,
+                                          fa.marketYears,
+                                          fa.marketApy,
+                                          fa.marketGuaranteedPct,
+                                          'Backloaded'
+                                        )
+                                      }
+                                      className="bg-[#1c1917] px-2 py-1 font-mono-ledger text-[10px] font-bold text-white hover:bg-[#1e3a5f] cursor-pointer"
+                                    >
+                                      + Sign
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        addSignFATransaction(fa, 1, 1.2, 0, 'Flat')
+                                      }
+                                      className="border border-[#15803d] bg-[#f0fdf4] px-1.5 py-1 font-mono-ledger text-[10px] font-bold text-[#14532d] cursor-pointer"
+                                    >
+                                      $1.2M
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Column 3: Draft a Prospect (2026 Picks) */}
+                    <div className="border border-[#d6d0c4] bg-[#eff6ff]/50 p-3 space-y-2">
+                      <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#1e3a5f]">
+                        3. Draft a {selectedNeedSolverPos} (2026 Picks)
+                      </div>
+                      {solverDraftPicks.length === 0 ? (
+                        <div className="text-[11px] text-[#64748b] py-2">
+                          No remaining unsigned 2026 picks.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {solverDraftPicks.map((pk) => {
+                            const cutoff =
+                              activeCapState.years[2026]
+                                ?.replacementLevelCutoff ?? 1.17;
+                            const slot = generateRookieContract(
+                              pk.overallPick,
+                              2026,
+                              selectedNeedSolverPos,
+                              cutoff
+                            );
+                            return (
+                              <div
+                                key={`solv-pk-${pk.id}`}
+                                className="flex items-center justify-between gap-2 border border-[#bfdbfe] bg-white p-2"
+                              >
+                                <div className="min-w-0">
+                                  <div className="font-bold text-[#111827]">
+                                    Rd {pk.round} · Pick #{pk.overallPick}
+                                  </div>
+                                  <div className="font-mono-ledger text-[10px] text-[#475569]">
+                                    Yr-1: ${slot.year1CapHit.toFixed(2)}M (Net −$
+                                    {slot.year1NetCapImpactAfterDisplacement.toFixed(
+                                      2
+                                    )}
+                                    M)
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    addDraftSigningTransaction({
+                                      pickId: pk.id,
+                                      overallPick: pk.overallPick,
+                                      round: pk.round,
+                                      prospectName: `${selectedNeedSolverPos} Prospect (#${pk.overallPick})`,
+                                      position: selectedNeedSolverPos,
+                                    })
+                                  }
+                                  className="shrink-0 bg-[#1e3a5f] px-2.5 py-1.5 font-mono-ledger text-[10px] font-bold text-white hover:bg-[#152c4a] cursor-pointer"
+                                >
+                                  Draft #{pk.overallPick} {selectedNeedSolverPos}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Consolidated Roster & Market Category Tabs */}
+        <div className="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-[#dfd9cc] pb-3 text-xs">
           {(
             [
               {
@@ -1199,6 +1437,40 @@ export function PlayerFateJourney({
               {cat.label}
             </button>
           ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              setCompareOriginalBaseline(false);
+              setFaDockSourceTab('INTERNAL');
+              setTeamBuilderSubTab('fa-dock');
+              setTimeout(() => {
+                document
+                  .getElementById('add-free-agents-dock')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 60);
+            }}
+            className="shrink-0 whitespace-nowrap min-h-[36px] border border-[#15803d] bg-[#f0fdf4] px-3 py-1.5 font-mono-ledger text-xs font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
+          >
+            + Pending FAs ({internalFaPool.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCompareOriginalBaseline(false);
+              setFaDockSourceTab('LEAGUE');
+              setTeamBuilderSubTab('fa-dock');
+              setTimeout(() => {
+                document
+                  .getElementById('add-free-agents-dock')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 60);
+            }}
+            className="shrink-0 whitespace-nowrap min-h-[36px] border border-[#1c1917] bg-[#fcfaf6] px-3 py-1.5 font-mono-ledger text-xs font-semibold text-[#111827] hover:bg-[#1c1917] hover:text-white transition-colors cursor-pointer"
+          >
+            + Open Market FAs
+          </button>
         </div>
 
         {/* Search & Position Filter Bar (Shown for Active Roster & Modified Roster Tabs) */}

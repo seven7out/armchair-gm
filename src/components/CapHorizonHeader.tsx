@@ -31,6 +31,7 @@ export function CapHorizonHeader() {
     baseTeam,
     capGrowthRate,
     capCalculationMode,
+    compareOriginalBaseline,
     transactions,
     baselineState,
     derivedState,
@@ -39,6 +40,7 @@ export function CapHorizonHeader() {
     selectTeam,
     setCapGrowthRate,
     setCapCalculationMode,
+    setCompareOriginalBaseline,
     setActiveTab,
     openInTeamBuilder,
     goBack,
@@ -54,7 +56,9 @@ export function CapHorizonHeader() {
   const [showMobileCapDetails, setShowMobileCapDetails] = useState(false);
 
   const enabledCount = transactions.filter((t) => t.enabled).length;
-  const isCurrentStateMode = activeTab === 'player-fate';
+  const isMainWorkspace =
+    activeTab === 'team-builder' || activeTab === 'player-fate';
+  const isCurrentStateMode = compareOriginalBaseline && enabledCount > 0;
   const displayCapState = isCurrentStateMode ? baselineState : derivedState;
   const compSummary = displayCapState.compPickSummary;
   const activeCapLabel = capCalculationMode === 'FULL_53' ? 'All-53' : 'Top-51';
@@ -88,12 +92,12 @@ export function CapHorizonHeader() {
         {/* Masthead Row — Compact on iPhone/Pixel, Full on Desktop */}
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5 sm:px-6 sm:py-4 border-b border-[#dfd9cc]">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            {activeTab !== 'player-fate' && (
+            {!isMainWorkspace && (
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={goBack}
-                  title="Go back to previous journey"
+                  title="Go back to previous view"
                   className="flex items-center gap-1 border border-[#1c1917] bg-[#1c1917] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -102,11 +106,11 @@ export function CapHorizonHeader() {
                 <button
                   type="button"
                   onClick={goHome}
-                  title="Return to Roster Grid & Needs (Home)"
+                  title="Return to Roster & Cap Home"
                   className="hidden sm:flex items-center gap-1.5 border border-[#1c1917] bg-[#fcfaf6] px-2.5 py-1.5 text-xs font-semibold text-[#1c1917] hover:bg-[#ede8dd] transition-colors cursor-pointer"
                 >
                   <Home className="h-3.5 w-3.5" />
-                  <span>Roster Grid (Home)</span>
+                  <span>Roster Home</span>
                 </button>
               </div>
             )}
@@ -165,85 +169,77 @@ export function CapHorizonHeader() {
             </div>
           </div>
 
-          {/* Center Navigation — 2 Primary Modes Switcher (Desktop md+) */}
+          {/* Center Navigation — Compact Quick Workspace Nav + Baseline Peek (Desktop md+) */}
           <nav
-            aria-label="Primary Modes"
-            className="hidden md:flex items-center border-2 border-[#111827] bg-white p-0.5"
+            aria-label="Quick Workspace Navigation"
+            className="hidden md:flex items-center gap-1.5"
           >
-            <button
-              type="button"
-              onClick={() => setActiveTab('player-fate')}
-              className={`flex flex-col items-start px-3.5 py-1.5 text-left transition-colors cursor-pointer ${
-                isCurrentStateMode
-                  ? 'bg-[#1e3a5f] text-white'
-                  : 'text-[#111827] hover:bg-[#f1f5f9]'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold tracking-tight">
-                <span
-                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full font-mono-ledger text-xs ${
-                    isCurrentStateMode
-                      ? 'bg-white text-[#1e3a5f]'
-                      : 'bg-[#e2e8f0] text-[#334155]'
-                  }`}
-                >
-                  1
-                </span>
-                <span>Roster Grid &amp; Needs</span>
-              </div>
-              <span
-                className={`text-[11px] font-medium tracking-[0.02em] ${
-                  isCurrentStateMode ? 'text-[#e2e8f0]' : 'text-[#475569]'
+            <div className="flex items-center border border-[#111827] bg-white p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setCompareOriginalBaseline(false);
+                  if (!isMainWorkspace) {
+                    setActiveTab('team-builder');
+                  } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
+                className={`px-3 py-1.5 font-semibold transition-colors cursor-pointer ${
+                  isMainWorkspace && !compareOriginalBaseline
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'text-[#111827] hover:bg-[#f1f5f9]'
                 }`}
               >
-                Current Roster (2026–2031)
-              </span>
-            </button>
+                Roster &amp; Cap
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCompareOriginalBaseline(false);
+                  openInTeamBuilder({ subTab: 'fa-dock' });
+                  setTimeout(() => {
+                    document
+                      .getElementById('add-free-agents-dock')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 60);
+                }}
+                className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#15803d] hover:bg-[#f0fdf4] transition-colors cursor-pointer"
+              >
+                + Free Agents
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCompareOriginalBaseline(false);
+                  openInTeamBuilder({ subTab: 'draft-trade' });
+                  setTimeout(() => {
+                    document
+                      .getElementById('team-builder-workbench')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 60);
+                }}
+                className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#111827] hover:bg-[#f1f5f9] transition-colors cursor-pointer"
+              >
+                Trades &amp; Draft
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (activeTab !== 'team-builder') {
-                  setActiveTab('team-builder');
-                }
-              }}
-              className={`flex flex-col items-start px-3.5 py-1.5 text-left transition-colors cursor-pointer border-l border-[#d6d0c4] ${
-                !isCurrentStateMode
-                  ? 'bg-[#15803d] text-white'
-                  : 'text-[#111827] hover:bg-[#f1f5f9]'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold tracking-tight">
-                <span
-                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full font-mono-ledger text-xs ${
-                    !isCurrentStateMode
-                      ? 'bg-white text-[#15803d]'
-                      : 'bg-[#dcfce7] text-[#15803d]'
-                  }`}
-                >
-                  2
-                </span>
-                <span>Team Builder</span>
-                {enabledCount > 0 && (
-                  <span
-                    className={`ml-1 px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${
-                      !isCurrentStateMode
-                        ? 'bg-white text-[#15803d]'
-                        : 'bg-[#15803d] text-white'
-                    }`}
-                  >
-                    {enabledCount} Move{enabledCount === 1 ? '' : 's'}
-                  </span>
-                )}
-              </div>
-              <span
-                className={`text-[11px] font-medium tracking-[0.02em] ${
-                  !isCurrentStateMode ? 'text-[#dcfce7]' : 'text-[#475569]'
+            {enabledCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setCompareOriginalBaseline(!compareOriginalBaseline)}
+                className={`border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                  compareOriginalBaseline
+                    ? 'border-[#b45309] bg-[#fef3c7] text-[#78350f]'
+                    : 'border-[#c7bfb0] bg-[#fcfaf6] text-[#334155] hover:border-[#111827]'
                 }`}
               >
-                Sign FAs, Cut, Trade &amp; Draft
-              </span>
-            </button>
+                {compareOriginalBaseline
+                  ? 'Viewing Original Baseline (Tap for Projected)'
+                  : 'Peek Original Baseline'}
+              </button>
+            )}
           </nav>
 
           {/* Right Controls: Global Player Lookup, Cap vs Cash Toggle, Growth & Scenario Notebook */}
@@ -455,6 +451,21 @@ export function CapHorizonHeader() {
 
         {/* MOBILE COMPACT 4-YEAR CAP PILL STRIP (Visible on Phone <768px so sticky header stays slim) */}
         <div className="md:hidden px-3 py-2 bg-white border-b border-[#d6d0c4] space-y-2">
+          {enabledCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setCompareOriginalBaseline(!compareOriginalBaseline)}
+              className={`w-full border px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-center ${
+                compareOriginalBaseline
+                  ? 'border-[#b45309] bg-[#fef3c7] text-[#78350f]'
+                  : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155]'
+              }`}
+            >
+              {compareOriginalBaseline
+                ? 'Viewing Original Baseline (Tap for Projected)'
+                : 'Peek Original Baseline'}
+            </button>
+          )}
           <div className="grid grid-cols-5 items-center gap-1.5">
             {LEAGUE_YEARS.map((year) => {
               const yData = displayCapState.years[year];
@@ -872,92 +883,99 @@ export function CapHorizonHeader() {
       </div>
     </header>
 
-    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — Thumb Reach Across Modes + Needs */}
+    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — 4 Thumb Targets */}
     <nav
-      aria-label="Mobile Primary Mode Switcher"
+      aria-label="Mobile Quick Navigation"
       className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-[#111827] bg-white/98 backdrop-blur-md pb-[max(0.45rem,env(safe-area-inset-bottom,0px))] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] shadow-[0_-4px_12px_rgba(17,24,39,0.1)]"
     >
-      <div className="grid grid-cols-3 divide-x divide-[#d6d0c4]">
+      <div className="grid grid-cols-4 divide-x divide-[#d6d0c4]">
         <button
           type="button"
           onClick={() => {
-            if (activeTab !== 'player-fate') {
-              setActiveTab('player-fate');
+            setCompareOriginalBaseline(false);
+            if (!isMainWorkspace) {
+              setActiveTab('team-builder');
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center justify-center min-h-[52px] py-2 px-1.5 text-center transition-colors ${
-            isCurrentStateMode
+          className={`flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center transition-colors ${
+            isMainWorkspace && !compareOriginalBaseline
               ? 'bg-[#1e3a5f] text-white'
-              : 'text-[#111827] hover:bg-[#f1f5f9]'
+              : 'text-[#111827] active:bg-[#f1f5f9]'
           }`}
         >
-          <span className="text-xs font-bold leading-tight">
-            1. Roster Grid
-          </span>
+          <span className="text-xs font-bold leading-tight">Roster</span>
           <span
             className={`mt-0.5 font-mono-ledger text-[10px] font-medium ${
-              isCurrentStateMode ? 'text-[#e2e8f0]' : 'text-[#475569]'
+              isMainWorkspace && !compareOriginalBaseline
+                ? 'text-[#e2e8f0]'
+                : 'text-[#475569]'
             }`}
           >
-            Current State
+            Cap Grid
           </span>
         </button>
 
         <button
           type="button"
           onClick={() => {
-            if (activeTab !== 'player-fate' && activeTab !== 'team-builder') {
-              setActiveTab('player-fate');
-              setTimeout(() => {
-                document
-                  .getElementById('positional-needs-matrix')
-                  ?.scrollIntoView({ behavior: 'smooth' });
-              }, 80);
-            } else {
-              document
-                .getElementById('positional-needs-matrix')
-                ?.scrollIntoView({ behavior: 'smooth' });
-            }
-          }}
-          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1.5 text-center text-[#111827] hover:bg-[#f1f5f9] active:bg-[#ebe6dc] transition-colors"
-        >
-          <span className="text-xs font-bold leading-tight">
-            Needs (&apos;26–&apos;29)
-          </span>
-          <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#b45309]">
-            Jump ↓
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (activeTab !== 'team-builder') {
+            setCompareOriginalBaseline(false);
+            if (!isMainWorkspace) {
               setActiveTab('team-builder');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-              document
-                .getElementById('team-builder-workbench')
-                ?.scrollIntoView({ behavior: 'smooth' });
             }
+            setTimeout(() => {
+              (
+                document.getElementById('need-solver-strip') ??
+                document.getElementById('positional-needs-matrix')
+              )?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 60);
           }}
-          className={`flex flex-col items-center justify-center min-h-[52px] py-2 px-1.5 text-center transition-colors ${
-            !isCurrentStateMode
-              ? 'bg-[#15803d] text-white'
-              : 'text-[#111827] hover:bg-[#f1f5f9]'
-          }`}
+          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center text-[#111827] hover:bg-[#f1f5f9] active:bg-[#ebe6dc] transition-colors"
+        >
+          <span className="text-xs font-bold leading-tight">Needs</span>
+          <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#b45309]">
+            Solve &apos;26
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setCompareOriginalBaseline(false);
+            openInTeamBuilder({ subTab: 'fa-dock' });
+            setTimeout(() => {
+              (
+                document.getElementById('add-free-agents-dock') ??
+                document.getElementById('team-builder-workbench')
+              )?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+          }}
+          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center text-[#111827] hover:bg-[#f0fdf4] active:bg-[#dcfce7] transition-colors"
+        >
+          <span className="text-xs font-bold leading-tight text-[#15803d]">
+            + Free Agents
+          </span>
+          <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#14532d]">
+            Sign / Re-Sign
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setScenarioDrawerOpen(true)}
+          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center bg-[#f8fafc] text-[#111827] active:bg-[#ebe6dc] transition-colors"
         >
           <span className="text-xs font-bold leading-tight">
-            2. Team Builder
-            {enabledCount > 0 ? ` (${enabledCount})` : ''}
+            Moves ({enabledCount})
           </span>
           <span
-            className={`mt-0.5 font-mono-ledger text-[10px] font-medium ${
-              !isCurrentStateMode ? 'text-[#dcfce7]' : 'text-[#15803d]'
+            className={`mt-0.5 font-mono-ledger text-[10px] font-bold ${
+              netCapDelta2026 >= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
             }`}
           >
-            Modify &amp; Add FAs
+            {enabledCount > 0
+              ? `${netCapDelta2026 >= 0 ? '+' : '−'}$${Math.abs(netCapDelta2026).toFixed(1)}M`
+              : 'Notebook'}
           </span>
         </button>
       </div>

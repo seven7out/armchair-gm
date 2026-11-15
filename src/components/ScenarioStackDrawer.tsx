@@ -1,9 +1,18 @@
 'use client';
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Check, CheckSquare, Copy, RotateCcw, Square, Trash2, X } from 'lucide-react';
+import {
+  Check,
+  CheckSquare,
+  Copy,
+  Link2,
+  RotateCcw,
+  Square,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { LEAGUE_YEARS } from '@/engine';
-import { useGMStore } from '@/store/useGMStore';
+import { buildShareableScenarioUrl, useGMStore } from '@/store/useGMStore';
 
 export function ScenarioStackDrawer() {
   const {
@@ -26,6 +35,7 @@ export function ScenarioStackDrawer() {
   const titleId = useId();
   const [copiedReceipt, setCopiedReceipt] = useState(false);
   const [copiedReddit, setCopiedReddit] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -110,6 +120,18 @@ export function ScenarioStackDrawer() {
     navigator.clipboard?.writeText(mdLines.join('\n'));
     setCopiedReddit(true);
     setTimeout(() => setCopiedReddit(false), 2500);
+  };
+
+  const handleCopyShareLink = () => {
+    const shareUrl = buildShareableScenarioUrl(
+      window.location.href,
+      derivedState.teamId,
+      transactions
+    );
+    window.history.replaceState(null, '', shareUrl);
+    navigator.clipboard?.writeText(shareUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
   };
 
   return (
@@ -318,6 +340,22 @@ export function ScenarioStackDrawer() {
         {/* Footer */}
         {transactions.length > 0 && (
           <div className="border-t border-[#dfd9cc] px-6 py-4 space-y-2.5 text-xs">
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="flex w-full items-center justify-center gap-1.5 border border-[#1e3a5f] bg-[#1e3a5f] px-3 py-2 font-semibold text-white hover:bg-[#152c4a] transition-colors cursor-pointer"
+            >
+              {copiedLink ? (
+                <>
+                  <Check className="h-3.5 w-3.5" /> Interactive Link Copied!
+                </>
+              ) : (
+                <>
+                  <Link2 className="h-3.5 w-3.5" /> Share Interactive Link
+                </>
+              )}
+            </button>
+
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"

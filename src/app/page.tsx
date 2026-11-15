@@ -28,12 +28,21 @@ const JOURNEY_LABELS: Record<ActiveTab, string> = {
 };
 
 export default function ArmchairGMApp() {
-  const { activeTab, navHistory, goBack, goHome } = useGMStore();
+  const {
+    activeTab,
+    compareOriginalBaseline,
+    navHistory,
+    goBack,
+    goHome,
+  } = useGMStore();
 
-  // Support native browser Back / Forward buttons & trackpad swipe-back
+  // Hydrate shared scenario URL (?team=DET&s=...) on initial load + support native Back/Forward
   useEffect(() => {
+    if (window.location.search) {
+      useGMStore.getState().hydrateScenarioFromUrlSearch(window.location.search);
+    }
     const handlePopState = (event: PopStateEvent) => {
-      const targetTab = (event.state?.tab as ActiveTab) || 'player-fate';
+      const targetTab = (event.state?.tab as ActiveTab) || 'team-builder';
       useGMStore.setState({ activeTab: targetTab });
     };
     window.addEventListener('popstate', handlePopState);
@@ -88,11 +97,10 @@ export default function ArmchairGMApp() {
       {/* 3. Main Workspace View — Organized by Customer Journey */}
       <main className="flex-1 pb-24">
         {activeTab === 'cap-checkup' && <CapCheckupJourney />}
-        {activeTab === 'player-fate' && (
-          <PlayerFateJourney mode="CURRENT_STATE" />
-        )}
-        {activeTab === 'team-builder' && (
-          <PlayerFateJourney mode="TEAM_BUILDER" />
+        {(activeTab === 'player-fate' || activeTab === 'team-builder') && (
+          <PlayerFateJourney
+            mode={compareOriginalBaseline ? 'CURRENT_STATE' : 'TEAM_BUILDER'}
+          />
         )}
         {activeTab === 'free-agency' && <FreeAgencySimulatorView />}
         {activeTab === 'draft' && <DraftTradeSandbox />}
