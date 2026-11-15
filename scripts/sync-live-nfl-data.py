@@ -238,13 +238,17 @@ def parse_otc_team(team_cfg):
                 if abs(diff) >= 0.005 and cap_num > 0:
                     prorated_total = round(max(0.0, prorated_total + diff), 3)
 
-                if yr == 2026 and otc_id not in players_by_otc:
+                if otc_id not in players_by_otc:
                     players_by_otc[otc_id] = {
                         "otc_id": otc_id,
                         "name": raw_name,
                         "years": {2026: None, 2027: None, 2028: None, 2029: None},
-                        "cap_2026": cap_num,
+                        "cap_2026": cap_num if yr == 2026 else 0.0,
+                        "ir_cap_2026": 0.0,
+                        "injuryStatus": None,
                     }
+                elif yr == 2026:
+                    players_by_otc[otc_id]["cap_2026"] = cap_num
 
                 if otc_id in players_by_otc:
                     is_void = base_sal == 0.0 and prorated_total > 0.0
@@ -258,7 +262,7 @@ def parse_otc_team(team_cfg):
                         "isVoidYear": is_void,
                     }
 
-        # Parse Non-Active Dead Money in 2026
+        # Parse Non-Active Dead Money and Signed Reserve Lists (IR / PUP / NFI / Exempt) in 2026
         if yr == 2026:
             dm_start = block.find("<h5>Dead Money</h5>")
             if dm_start != -1:
@@ -280,8 +284,77 @@ def parse_otc_team(team_cfg):
                                 "amountsByYear": {2026: dm_val, 2027: 0, 2028: 0, 2029: 0},
                             })
 
-    # Keep all active OTC contracts (up to 65) + top up with ESPN active roster players so every team has 53+ players
-    all_p = sorted(players_by_otc.values(), key=lambda x: x["cap_2026"], reverse=True)[:65]
+            # Parse signed players on 2026 reserve lists (IR, PUP, NFI, Commissioner Exempt / Reserve)
+            for m_sec in re.finditer(r"<h5>(.*?)</h5>\s*<table[^>]*>(.*?)</table>", block, re.S):
+                sec_title = re.sub(r"<[^>]+>", "", m_sec.group(1)).strip()
+                if "Dead Money" in sec_title or "Practice Squad" in sec_title:
+                    continue
+                if "Injured Reserve" in sec_title:
+                    status_code = "IR"
+                elif "Physically Unable" in sec_title:
+                    status_code = "PUP"
+                elif "Non-Football Injury" in sec_title:
+                    status_code = "NFI"
+                elif "Commissioner Exempt" in sec_title or "Suspended" in sec_title or "Reserve" in sec_title:
+                    status_code = "RESERVE"
+                else:
+                    continue
+
+                sec_rows = re.findall(r"<tr>.*?</tr>", m_sec.group(2), re.S)
+                for sr in sec_rows:
+                    m_ir = re.search(
+                        r'href="/player/[^/]+/(\d+)/">([^<]+)</a>.*?<td[^>]*>([^<]+)</td>',
+                        sr,
+                        re.S,
+                    )
+                    if not m_ir:
+                        continue
+                    ir_otc_id, ir_name, ir_cap_str = (
+                        m_ir.group(1),
+                        m_ir.group(2).strip(),
+                        m_ir.group(3),
+                    )
+                    ir_cap = parse_money(ir_cap_str)
+                    if ir_cap <= 0:
+                        continue
+                    if ir_otc_id not in players_by_otc:
+                        players_by_otc[ir_otc_id] = {
+                            "otc_id": ir_otc_id,
+                            "name": ir_name,
+                            "years": {2026: None, 2027: None, 2028: None, 2029: None},
+                            "cap_2026": ir_cap,
+                            "ir_cap_2026": ir_cap,
+                            "injuryStatus": status_code,
+                        }
+                    else:
+                        players_by_otc[ir_otc_id]["cap_2026"] = ir_cap
+                        players_by_otc[ir_otc_id]["ir_cap_2026"] = ir_cap
+                        players_by_otc[ir_otc_id]["injuryStatus"] = status_code
+
+    # Reconstruct 2026 contract year for signed IR/PUP/NFI/Reserve players so their 2026 cap hit matches OTC
+    for p in players_by_otc.values():
+        if p["years"][2026] is None and p.get("ir_cap_2026", 0.0) > 0.0:
+            ir_cap_2026 = p["ir_cap_2026"]
+            y27 = p["years"].get(2027)
+            prorated_2026 = (
+                round(min(ir_cap_2026, y27["proratedBonus"]), 3)
+                if y27 and y27.get("proratedBonus", 0.0) > 0.0
+                else 0.0
+            )
+            base_sal_2026 = round(max(0.0, ir_cap_2026 - prorated_2026), 3)
+            p["years"][2026] = {
+                "year": 2026,
+                "baseSalary": base_sal_2026,
+                "guaranteedSalary": base_sal_2026,
+                "proratedBonus": prorated_2026,
+                "rosterBonus": 0.0,
+                "workoutBonus": 0.0,
+                "isVoidYear": False,
+            }
+
+    # Keep all signed active + reserve OTC contracts (up to 90) who have a 2026 roster/reserve cap charge
+    eligible_p = [p for p in players_by_otc.values() if p["years"][2026] is not None]
+    all_p = sorted(eligible_p, key=lambda x: x["cap_2026"], reverse=True)[:90]
     roster_out = []
 
     for p in all_p:
@@ -349,7 +422,7 @@ def parse_otc_team(team_cfg):
             tier = "Depth"
             ovr = 73
 
-        roster_out.append({
+        player_dict = {
             "id": f"{team_cfg['id'].lower()}-{otc_id}",
             "name": name,
             "position": pos,
@@ -362,7 +435,10 @@ def parse_otc_team(team_cfg):
             "draftPick": draft_pick,
             "isRookieContract": bool(is_rookie),
             "contractYears": p["years"],
-        })
+        }
+        if p.get("injuryStatus"):
+            player_dict["injuryStatus"] = p["injuryStatus"]
+        roster_out.append(player_dict)
 
     # If OTC had fewer than 53 players under 2026 contract, top up to 55 from ESPN active roster
     existing_norm_names = {norm_name(p["name"]) for p in roster_out}

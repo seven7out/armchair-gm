@@ -57,6 +57,27 @@ for (const deadEntry of ['David Montgomery', 'Taylor Decker', 'Frank Ragnow', 'D
   );
 }
 
+// 2b. Verify Signed IR / PUP / NFI Reserve Players Are Included Across Teams (MIA & DET)
+const miaRoster = SEED_TEAMS['MIA'].roster;
+for (const starName of ['Malik Willis', 'Zach Sieler', 'Devon Achane']) {
+  const found = miaRoster.find((p) => p.name === starName);
+  assert(
+    Boolean(found && found.contractYears[2026]),
+    `${starName} SHOULD be on Miami's roster with a valid 2026 contract year`
+  );
+}
+const willis = miaRoster.find((p) => p.name === 'Malik Willis')!;
+assert(
+  Boolean(willis.contractYears[2027] && willis.contractYears[2028]),
+  'Malik Willis SHOULD retain his multi-year 2027-2028 Dolphins contract'
+);
+for (const detReserve of ['Jack Campbell', 'Kerby Joseph']) {
+  assert(
+    detBase.roster.some((p) => p.name === detReserve),
+    `${detReserve} SHOULD be on Detroit's roster (including IR/PUP players)`
+  );
+}
+
 // 3. Test Restructure Math on Jared Goff (Live Over The Cap 2026 Contract: det-4714)
 const goff = detBase.roster.find((p) => p.name === 'Jared Goff')!;
 const goffRestructure = simulateRestructure(goff, 2026, 1.0, 0);

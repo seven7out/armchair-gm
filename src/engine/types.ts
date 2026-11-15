@@ -68,6 +68,8 @@ export interface Player {
   isRookieContract?: boolean;
   fifthYearOptionExercised?: boolean;
   priorTagsCount?: number;      // Number of prior Franchise Tags (triggers 120% or 144% escalation)
+  /** Optional reserve/injury designation from Over The Cap (e.g. 'IR', 'PUP', 'NFI') */
+  injuryStatus?: 'IR' | 'PUP' | 'NFI' | 'RESERVE';
   notes?: string;
   contractYears: Record<LeagueYear, ContractYear | null>;
 }

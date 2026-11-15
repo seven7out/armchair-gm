@@ -1624,21 +1624,31 @@ export function PlayerFateJourney({
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  isCurrentState
-                                    ? openPlayerDossier(player, baseTeam.id)
-                                    : selectPlayer(
-                                        player.id,
-                                        forecast.recommendedActionTab,
-                                        2026
-                                      )
-                                }
-                                className="truncate font-bold text-sm text-[#111827] hover:text-[#1e3a5f] hover:underline text-left cursor-pointer"
-                              >
-                                {player.name}
-                              </button>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    isCurrentState
+                                      ? openPlayerDossier(player, baseTeam.id)
+                                      : selectPlayer(
+                                          player.id,
+                                          forecast.recommendedActionTab,
+                                          2026
+                                        )
+                                  }
+                                  className="truncate font-bold text-sm text-[#111827] hover:text-[#1e3a5f] hover:underline text-left cursor-pointer"
+                                >
+                                  {player.name}
+                                </button>
+                                {player.injuryStatus && (
+                                  <span
+                                    title={`Currently on ${player.injuryStatus} list`}
+                                    className="shrink-0 border border-[#dc2626] bg-[#fef2f2] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#b91c1c]"
+                                  >
+                                    {player.injuryStatus}
+                                  </span>
+                                )}
+                              </div>
 
                               <div className="flex items-center gap-1 shrink-0 relative">
                                 {isCurrentState ? (
@@ -2067,6 +2077,14 @@ export function PlayerFateJourney({
                           <span className="truncate font-editorial text-base font-bold text-[#111827]">
                             {player.name}
                           </span>
+                          {player.injuryStatus && (
+                            <span
+                              title={`Currently on ${player.injuryStatus} list`}
+                              className="shrink-0 border border-[#dc2626] bg-[#fef2f2] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#b91c1c]"
+                            >
+                              {player.injuryStatus}
+                            </span>
+                          )}
                           <span className="shrink-0 border border-[#cbd5e1] bg-[#f8fafc] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#111827]">
                             {player.position} · Age {player.ageIn2026} · {player.overallRating}/99
                           </span>

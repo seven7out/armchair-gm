@@ -213,6 +213,14 @@ export function RosterMatrix() {
                 <span className="font-semibold text-sm text-[#111827] group-hover:underline">
                   {player.name}
                 </span>
+                {player.injuryStatus && (
+                  <span
+                    title={`Currently on ${player.injuryStatus} list`}
+                    className="border border-[#dc2626] bg-[#fef2f2] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#b91c1c]"
+                  >
+                    {player.injuryStatus}
+                  </span>
+                )}
                 <span className="font-mono-ledger text-[11px] font-medium uppercase text-[#475569]">
                   {player.position} · {player.tier}
                 </span>
