@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import {
   applyPlayerExtension,
+  CapCalculationMode,
   computeDerivedTeamCapState,
   ContractStructureTemplate,
   createSignedFreeAgentPlayer,
@@ -41,6 +42,7 @@ interface GMStoreState {
   selectedTeamId: string;
   baseTeam: TeamSeedData;
   capGrowthRate: number;
+  capCalculationMode: CapCalculationMode;
   transactions: Transaction[];
   baselineState: DerivedTeamCapState;
   derivedState: DerivedTeamCapState;
@@ -65,6 +67,7 @@ interface GMStoreState {
   // Actions
   selectTeam: (teamId: string) => void;
   setCapGrowthRate: (rate: number) => void;
+  setCapCalculationMode: (mode: CapCalculationMode) => void;
   setActiveTab: (tab: ActiveTab) => void;
   setTeamBuilderSubTab: (sub: TeamBuilderSubTab) => void;
   setTeamBuilderPosFilter: (pos: PositionGroup | 'ALL') => void;
@@ -139,6 +142,11 @@ interface GMStoreState {
     tradeValueSent: number;
     tradeValueReceived: number;
   }) => void;
+  addQuickTradeTransaction: (
+    player: Player,
+    designation?: 'PRE_JUNE_1' | 'POST_JUNE_1',
+    actionYear?: LeagueYear
+  ) => void;
   addDraftSigningTransaction: (params: {
     pickId: string;
     overallPick: number;
@@ -162,20 +170,29 @@ const initialTeam = SEED_TEAMS['DET'];
 const initialDerived = computeDerivedTeamCapState(
   initialTeam,
   [],
-  DEFAULT_CAP_GROWTH_RATE
+  DEFAULT_CAP_GROWTH_RATE,
+  'TOP_51'
 );
 
 export const useGMStore = create<GMStoreState>((set, get) => {
   const recompute = (
     baseTeam: TeamSeedData,
     transactions: Transaction[],
-    capGrowthRate: number
-  ) => computeDerivedTeamCapState(baseTeam, transactions, capGrowthRate);
+    capGrowthRate: number,
+    capCalculationMode: CapCalculationMode = get().capCalculationMode
+  ) =>
+    computeDerivedTeamCapState(
+      baseTeam,
+      transactions,
+      capGrowthRate,
+      capCalculationMode
+    );
 
   return {
     selectedTeamId: 'DET',
     baseTeam: initialTeam,
     capGrowthRate: DEFAULT_CAP_GROWTH_RATE,
+    capCalculationMode: 'TOP_51',
     transactions: [],
     baselineState: initialDerived,
     derivedState: initialDerived,
@@ -199,7 +216,8 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     selectTeam: (teamId) => {
       const nextTeam = SEED_TEAMS[teamId] ?? SEED_TEAMS['DET'];
       const rate = get().capGrowthRate;
-      const freshBaseline = recompute(nextTeam, [], rate);
+      const mode = get().capCalculationMode;
+      const freshBaseline = recompute(nextTeam, [], rate, mode);
       set({
         selectedTeamId: nextTeam.id,
         baseTeam: nextTeam,
@@ -212,11 +230,20 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     },
 
     setCapGrowthRate: (rate) => {
-      const { baseTeam, transactions } = get();
+      const { baseTeam, transactions, capCalculationMode } = get();
       set({
         capGrowthRate: rate,
-        baselineState: recompute(baseTeam, [], rate),
-        derivedState: recompute(baseTeam, transactions, rate),
+        baselineState: recompute(baseTeam, [], rate, capCalculationMode),
+        derivedState: recompute(baseTeam, transactions, rate, capCalculationMode),
+      });
+    },
+
+    setCapCalculationMode: (mode) => {
+      const { baseTeam, transactions, capGrowthRate } = get();
+      set({
+        capCalculationMode: mode,
+        baselineState: recompute(baseTeam, [], capGrowthRate, mode),
+        derivedState: recompute(baseTeam, transactions, capGrowthRate, mode),
       });
     },
 
@@ -504,6 +531,13 @@ export const useGMStore = create<GMStoreState>((set, get) => {
       const cutoff = get().derivedState.years[2026].replacementLevelCutoff;
       const netImpact2026 = roundCap(Math.max(0, hit2026 - cutoff));
       const pred = evaluateFreeAgentTarget(freeAgent);
+      const isInternalResign =
+        freeAgent.previousTeam.toUpperCase() ===
+          get().baseTeam.abbreviation.toUpperCase() ||
+        freeAgent.id.startsWith('fa-internal-');
+      const countsTowardCompPickFormula = isInternalResign
+        ? false
+        : pred.countsTowardCompFormula;
 
       const tx: Transaction = {
         id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -516,9 +550,11 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         apy,
         guaranteedPct,
         structure,
-        countsTowardCompPickFormula: pred.countsTowardCompFormula,
-        label: `Signed ${pred.countsTowardCompFormula ? 'UFA' : 'Street FA'} ${freeAgent.name} (${freeAgent.position})`,
-        sublabel: `${years} yrs, $${(years * apy).toFixed(1)}M | 2026 Net: -$${netImpact2026.toFixed(2)}M | ${pred.countsTowardCompFormula ? 'Counts vs Comp Pick' : 'Comp-Pick Safe'}`,
+        countsTowardCompPickFormula,
+        label: isInternalResign
+          ? `Re-Signed ${freeAgent.name} (${freeAgent.position})`
+          : `Signed ${countsTowardCompPickFormula ? 'UFA' : 'Street FA'} ${freeAgent.name} (${freeAgent.position})`,
+        sublabel: `${years} yrs, $${(years * apy).toFixed(1)}M | 2026 Net: -$${netImpact2026.toFixed(2)}M | ${isInternalResign ? 'Internal Re-Sign · Comp-Pick Safe' : countsTowardCompPickFormula ? 'Counts vs Comp Pick' : 'Comp-Pick Safe'}`,
         capDelta2026: roundCap(-netImpact2026),
       };
 
@@ -581,6 +617,44 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         label: `Trade with ${partnerTeamName}`,
         sublabel: `Acquired: ${recNames || 'None'} | Sent: ${sentNames || 'None'}`,
         capDelta2026: roundCap(savings2026),
+      };
+
+      const nextTx = [...get().transactions, tx];
+      set({
+        transactions: nextTx,
+        selectedPlayerId: null,
+        derivedState: recompute(get().baseTeam, nextTx, get().capGrowthRate),
+      });
+    },
+
+    addQuickTradeTransaction: (
+      player,
+      designation = 'PRE_JUNE_1',
+      actionYear = 2026
+    ) => {
+      const mode =
+        designation === 'POST_JUNE_1'
+          ? 'POST_JUNE_1_TRADE'
+          : 'PRE_JUNE_1_TRADE';
+      const sim = simulateCutOrTrade(player, actionYear, mode);
+      const tx: Transaction = {
+        id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'TRADE',
+        timestamp: Date.now(),
+        enabled: true,
+        actionYear,
+        partnerTeamId: 'OPEN_MARKET',
+        partnerTeamName: 'Trade Partner (Quick Sim)',
+        designation,
+        outgoingPlayerIds: [player.id],
+        incomingPlayers: [],
+        outgoingPickIds: [],
+        incomingPicks: [],
+        tradeValueSent: 0,
+        tradeValueReceived: 0,
+        label: `Traded ${player.name} (${designation === 'POST_JUNE_1' ? 'Post-6/1' : 'Quick Sim'})`,
+        sublabel: `${actionYear} Savings: ${sim.currentYearCapSavings >= 0 ? '+' : '-'}$${Math.abs(sim.currentYearCapSavings).toFixed(2)}M | Dead Cap: $${sim.currentYearDeadCap.toFixed(2)}M`,
+        capDelta2026: actionYear === 2026 ? sim.currentYearCapSavings : 0,
       };
 
       const nextTx = [...get().transactions, tx];

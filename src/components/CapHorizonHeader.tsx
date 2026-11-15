@@ -30,6 +30,7 @@ export function CapHorizonHeader() {
     selectedTeamId,
     baseTeam,
     capGrowthRate,
+    capCalculationMode,
     transactions,
     baselineState,
     derivedState,
@@ -37,6 +38,7 @@ export function CapHorizonHeader() {
     ledgerMode,
     selectTeam,
     setCapGrowthRate,
+    setCapCalculationMode,
     setActiveTab,
     openInTeamBuilder,
     goBack,
@@ -55,6 +57,13 @@ export function CapHorizonHeader() {
   const isCurrentStateMode = activeTab === 'player-fate';
   const displayCapState = isCurrentStateMode ? baselineState : derivedState;
   const compSummary = displayCapState.compPickSummary;
+  const activeCapLabel = capCalculationMode === 'FULL_53' ? 'All-53' : 'Top-51';
+  const netCapDelta2026 =
+    Math.round(
+      (derivedState.years[2026].effectiveCapSpace -
+        baselineState.years[2026].effectiveCapSpace) *
+        100
+    ) / 100;
 
   const teamsByDivision = useMemo(() => {
     const allTeams = Object.values(SEED_TEAMS);
@@ -250,6 +259,38 @@ export function CapHorizonHeader() {
               <JargonDecoderButton />
             </div>
 
+            {/* Top-51 Offseason vs 53-Man Season Cap Mode Toggle */}
+            <div
+              role="group"
+              aria-label="Cap Accounting Roster Rule"
+              className="hidden md:flex items-center border border-[#c7bfb0] text-[11px]"
+            >
+              <button
+                type="button"
+                onClick={() => setCapCalculationMode('TOP_51')}
+                title="Offseason rule: only top 51 cap hits + replacement pool count"
+                className={`px-2 py-1 cursor-pointer ${
+                  capCalculationMode === 'TOP_51'
+                    ? 'bg-[#1e3a5f] text-white font-semibold'
+                    : 'text-[#57534e] hover:text-[#111827]'
+                }`}
+              >
+                Top-51
+              </button>
+              <button
+                type="button"
+                onClick={() => setCapCalculationMode('FULL_53')}
+                title="In-season 53-man rule: all active roster contracts count against the cap"
+                className={`px-2 py-1 cursor-pointer ${
+                  capCalculationMode === 'FULL_53'
+                    ? 'bg-[#1e3a5f] text-white font-semibold'
+                    : 'text-[#57534e] hover:text-[#111827]'
+                }`}
+              >
+                53-Man
+              </button>
+            </div>
+
             {/* Cap vs Cash Accounting Toggle */}
             <div className="hidden md:flex items-center border border-[#c7bfb0] text-[11px]">
               <button
@@ -312,6 +353,18 @@ export function CapHorizonHeader() {
               <span className="font-mono-ledger text-[11px] opacity-80">
                 [{enabledCount}/{transactions.length}]
               </span>
+              {enabledCount > 0 && Math.abs(netCapDelta2026) >= 0.05 && (
+                <span
+                  className={`ml-0.5 px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${
+                    netCapDelta2026 >= 0
+                      ? 'bg-[#15803d] text-white'
+                      : 'bg-[#b91c1c] text-white'
+                  }`}
+                >
+                  {netCapDelta2026 >= 0 ? '+' : '−'}$
+                  {Math.abs(netCapDelta2026).toFixed(1)}M
+                </span>
+              )}
             </button>
 
             {transactions.length > 0 && (
@@ -405,6 +458,15 @@ export function CapHorizonHeader() {
           <div className="grid grid-cols-5 items-center gap-1.5">
             {LEAGUE_YEARS.map((year) => {
               const yData = displayCapState.years[year];
+              const baseYrData = baselineState.years[year];
+              const mobDelta =
+                Math.round(
+                  (yData.effectiveCapSpace - baseYrData.effectiveCapSpace) * 100
+                ) / 100;
+              const showMobDelta =
+                !isCurrentStateMode &&
+                enabledCount > 0 &&
+                Math.abs(mobDelta) >= 0.05;
               const isOverCap = yData.effectiveCapSpace < 0;
               const isActiveReceipt = receiptYear === year;
               return (
@@ -417,6 +479,8 @@ export function CapHorizonHeader() {
                   className={`flex flex-col items-center border py-1.5 px-1 text-center transition-colors ${
                     isActiveReceipt
                       ? 'border-[#1e3a5f] bg-[#eff6ff]'
+                      : showMobDelta
+                      ? 'border-[#2563eb]/50 bg-[#eff6ff]/60'
                       : 'border-[#d6d0c4] bg-[#f7f5f0] active:bg-[#ebe6dc]'
                   }`}
                 >
@@ -432,6 +496,16 @@ export function CapHorizonHeader() {
                     {isOverCap ? '−$' : '+$'}
                     {Math.abs(yData.effectiveCapSpace).toFixed(0)}M
                   </span>
+                  {showMobDelta && (
+                    <span
+                      className={`font-mono-ledger text-[9px] font-bold leading-none mt-0.5 ${
+                        mobDelta >= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
+                      }`}
+                    >
+                      Δ{mobDelta >= 0 ? '+' : '−'}
+                      {Math.abs(mobDelta).toFixed(1)}M
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -446,38 +520,74 @@ export function CapHorizonHeader() {
           </div>
 
           {receiptYear !== null && (
-            <div className="border border-[#d6d0c4] bg-[#f7f5f0] px-2.5 py-1.5 font-mono-ledger text-[11px] flex items-center justify-between gap-2 text-[#111827]">
-              {(() => {
-                const rData = displayCapState.years[receiptYear];
-                return (
-                  <div className="leading-snug">
-                    <strong className="text-[#475569] mr-1">{receiptYear}:</strong>
-                    Cap ${rData.baseLeagueCap.toFixed(1)}M + Roll $
-                    {rData.rolloverFromPriorYear.toFixed(1)}M − Top-51 $
-                    {rData.activeTop51Cap.toFixed(1)}M − Dead $
-                    {rData.deadMoneyTotal.toFixed(1)}M − Rookies $
-                    {rData.netRookiePoolImpact.toFixed(1)}M ={' '}
-                    <strong
-                      className={
-                        rData.effectiveCapSpace < 0
-                          ? 'text-[#b91c1c]'
-                          : 'text-[#15803d]'
-                      }
-                    >
-                      {rData.effectiveCapSpace < 0 ? '−$' : '+$'}
-                      {Math.abs(rData.effectiveCapSpace).toFixed(1)}M
-                    </strong>
-                  </div>
-                );
-              })()}
-              <button
-                type="button"
-                onClick={() => setReceiptYear(null)}
-                aria-label="Close cap math breakdown"
-                className="shrink-0 px-1.5 py-0.5 text-xs text-[#475569]"
-              >
-                ✕
-              </button>
+            <div className="border border-[#d6d0c4] bg-[#f7f5f0] px-2.5 py-2 font-mono-ledger text-[11px] space-y-2 text-[#111827]">
+              <div className="flex items-center justify-between gap-2">
+                {(() => {
+                  const rData = displayCapState.years[receiptYear];
+                  const activeCapVal =
+                    rData.activeCountedCap ?? rData.activeTop51Cap;
+                  return (
+                    <div className="leading-snug">
+                      <strong className="text-[#475569] mr-1">
+                        {receiptYear}:
+                      </strong>
+                      Cap ${rData.baseLeagueCap.toFixed(1)}M + Roll $
+                      {rData.rolloverFromPriorYear.toFixed(1)}M −{' '}
+                      {activeCapLabel} ${activeCapVal.toFixed(1)}M − Dead $
+                      {rData.deadMoneyTotal.toFixed(1)}M − Rookies $
+                      {rData.netRookiePoolImpact.toFixed(1)}M ={' '}
+                      <strong
+                        className={
+                          rData.effectiveCapSpace < 0
+                            ? 'text-[#b91c1c]'
+                            : 'text-[#15803d]'
+                        }
+                      >
+                        {rData.effectiveCapSpace < 0 ? '−$' : '+$'}
+                        {Math.abs(rData.effectiveCapSpace).toFixed(1)}M
+                      </strong>
+                    </div>
+                  );
+                })()}
+                <button
+                  type="button"
+                  onClick={() => setReceiptYear(null)}
+                  aria-label="Close cap math breakdown"
+                  className="shrink-0 px-1.5 py-0.5 text-xs text-[#475569]"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-[#d6d0c4] pt-1.5 text-[10px]">
+                <span className="font-semibold text-[#475569] uppercase tracking-wider">
+                  Cap Rule:
+                </span>
+                <div className="inline-flex border border-[#111827] bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setCapCalculationMode('TOP_51')}
+                    className={`px-2 py-0.5 font-semibold ${
+                      capCalculationMode === 'TOP_51'
+                        ? 'bg-[#1e3a5f] text-white'
+                        : 'text-[#475569]'
+                    }`}
+                  >
+                    Top-51 Offseason
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCapCalculationMode('FULL_53')}
+                    className={`px-2 py-0.5 font-semibold ${
+                      capCalculationMode === 'FULL_53'
+                        ? 'bg-[#1e3a5f] text-white'
+                        : 'text-[#475569]'
+                    }`}
+                  >
+                    53-Man Season
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -488,10 +598,40 @@ export function CapHorizonHeader() {
             showMobileCapDetails ? 'block' : 'hidden md:block'
           }`}
         >
+        {showMobileCapDetails && (
+          <div className="md:hidden pt-3 flex items-center justify-between gap-2 text-xs font-mono-ledger">
+            <span className="font-semibold text-[#475569]">Cap Calculation Mode:</span>
+            <div className="inline-flex border border-[#111827] bg-white">
+              <button
+                type="button"
+                onClick={() => setCapCalculationMode('TOP_51')}
+                className={`px-2.5 py-1 text-[11px] font-semibold ${
+                  capCalculationMode === 'TOP_51'
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'text-[#475569]'
+                }`}
+              >
+                Top-51 Offseason
+              </button>
+              <button
+                type="button"
+                onClick={() => setCapCalculationMode('FULL_53')}
+                className={`px-2.5 py-1 text-[11px] font-semibold ${
+                  capCalculationMode === 'FULL_53'
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'text-[#475569]'
+                }`}
+              >
+                53-Man Season
+              </button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 py-3">
           {LEAGUE_YEARS.map((year) => {
             const yData = displayCapState.years[year];
             const baseYearData = baselineState.years[year];
+            const activeCapVal = yData.activeCountedCap ?? yData.activeTop51Cap;
             const deltaVsCurrent =
               Math.round(
                 (yData.effectiveCapSpace - baseYearData.effectiveCapSpace) * 100
@@ -499,7 +639,7 @@ export function CapHorizonHeader() {
             const isOverCap = yData.effectiveCapSpace < 0;
             const activePct = Math.min(
               100,
-              (yData.activeTop51Cap / yData.adjustedCapCeiling) * 100
+              (activeCapVal / yData.adjustedCapCeiling) * 100
             );
             const deadPct = Math.min(
               100 - activePct,
@@ -593,7 +733,7 @@ export function CapHorizonHeader() {
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-1 font-mono-ledger text-xs font-medium text-[#334155]">
                   <span>
                     <JargonTip term="TOP_51_RULE">
-                      Top-51 ${yData.activeTop51Cap.toFixed(1)}M
+                      {activeCapLabel} ${activeCapVal.toFixed(1)}M
                     </JargonTip>{' '}
                     ·{' '}
                     <JargonTip term="DEAD_MONEY">
@@ -641,6 +781,8 @@ export function CapHorizonHeader() {
           <div className="hidden md:block border border-[#d6d0c4] bg-white px-3.5 py-2 mb-3 text-xs shadow-2xs">
             {(() => {
               const rData = displayCapState.years[receiptYear];
+              const activeCapVal =
+                rData.activeCountedCap ?? rData.activeTop51Cap;
               return (
                 <div className="flex flex-wrap items-center justify-between gap-2 font-mono-ledger text-xs text-[#111827]">
                   <div className="flex flex-wrap items-center gap-2">
@@ -659,8 +801,8 @@ export function CapHorizonHeader() {
                     </span>
                     <span>−</span>
                     <span>
-                      Top-51{' '}
-                      <strong>${rData.activeTop51Cap.toFixed(1)}M</strong>
+                      {activeCapLabel}{' '}
+                      <strong>${activeCapVal.toFixed(1)}M</strong>
                     </span>
                     <span>−</span>
                     <span>
@@ -688,14 +830,40 @@ export function CapHorizonHeader() {
                       {Math.abs(rData.effectiveCapSpace).toFixed(2)}M Spendable
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setReceiptYear(null)}
-                    className="text-[#475569] hover:text-[#111827] cursor-pointer px-1"
-                    aria-label="Close math breakdown"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex border border-[#c7bfb0] text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setCapCalculationMode('TOP_51')}
+                        className={`px-1.5 py-0.5 cursor-pointer ${
+                          capCalculationMode === 'TOP_51'
+                            ? 'bg-[#1e3a5f] text-white font-semibold'
+                            : 'text-[#475569]'
+                        }`}
+                      >
+                        Top-51 Offseason
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCapCalculationMode('FULL_53')}
+                        className={`px-1.5 py-0.5 cursor-pointer ${
+                          capCalculationMode === 'FULL_53'
+                            ? 'bg-[#1e3a5f] text-white font-semibold'
+                            : 'text-[#475569]'
+                        }`}
+                      >
+                        53-Man Season
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReceiptYear(null)}
+                      className="text-[#475569] hover:text-[#111827] cursor-pointer px-1"
+                      aria-label="Close math breakdown"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               );
             })()}

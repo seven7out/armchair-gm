@@ -7,6 +7,7 @@ import {
   ArrowRight,
   BarChart3,
   Check,
+  ChevronDown,
   Ghost,
   LayoutGrid,
   Monitor,
@@ -32,15 +33,21 @@ import {
   evaluateTeamPositionalNeedsByYear,
   FutureRosterBucket,
   FutureSeasonPlayerEvaluation,
+  generateRookieContract,
   getContractYearCapHit,
   LEAGUE_YEARS,
   LeagueYear,
   POSITION_GROUPS,
   PositionGroup,
   projectPlayerCareerHorizon,
+  simulateCutOrTrade,
+  simulateRestructure,
   TIMELINE_HORIZON_YEARS,
 } from '@/engine';
-import { getLeagueWideFreeAgentPool } from '@/data/seed/freeAgents';
+import {
+  getLeagueWideFreeAgentPool,
+  getTeamInternalFreeAgents,
+} from '@/data/seed/freeAgents';
 import { TeamBuilderSubTab, useGMStore } from '@/store/useGMStore';
 import { PlayerAvatar } from './PlayerAvatar';
 import { JargonTip } from './JargonTooltip';
@@ -50,6 +57,7 @@ import { DraftTradeSandbox } from './DraftTradeSandbox';
 import { RosterMatrix } from './RosterMatrix';
 
 type Journey2ViewMode = 'TIMELINE_BARS' | 'BUCKET_CARDS';
+type RosterCategoryTab = 'ACTIVE' | 'DEAD_MONEY' | 'DRAFT_PICKS' | 'MODIFIED';
 type BucketFilter = 'ALL_BUCKETS' | FutureRosterBucket;
 type TimelineQuickFilter =
   | 'ALL'
@@ -60,6 +68,15 @@ type TimelineQuickFilter =
   | 'ADDED_FA';
 
 const ALL_POSITIONS: (PositionGroup | 'ALL')[] = ['ALL', ...POSITION_GROUPS];
+
+function isNewFaPlayerId(id: string): boolean {
+  return id.startsWith('fa-tx-') || id.startsWith('fa-signed-');
+}
+
+function formatCapDelta(val: number): string {
+  const rounded = Math.round(val * 100) / 100;
+  return `${rounded >= 0 ? '+$' : '−$'}${Math.abs(rounded).toFixed(2)}M`;
+}
 
 export function PlayerFateJourney({
   mode = 'CURRENT_STATE',
@@ -83,6 +100,7 @@ export function PlayerFateJourney({
     addRestructureTransaction,
     addExtensionTransaction,
     addSignFATransaction,
+    addQuickTradeTransaction,
     removeTransaction,
     resetScenarioStack,
     setActiveTab,
@@ -91,6 +109,11 @@ export function PlayerFateJourney({
   } = useGMStore();
 
   const [viewMode, setViewMode] = useState<Journey2ViewMode>('TIMELINE_BARS');
+  const [rosterCategoryTab, setRosterCategoryTab] =
+    useState<RosterCategoryTab>('ACTIVE');
+  const [openActionMenuPlayerId, setOpenActionMenuPlayerId] = useState<
+    string | null
+  >(null);
   const [timelineFilter, setTimelineFilter] =
     useState<TimelineQuickFilter>('ALL');
   const [targetYear, setTargetYear] = useState<LeagueYear>(2027);
@@ -101,6 +124,9 @@ export function PlayerFateJourney({
   // Bottom Free Agent Dock filters
   const faPosFilter = teamBuilderPosFilter;
   const setFaPosFilter = setTeamBuilderPosFilter;
+  const [faDockSourceTab, setFaDockSourceTab] = useState<'LEAGUE' | 'INTERNAL'>(
+    'LEAGUE'
+  );
   const [faSearchQuery, setFaSearchQuery] = useState('');
   const [faShowCount, setFaShowCount] = useState(14);
   const [deviceLayoutMode, setDeviceLayoutMode] = useState<
@@ -111,12 +137,16 @@ export function PlayerFateJourney({
   const activeCapState = isCurrentState ? baselineState : derivedState;
   const space2026 = activeCapState.years[2026].effectiveCapSpace;
   const enabledMovesCount = transactions.filter((t) => t.enabled).length;
+  const signedFaCount = transactions.filter(
+    (t) => t.enabled && t.type === 'SIGN_FA'
+  ).length;
 
-  // Map active SIGN_FA transactions by signed player ID (`fa-signed-${fa.id}`) and by `fa.id`
+  // Map active SIGN_FA transactions by signed player ID (`fa-${tx.id}-${fa.id}`, `fa-signed-${fa.id}`) and `fa.id`
   const activeSignFaTxByPlayerId = useMemo(() => {
     const map = new Map<string, string>();
     for (const tx of transactions) {
       if (tx.enabled && tx.type === 'SIGN_FA') {
+        map.set(`fa-${tx.id}-${tx.freeAgent.id}`, tx.id);
         map.set(`fa-signed-${tx.freeAgent.id}`, tx.id);
         map.set(tx.freeAgent.id, tx.id);
       }
@@ -124,7 +154,7 @@ export function PlayerFateJourney({
     return map;
   }, [transactions]);
 
-  // Map active EXTENSION / RESTRUCTURE transactions by playerId for inline badges & 1-click Undo
+  // Map active player modifications (Extension, Restructure, Tag, 5th-Yr Option, Trade In) for Blue highlight & 1-click Undo
   const activePlayerTxMap = useMemo(() => {
     const map = new Map<string, { txId: string; type: string; label: string }>();
     for (const tx of transactions) {
@@ -147,10 +177,48 @@ export function PlayerFateJourney({
           type: 'FRANCHISE_TAG',
           label: `Tagged ($${tx.tagSalary.toFixed(1)}M)`,
         });
+      } else if (tx.type === 'FIFTH_YEAR_OPTION') {
+        map.set(tx.playerId, {
+          txId: tx.id,
+          type: '5TH_YR_OPT',
+          label: `5th-Yr Opt ($${tx.optionAmount.toFixed(1)}M)`,
+        });
+      } else if (tx.type === 'TRADE') {
+        for (const inc of tx.incomingPlayers) {
+          map.set(inc.id, {
+            txId: tx.id,
+            type: 'TRADE_IN',
+            label: `Acquired (${tx.partnerTeamName})`,
+          });
+        }
       }
     }
     return map;
   }, [transactions]);
+
+  // Map session-created DeadCapEntry IDs back to their Transaction for 1-click Undo / Restore
+  const deadCapTxMap = useMemo(() => {
+    const map = new Map<string, (typeof transactions)[number]>();
+    for (const entry of activeCapState.deadCapLedger) {
+      if (!entry.id.startsWith('dead-tx-')) continue;
+      const match = transactions.find(
+        (tx) => tx.enabled && entry.id.startsWith(`dead-${tx.id}-`)
+      );
+      if (match) {
+        map.set(entry.id, match);
+      }
+    }
+    return map;
+  }, [activeCapState.deadCapLedger, transactions]);
+
+  const sortedDeadCapLedger = useMemo(() => {
+    return [...activeCapState.deadCapLedger].sort((a, b) => {
+      const aSess = deadCapTxMap.has(a.id) ? 1 : 0;
+      const bSess = deadCapTxMap.has(b.id) ? 1 : 0;
+      if (aSess !== bSess) return bSess - aSess;
+      return (b.amountsByYear[2026] ?? 0) - (a.amountsByYear[2026] ?? 0);
+    });
+  }, [activeCapState.deadCapLedger, deadCapTxMap]);
 
   // 1. Build 6-Year Visual Contract & Extension Timeline Rows (2026–2031)
   const timelineRows = useMemo(() => {
@@ -159,8 +227,8 @@ export function PlayerFateJourney({
       .sort((a, b) => {
         if (!isCurrentState) {
           // Put newly signed Free Agents right at the top when added so the user immediately sees them in the grid!
-          const aIsNewFa = a.player.id.startsWith('fa-signed-') ? 1 : 0;
-          const bIsNewFa = b.player.id.startsWith('fa-signed-') ? 1 : 0;
+          const aIsNewFa = isNewFaPlayerId(a.player.id) ? 1 : 0;
+          const bIsNewFa = isNewFaPlayerId(b.player.id) ? 1 : 0;
           if (aIsNewFa !== bIsNewFa) return bIsNewFa - aIsNewFa;
         }
 
@@ -171,8 +239,21 @@ export function PlayerFateJourney({
       });
   }, [activeCapState.roster, space2026, isCurrentState]);
 
+  const effectiveTab =
+    !isCurrentState && enabledMovesCount === 0 && rosterCategoryTab === 'MODIFIED'
+      ? 'ACTIVE'
+      : isCurrentState && rosterCategoryTab === 'MODIFIED'
+      ? 'ACTIVE'
+      : rosterCategoryTab;
+
   const filteredTimelineRows = useMemo(() => {
     return timelineRows.filter((row) => {
+      if (effectiveTab === 'MODIFIED') {
+        const isModified =
+          activePlayerTxMap.has(row.player.id) ||
+          isNewFaPlayerId(row.player.id);
+        if (!isModified) return false;
+      }
       if (posFilter !== 'ALL' && row.player.position !== posFilter) {
         return false;
       }
@@ -197,11 +278,18 @@ export function PlayerFateJourney({
         return row.xray.voidYearsCount > 0;
       }
       if (timelineFilter === 'ADDED_FA') {
-        return row.player.id.startsWith('fa-signed-');
+        return isNewFaPlayerId(row.player.id);
       }
       return true;
     });
-  }, [timelineRows, posFilter, searchQuery, timelineFilter]);
+  }, [
+    timelineRows,
+    effectiveTab,
+    activePlayerTxMap,
+    posFilter,
+    searchQuery,
+    timelineFilter,
+  ]);
 
   // 2. Positional Needs by Year (2026–2029) Matrix
   const baselinePositionalNeeds = useMemo(
@@ -227,10 +315,9 @@ export function PlayerFateJourney({
       .map((r) => r.position);
   }, [positionalNeeds]);
 
-  // 3. League-Wide Free Agent & Street Cap Casualty Pool for Bottom Dock
-  const faPool = useMemo(() => {
-    const rawPool = getLeagueWideFreeAgentPool(baseTeam.id);
-    return rawPool.map((fa) => ({
+  // 3. League-Wide & Internal Free Agent Pools for Bottom Dock
+  const mapFaList = (rawList: ReturnType<typeof getLeagueWideFreeAgentPool>) =>
+    rawList.map((fa) => ({
       fa,
       evalResult: evaluateFreeAgentTarget(fa),
       sampleContract: buildStructuredContract(
@@ -242,10 +329,22 @@ export function PlayerFateJourney({
         fa.accruedSeasons
       ),
     }));
-  }, [baseTeam.id]);
+
+  const faPool = useMemo(
+    () => mapFaList(getLeagueWideFreeAgentPool(baseTeam.id)),
+    [baseTeam.id]
+  );
+
+  const internalFaPool = useMemo(
+    () => mapFaList(getTeamInternalFreeAgents(baseTeam.id)),
+    [baseTeam.id]
+  );
+
+  const activeDockFaPool =
+    faDockSourceTab === 'INTERNAL' ? internalFaPool : faPool;
 
   const filteredFaPool = useMemo(() => {
-    return faPool.filter(({ fa }) => {
+    return activeDockFaPool.filter(({ fa }) => {
       if (faPosFilter !== 'ALL' && fa.position !== faPosFilter) {
         return false;
       }
@@ -260,7 +359,140 @@ export function PlayerFateJourney({
       }
       return true;
     });
-  }, [faPool, faPosFilter, faSearchQuery]);
+  }, [activeDockFaPool, faPosFilter, faSearchQuery]);
+
+  const renderPlayerActionMenu = (
+    row: (typeof timelineRows)[number],
+    alignClass: string = 'left-0 top-full mt-1'
+  ) => {
+    const { player, forecast, lastActiveContractYear, extensionWindowYears } = row;
+    const restr = simulateRestructure(player, 2026, 1.0, 1);
+    const preCut = simulateCutOrTrade(player, 2026, 'PRE_JUNE_1_CUT');
+    const postCut = simulateCutOrTrade(player, 2026, 'POST_JUNE_1_CUT');
+    const quickTrade = simulateCutOrTrade(player, 2026, 'PRE_JUNE_1_TRADE');
+    const extYears = Math.min(3, Math.max(1, extensionWindowYears.length || 3));
+
+    return (
+      <div
+        role="menu"
+        aria-label={`Quick actions for ${player.name}`}
+        className={`absolute ${alignClass} z-30 w-72 border-2 border-[#111827] bg-white shadow-xl divide-y divide-[#e2e8f0] text-left`}
+      >
+        <div className="flex items-center justify-between bg-[#f8fafc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#475569]">
+          <span>1-Tap Move ({player.name})</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenActionMenuPlayerId(null);
+            }}
+            className="text-[#475569] hover:text-[#111827] cursor-pointer px-1"
+            aria-label="Close action menu"
+          >
+            ✕
+          </button>
+        </div>
+
+        <button
+          type="button"
+          disabled={restr.currentYearCapSavings <= 0.05}
+          onClick={(e) => {
+            e.stopPropagation();
+            addRestructureTransaction(player, 1.0, 1, 2026);
+            setOpenActionMenuPlayerId(null);
+          }}
+          className="w-full px-3 py-2 flex items-center justify-between text-xs hover:bg-[#eff6ff] disabled:opacity-40 cursor-pointer"
+        >
+          <span className="font-semibold text-[#111827]">Restructure (Max)</span>
+          <span className="font-mono-ledger font-bold text-[#15803d]">
+            → {formatCapDelta(restr.currentYearCapSavings)}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            addCutTransaction(player, 'PRE_JUNE_1_CUT', 2026);
+            setOpenActionMenuPlayerId(null);
+          }}
+          className="w-full px-3 py-2 flex items-center justify-between text-xs hover:bg-[#fef3c7] cursor-pointer"
+        >
+          <span className="font-semibold text-[#111827]">Release (Pre-6/1)</span>
+          <span className="font-mono-ledger text-[11px] font-bold text-[#78350f]">
+            → {formatCapDelta(preCut.currentYearCapSavings)} (${preCut.currentYearDeadCap.toFixed(1)}M dead)
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            addCutTransaction(player, 'POST_JUNE_1_CUT', 2026);
+            setOpenActionMenuPlayerId(null);
+          }}
+          className="w-full px-3 py-2 flex items-center justify-between text-xs hover:bg-[#fef3c7] cursor-pointer"
+        >
+          <span className="font-semibold text-[#111827]">Release (Post-6/1)</span>
+          <span className="font-mono-ledger text-[11px] font-bold text-[#78350f]">
+            → {formatCapDelta(postCut.currentYearCapSavings)} (${postCut.currentYearDeadCap.toFixed(1)}M dead)
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            addQuickTradeTransaction(player, 'PRE_JUNE_1', 2026);
+            setOpenActionMenuPlayerId(null);
+          }}
+          className="w-full px-3 py-2 flex items-center justify-between text-xs hover:bg-[#eff6ff] cursor-pointer"
+        >
+          <span className="font-semibold text-[#111827]">Trade (Quick Sim)</span>
+          <span className="font-mono-ledger text-[11px] font-bold text-[#1e3a5f]">
+            → {formatCapDelta(quickTrade.currentYearCapSavings)} (${quickTrade.currentYearDeadCap.toFixed(1)}M dead)
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            addExtensionTransaction(
+              player,
+              extYears,
+              forecast.projectedMarketApy,
+              0.55,
+              'Backloaded',
+              lastActiveContractYear
+            );
+            setOpenActionMenuPlayerId(null);
+          }}
+          className="w-full px-3 py-2 flex items-center justify-between text-xs hover:bg-[#dcfce7] cursor-pointer"
+        >
+          <span className="font-semibold text-[#111827]">
+            Quick Extend (+{extYears}yr)
+          </span>
+          <span className="font-mono-ledger font-bold text-[#15803d]">
+            → ~${forecast.projectedMarketApy.toFixed(1)}M/yr
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenActionMenuPlayerId(null);
+            selectPlayer(player.id, forecast.recommendedActionTab, 2026);
+          }}
+          className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-[#1e3a5f] bg-[#f8fafc] hover:bg-[#e2e8f0] cursor-pointer"
+        >
+          <span>Custom 4-Door Modal…</span>
+          <span>→</span>
+        </button>
+      </div>
+    );
+  };
 
   // 2. Build 4-Bucket Future Roster Outlook for `targetYear`
   const outlook = useMemo(
@@ -872,10 +1104,105 @@ export function PlayerFateJourney({
                 );
               })}
             </div>
+
+            {/* Live Chronological Move Log with Per-Move 1-Tap Undo */}
+            {transactions.length > 0 && (
+              <div className="pt-1">
+                <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.1em] text-[#475569]">
+                  <span>Chronological Move Log ({transactions.length})</span>
+                  <span>Tap ✕ to undo any single move</span>
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {transactions.map((tx, idx) => (
+                    <div
+                      key={tx.id}
+                      className={`shrink-0 inline-flex items-center gap-2 border px-2.5 py-1 text-[11px] font-mono-ledger ${
+                        tx.enabled
+                          ? 'border-[#2563eb]/50 bg-[#eff6ff] text-[#1e3a5f]'
+                          : 'border-[#cbd5e1] bg-[#f8fafc] text-[#64748b] opacity-60 line-through'
+                      }`}
+                    >
+                      <span className="font-bold text-[#475569]">
+                        #{idx + 1}
+                      </span>
+                      <span className="font-semibold text-[#111827]">
+                        {tx.label}
+                      </span>
+                      {tx.capDelta2026 !== 0 && (
+                        <span
+                          className={`font-bold ${
+                            tx.capDelta2026 >= 0
+                              ? 'text-[#15803d]'
+                              : 'text-[#b91c1c]'
+                          }`}
+                        >
+                          {formatCapDelta(tx.capDelta2026)}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeTransaction(tx.id)}
+                        title={`Undo move #${idx + 1}: ${tx.label}`}
+                        className="inline-flex items-center gap-0.5 border border-[#b91c1c]/40 bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#b91c1c] hover:bg-[#b91c1c] hover:text-white transition-colors cursor-pointer"
+                      >
+                        ✕ Undo
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Search & Position Filter Bar (Shared by Both Views) */}
+        {/* Spotrac-Style Roster Category Tabs (Active Roster · Dead Money · Draft Picks · Modified Moves) */}
+        <div className="mt-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-[#dfd9cc] pb-3 text-xs">
+          {(
+            [
+              {
+                id: 'ACTIVE',
+                label: `Active Roster (${activeCapState.roster.length})`,
+              },
+              {
+                id: 'DEAD_MONEY',
+                label: `Dead Money (${activeCapState.deadCapLedger.length} · $${activeCapState.years[2026].deadMoneyTotal.toFixed(1)}M)`,
+              },
+              {
+                id: 'DRAFT_PICKS',
+                label: `Draft Picks (${activeCapState.draftPicks.length})`,
+              },
+              ...(!isCurrentState && enabledMovesCount > 0
+                ? [
+                    {
+                      id: 'MODIFIED' as RosterCategoryTab,
+                      label: `Modified Moves (${enabledMovesCount})`,
+                    },
+                  ]
+                : []),
+            ] as { id: RosterCategoryTab; label: string }[]
+          ).map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => {
+                setRosterCategoryTab(cat.id);
+                setOpenActionMenuPlayerId(null);
+              }}
+              className={`shrink-0 whitespace-nowrap min-h-[36px] border px-3 py-1.5 font-mono-ledger text-xs font-semibold transition-colors cursor-pointer ${
+                effectiveTab === cat.id
+                  ? cat.id === 'MODIFIED'
+                    ? 'border-[#2563eb] bg-[#2563eb] text-white'
+                    : 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                  : 'border-[#d6d0c4] bg-white text-[#334155] hover:border-[#111827] hover:text-[#111827]'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search & Position Filter Bar (Shown for Active Roster & Modified Roster Tabs) */}
+        {(effectiveTab === 'ACTIVE' || effectiveTab === 'MODIFIED') && (
         <div className="mt-4 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2.5 flex-1">
             <div className="relative flex-1 min-w-0 sm:max-w-xs">
@@ -917,12 +1244,188 @@ export function PlayerFateJourney({
             ))}
           </div>
         </div>
+        )}
       </section>
+
+      {/* =====================================================================
+          CATEGORY TAB VIEW: DEAD MONEY LEDGER (Prior + Session Cuts/Trades)
+         ===================================================================== */}
+      {effectiveTab === 'DEAD_MONEY' && (
+        <section className="border border-[#d6d0c4] bg-white p-4 sm:p-5 space-y-4 shadow-2xs">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[#dfd9cc] pb-3">
+            <div>
+              <h2 className="font-editorial text-xl sm:text-2xl text-[#111827]">
+                Dead Money &amp; Accelerated Cap Charges ({sortedDeadCapLedger.length})
+              </h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 font-mono-ledger text-xs">
+              {LEAGUE_YEARS.map((yr) => (
+                <span key={yr} className="text-[#b91c1c] font-semibold">
+                  &apos;{String(yr).slice(2)}: $
+                  {activeCapState.years[yr].deadMoneyTotal.toFixed(1)}M
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {sortedDeadCapLedger.length === 0 ? (
+            <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-6 text-xs text-[#64748b]">
+              No dead cap charges on the 2026–2029 books.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b-2 border-[#111827] text-[11px] uppercase tracking-[0.08em] text-[#475569]">
+                    <th className="py-2.5 pr-4">Player / Charge</th>
+                    <th className="py-2.5 px-3">Reason</th>
+                    {LEAGUE_YEARS.map((yr) => (
+                      <th key={yr} className="py-2.5 px-3 text-right">
+                        {yr} Dead
+                      </th>
+                    ))}
+                    <th className="py-2.5 pl-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#dfd9cc]">
+                  {sortedDeadCapLedger.map((entry) => {
+                    const sessionTx = !isCurrentState
+                      ? deadCapTxMap.get(entry.id)
+                      : undefined;
+                    return (
+                      <tr
+                        key={entry.id}
+                        className={
+                          sessionTx
+                            ? 'bg-[#eff6ff] border-l-4 border-l-[#2563eb]'
+                            : 'hover:bg-[#f8fafc]'
+                        }
+                      >
+                        <th scope="row" className="py-3 pr-4 font-semibold text-[#111827]">
+                          <span>{entry.playerName}</span>
+                          <span className="ml-2 font-mono-ledger text-[10px] font-medium text-[#475569]">
+                            {entry.position}
+                          </span>
+                        </th>
+                        <td className="py-3 px-3 text-[#475569]">
+                          {entry.reason}
+                        </td>
+                        {LEAGUE_YEARS.map((yr) => {
+                          const amt = entry.amountsByYear[yr] ?? 0;
+                          return (
+                            <td
+                              key={yr}
+                              className={`py-3 px-3 text-right font-mono-ledger ${
+                                amt > 0
+                                  ? 'font-bold text-[#b91c1c]'
+                                  : 'text-[#94a3b8]'
+                              }`}
+                            >
+                              {amt > 0 ? `$${amt.toFixed(2)}M` : '—'}
+                            </td>
+                          );
+                        })}
+                        <td className="py-3 pl-3 text-right">
+                          {sessionTx ? (
+                            <button
+                              type="button"
+                              onClick={() => removeTransaction(sessionTx.id)}
+                              className="inline-flex items-center gap-1 border border-[#2563eb] bg-[#2563eb] px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#1d4ed8] cursor-pointer"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              <span>Undo / Restore</span>
+                            </button>
+                          ) : (
+                            <span className="font-mono-ledger text-[10px] text-[#64748b]">
+                              Prior Book
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* =====================================================================
+          CATEGORY TAB VIEW: DRAFT PICKS & ROOKIE SCALE CAPITAL
+         ===================================================================== */}
+      {effectiveTab === 'DRAFT_PICKS' && (
+        <section className="border border-[#d6d0c4] bg-white p-4 sm:p-5 space-y-4 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#dfd9cc] pb-3">
+            <h2 className="font-editorial text-xl sm:text-2xl text-[#111827]">
+              Draft Capital &amp; Rookie Slot Reserve ({activeCapState.draftPicks.length} Picks)
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                if (isCurrentState) {
+                  openInTeamBuilder({ subTab: 'draft-trade' });
+                } else {
+                  setTeamBuilderSubTab('draft-trade');
+                  document
+                    .getElementById('team-builder-workbench')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className="border border-[#1e3a5f] bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152c4a] cursor-pointer"
+            >
+              Open Draft &amp; Trade Room →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {activeCapState.draftPicks.map((pk) => {
+              const cutoff = activeCapState.years[pk.year]?.replacementLevelCutoff ?? 1.17;
+              const slot = generateRookieContract(
+                pk.overallPick,
+                pk.year,
+                pk.selectedPosition ?? 'EDGE',
+                cutoff
+              );
+              return (
+                <div
+                  key={pk.id}
+                  className={`border p-3 text-xs flex items-center justify-between gap-2 ${
+                    pk.selectedPlayerName
+                      ? 'border-[#2563eb] bg-[#eff6ff]'
+                      : 'border-[#d6d0c4] bg-[#fcfaf6]'
+                  }`}
+                >
+                  <div>
+                    <div className="font-mono-ledger font-bold text-[#111827]">
+                      {pk.year} Rd {pk.round} · Pick #{pk.overallPick}
+                    </div>
+                    <div className="text-[11px] text-[#475569]">
+                      {pk.selectedPlayerName
+                        ? `Drafted: ${pk.selectedPlayerName} (${pk.selectedPosition})`
+                        : `Orig: ${pk.originalTeamId} · Unsigned Slot`}
+                    </div>
+                  </div>
+                  <div className="text-right font-mono-ledger shrink-0">
+                    <div className="font-bold text-[#111827]">
+                      Yr-1: ${slot.year1CapHit.toFixed(2)}M
+                    </div>
+                    <div className="text-[10px] text-[#15803d]">
+                      Net −${slot.year1NetCapImpactAfterDisplacement.toFixed(2)}M
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* =====================================================================
           VIEW MODE 1: VISUAL CONTRACT & EXTENSION BAR TIMELINE (2026–2031)
          ===================================================================== */}
-      {viewMode === 'TIMELINE_BARS' && (
+      {(effectiveTab === 'ACTIVE' || effectiveTab === 'MODIFIED') &&
+        viewMode === 'TIMELINE_BARS' && (
         <section className="border border-[#d6d0c4] bg-white p-3.5 sm:p-5 space-y-4 sm:space-y-5 shadow-2xs">
           {/* Visual Legend + Quick Filter Pills */}
           <div className="flex flex-col gap-3 sm:gap-4 border-b border-[#d6d0c4] pb-3.5 sm:pb-4">
@@ -980,11 +1483,11 @@ export function PlayerFateJourney({
                   },
                   { id: 'EXPIRING_2026', label: 'Expiring After 2026' },
                   { id: 'VOID_BILLS', label: 'Void-Year Bills' },
-                  ...(!isCurrentState && activeSignFaTxByPlayerId.size > 0
+                  ...(!isCurrentState && signedFaCount > 0
                     ? [
                         {
                           id: 'ADDED_FA' as TimelineQuickFilter,
-                          label: `Added FAs (${activeSignFaTxByPlayerId.size / 2})`,
+                          label: `Added FAs (${signedFaCount})`,
                         },
                       ]
                     : []),
@@ -1011,7 +1514,9 @@ export function PlayerFateJourney({
             tabIndex={0}
             role="region"
             aria-label="Multi-Year Contract and Extension Timeline Table"
-            className={`${desktopBlockClass} overflow-x-auto [container-type:inline-size]`}
+            className={`${desktopBlockClass} overflow-x-auto [container-type:inline-size] ${
+              openActionMenuPlayerId ? 'pb-48' : ''
+            }`}
           >
             <table className="w-full min-w-[1120px] border-collapse text-left">
               <thead>
@@ -1019,7 +1524,7 @@ export function PlayerFateJourney({
                   <th className="sticky left-0 z-10 bg-white py-3 pr-4 w-[315px]">
                     {isCurrentState
                       ? `Player (${filteredTimelineRows.length}) · Ext. Likelihood`
-                      : `Player (${filteredTimelineRows.length}) · Ext. Likelihood & Quick Actions`}
+                      : `Player (${filteredTimelineRows.length}) · Ext. Likelihood & Actions`}
                   </th>
                   {TIMELINE_HORIZON_YEARS.map((yr) => {
                     const yCap =
@@ -1057,7 +1562,7 @@ export function PlayerFateJourney({
               </thead>
 
               <tbody className="divide-y divide-[#dfd9cc]">
-                {filteredTimelineRows.map((row) => {
+                {filteredTimelineRows.map((row, rowIdx) => {
                   const {
                     player,
                     forecast,
@@ -1068,13 +1573,21 @@ export function PlayerFateJourney({
                   } = row;
 
                   const isNewlySignedFa =
-                    !isCurrentState && player.id.startsWith('fa-signed-');
+                    !isCurrentState && isNewFaPlayerId(player.id);
                   const faTxId = !isCurrentState
                     ? activeSignFaTxByPlayerId.get(player.id)
                     : undefined;
                   const activePlayerTx = !isCurrentState
                     ? activePlayerTxMap.get(player.id)
                     : undefined;
+                  const isRowModified =
+                    !isCurrentState &&
+                    (isNewlySignedFa || Boolean(activePlayerTx));
+                  const isActionMenuOpen =
+                    openActionMenuPlayerId === player.id;
+                  const openUpward =
+                    filteredTimelineRows.length > 5 &&
+                    rowIdx >= filteredTimelineRows.length - 4;
 
                   const extBadgeColor =
                     extensionLikelihoodTier === 'HIGH'
@@ -1087,17 +1600,19 @@ export function PlayerFateJourney({
                     <tr
                       key={player.id}
                       className={`group transition-colors ${
-                        isNewlySignedFa
-                          ? 'bg-[#dcfce7]/50 hover:bg-[#dcfce7]/70'
+                        isRowModified
+                          ? 'bg-[#eff6ff] hover:bg-[#dbeafe]'
                           : 'hover:bg-[#f8fafc]'
                       }`}
                     >
                       {/* Left Sticky Player Identity + Extension Probability Column */}
                       <th
                         scope="row"
-                        className={`sticky left-0 z-10 py-3.5 pr-4 align-middle font-normal border-r border-[#d6d0c4] ${
-                          isNewlySignedFa
-                            ? 'bg-[#f0fdf4] group-hover:bg-[#dcfce7] border-l-4 border-l-[#15803d] pl-2.5'
+                        className={`sticky left-0 ${
+                          isActionMenuOpen ? 'z-30' : 'z-10'
+                        } py-3.5 pr-4 align-middle font-normal border-r border-[#d6d0c4] ${
+                          isRowModified
+                            ? 'bg-[#eff6ff] group-hover:bg-[#dbeafe] border-l-4 border-l-[#2563eb] pl-2.5'
                             : 'bg-white group-hover:bg-[#f8fafc]'
                         }`}
                       >
@@ -1125,7 +1640,7 @@ export function PlayerFateJourney({
                                 {player.name}
                               </button>
 
-                              <div className="flex items-center gap-1 shrink-0">
+                              <div className="flex items-center gap-1 shrink-0 relative">
                                 {isCurrentState ? (
                                   <>
                                     <button
@@ -1163,7 +1678,7 @@ export function PlayerFateJourney({
                                         className="inline-flex items-center gap-0.5 border border-[#b91c1c] bg-[#b91c1c] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#991b1b] cursor-pointer"
                                       >
                                         <X className="h-3 w-3" />
-                                        <span>Remove FA</span>
+                                        <span>Undo FA</span>
                                       </button>
                                     ) : activePlayerTx ? (
                                       <button
@@ -1172,11 +1687,31 @@ export function PlayerFateJourney({
                                           removeTransaction(activePlayerTx.txId)
                                         }
                                         title="Undo move on this player"
-                                        className="inline-flex items-center gap-0.5 border border-[#15803d] bg-[#15803d] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white cursor-pointer"
+                                        className="inline-flex items-center gap-0.5 border border-[#2563eb] bg-[#2563eb] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#1d4ed8] cursor-pointer"
                                       >
-                                        <span>Undo {activePlayerTx.type}</span>
+                                        <RotateCcw className="h-3 w-3" />
+                                        <span>Undo</span>
                                       </button>
-                                    ) : null}
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        aria-expanded={isActionMenuOpen}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenActionMenuPlayerId((prev) =>
+                                            prev === player.id ? null : player.id
+                                          );
+                                        }}
+                                        className={`inline-flex items-center gap-0.5 border px-2 py-0.5 font-mono-ledger text-[11px] font-bold transition-colors cursor-pointer ${
+                                          isActionMenuOpen
+                                            ? 'border-[#111827] bg-[#111827] text-white'
+                                            : 'border-[#1e3a5f] bg-[#eff6ff] text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white'
+                                        }`}
+                                      >
+                                        <span>Action</span>
+                                        <ChevronDown className="h-3 w-3" />
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -1186,6 +1721,13 @@ export function PlayerFateJourney({
                                     >
                                       Dossier
                                     </button>
+                                    {isActionMenuOpen &&
+                                      renderPlayerActionMenu(
+                                        row,
+                                        openUpward
+                                          ? 'left-0 bottom-full mb-1'
+                                          : 'left-0 top-full mt-1'
+                                      )}
                                   </>
                                 )}
                               </div>
@@ -1473,13 +2015,16 @@ export function PlayerFateJourney({
               } = row;
 
               const isNewlySignedFa =
-                !isCurrentState && player.id.startsWith('fa-signed-');
+                !isCurrentState && isNewFaPlayerId(player.id);
               const faTxId = !isCurrentState
                 ? activeSignFaTxByPlayerId.get(player.id)
                 : undefined;
               const activePlayerTx = !isCurrentState
                 ? activePlayerTxMap.get(player.id)
                 : undefined;
+              const isModifiedMobileRow =
+                !isCurrentState &&
+                (isNewlySignedFa || Boolean(activePlayerTx));
 
               const extBadgeColor =
                 extensionLikelihoodTier === 'HIGH'
@@ -1492,8 +2037,8 @@ export function PlayerFateJourney({
                 <div
                   key={`mob-${player.id}`}
                   className={`border p-3 space-y-2.5 transition-colors ${
-                    isNewlySignedFa
-                      ? 'border-2 border-[#15803d] bg-[#f0fdf4]'
+                    isModifiedMobileRow
+                      ? 'border-2 border-l-4 border-[#2563eb] bg-[#eff6ff]'
                       : 'border-[#d6d0c4] bg-white'
                   }`}
                 >
@@ -1653,10 +2198,10 @@ export function PlayerFateJourney({
                             <button
                               type="button"
                               onClick={() => removeTransaction(faTxId)}
-                              className="min-h-[36px] inline-flex items-center gap-1 border border-[#b91c1c] bg-[#b91c1c] px-3 py-1.5 text-[11px] font-semibold text-white"
+                              className="min-h-[36px] inline-flex items-center gap-1 border border-[#2563eb] bg-[#2563eb] px-3 py-1.5 text-[11px] font-semibold text-white"
                             >
                               <X className="h-3.5 w-3.5" />
-                              <span>Remove FA</span>
+                              <span>Undo FA</span>
                             </button>
                           ) : activePlayerTx ? (
                             <button
@@ -1664,74 +2209,97 @@ export function PlayerFateJourney({
                               onClick={() =>
                                 removeTransaction(activePlayerTx.txId)
                               }
-                              className="min-h-[36px] inline-flex items-center gap-1 border border-[#15803d] bg-[#15803d] px-3 py-1.5 text-[11px] font-semibold text-white"
+                              className="min-h-[36px] inline-flex items-center gap-1 border border-[#2563eb] bg-[#2563eb] px-3 py-1.5 text-[11px] font-semibold text-white"
                             >
                               <span>Undo {activePlayerTx.type}</span>
                             </button>
-                          ) : (
-                            <>
-                              {extensionLikelihoodPct >= 55 &&
-                                row.extensionWindowYears.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      addExtensionTransaction(
-                                        player,
-                                        Math.min(
-                                          3,
-                                          Math.max(
-                                            1,
-                                            row.extensionWindowYears.length
-                                          )
-                                        ),
-                                        forecast.projectedMarketApy,
-                                        0.55,
-                                        'Backloaded',
-                                        row.lastActiveContractYear
+                          ) : null}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenActionMenuPlayerId(
+                                openActionMenuPlayerId === player.id
+                                  ? null
+                                  : player.id
+                              )
+                            }
+                            className={`min-h-[36px] inline-flex items-center gap-1 border px-2.5 py-1.5 text-[11px] font-semibold ${
+                              openActionMenuPlayerId === player.id
+                                ? 'border-[#111827] bg-[#111827] text-white'
+                                : 'border-[#cbd5e1] bg-[#f8fafc] text-[#111827]'
+                            }`}
+                          >
+                            <span>Action</span>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </button>
+
+                          {!isNewlySignedFa &&
+                            !activePlayerTx &&
+                            extensionLikelihoodPct >= 55 &&
+                            row.extensionWindowYears.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  addExtensionTransaction(
+                                    player,
+                                    Math.min(
+                                      3,
+                                      Math.max(
+                                        1,
+                                        row.extensionWindowYears.length
                                       )
-                                    }
-                                    className="min-h-[36px] border border-[#15803d] bg-[#dcfce7] px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#14532d]"
-                                  >
-                                    + Extend (~$
-                                    {forecast.projectedMarketApy.toFixed(1)}M)
-                                  </button>
-                                )}
-                              {forecast.bestCutSavings2026 >= 2.5 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    addCutTransaction(
-                                      player,
-                                      'PRE_JUNE_1_CUT',
-                                      2026
-                                    )
-                                  }
-                                  className="min-h-[36px] border border-[#d97706] bg-[#fef3c7] px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#78350f]"
-                                >
-                                  ✂ Cut (+$
-                                  {forecast.bestCutSavings2026.toFixed(1)}M)
-                                </button>
-                              )}
-                              {forecast.maxRestructureSavings2026 >= 2.5 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    addRestructureTransaction(
-                                      player,
-                                      1.0,
-                                      2,
-                                      2026
-                                    )
-                                  }
-                                  className="min-h-[36px] border border-[#111827] bg-white px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#111827]"
-                                >
-                                  Restructure (+$
-                                  {forecast.maxRestructureSavings2026.toFixed(1)}
-                                  M)
-                                </button>
-                              )}
-                            </>
-                          )}
+                                    ),
+                                    forecast.projectedMarketApy,
+                                    0.55,
+                                    'Backloaded',
+                                    row.lastActiveContractYear
+                                  )
+                                }
+                                className="min-h-[36px] border border-[#15803d] bg-[#dcfce7] px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#14532d]"
+                              >
+                                + Extend (~$
+                                {forecast.projectedMarketApy.toFixed(1)}M)
+                              </button>
+                            )}
+                          {!isNewlySignedFa &&
+                            !activePlayerTx &&
+                            forecast.bestCutSavings2026 >= 2.5 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  addCutTransaction(
+                                    player,
+                                    'PRE_JUNE_1_CUT',
+                                    2026
+                                  )
+                                }
+                                className="min-h-[36px] border border-[#d97706] bg-[#fef3c7] px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#78350f]"
+                              >
+                                ✂ Cut (+$
+                                {forecast.bestCutSavings2026.toFixed(1)}M)
+                              </button>
+                            )}
+                          {!isNewlySignedFa &&
+                            !activePlayerTx &&
+                            forecast.maxRestructureSavings2026 >= 2.5 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  addRestructureTransaction(
+                                    player,
+                                    1.0,
+                                    2,
+                                    2026
+                                  )
+                                }
+                                className="min-h-[36px] border border-[#111827] bg-white px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#111827]"
+                              >
+                                Restructure (+$
+                                {forecast.maxRestructureSavings2026.toFixed(1)}
+                                M)
+                              </button>
+                            )}
                         </div>
 
                         <button
@@ -1750,6 +2318,15 @@ export function PlayerFateJourney({
                       </>
                     )}
                   </div>
+
+                  {!isCurrentState && openActionMenuPlayerId === player.id && (
+                    <div className="relative pt-1">
+                      {renderPlayerActionMenu(
+                        row,
+                        'left-0 right-0 top-full mt-1 !w-full'
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1772,7 +2349,8 @@ export function PlayerFateJourney({
       {/* =====================================================================
           VIEW MODE 2: 4-BUCKET FUTURE ROSTER OUTLOOK BY YEAR (2026–2029)
          ===================================================================== */}
-      {viewMode === 'BUCKET_CARDS' && (
+      {(effectiveTab === 'ACTIVE' || effectiveTab === 'MODIFIED') &&
+        viewMode === 'BUCKET_CARDS' && (
         <>
           {/* Season Year Switcher + 4 Bucket Summary Cards */}
           <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-6 space-y-5">
@@ -2115,6 +2693,70 @@ export function PlayerFateJourney({
             )}
         </>
       )}
+
+      {!isCurrentState &&
+        effectiveTab === 'MODIFIED' &&
+        (() => {
+          const sessionDeadEntries = sortedDeadCapLedger.filter((entry) =>
+            deadCapTxMap.has(entry.id)
+          );
+          if (sessionDeadEntries.length === 0) return null;
+          return (
+            <section className="border-2 border-[#2563eb] bg-[#eff6ff] p-4 sm:p-5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#bfdbfe] pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 bg-[#2563eb]" />
+                  <h3 className="font-editorial text-lg font-bold text-[#1e3a8a]">
+                    Departed / Cut / Traded Players ({sessionDeadEntries.length})
+                  </h3>
+                </div>
+                <span className="font-mono-ledger text-[11px] font-semibold text-[#1e40af]">
+                  Tap Undo / Restore to return a released or traded player to the active roster
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {sessionDeadEntries.map((entry) => {
+                  const sessionTx = deadCapTxMap.get(entry.id);
+                  const dead2026 = entry.amountsByYear[2026] ?? 0;
+                  return (
+                    <div
+                      key={`mod-dead-${entry.id}`}
+                      className="flex items-center justify-between gap-2 border border-[#93c5fd] bg-white px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-editorial text-sm font-bold text-[#111827]">
+                            {entry.playerName}
+                          </span>
+                          <span className="font-mono-ledger text-[10px] font-semibold text-[#475569]">
+                            {entry.position}
+                          </span>
+                        </div>
+                        <div className="truncate font-mono-ledger text-[10px] text-[#475569]">
+                          {entry.reason} · 2026 Dead:{' '}
+                          <span className="font-bold text-[#b91c1c]">
+                            ${dead2026.toFixed(2)}M
+                          </span>
+                        </div>
+                      </div>
+                      {sessionTx && (
+                        <button
+                          type="button"
+                          onClick={() => removeTransaction(sessionTx.id)}
+                          className="shrink-0 inline-flex items-center gap-1 border border-[#2563eb] bg-[#2563eb] px-2.5 py-1.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#1d4ed8] cursor-pointer"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          <span>Undo / Restore</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
 
       {/* =====================================================================
           SECTION A (BELOW PLAYERS): POSITIONAL NEEDS BY YEAR MATRIX (2026–2029)
@@ -2573,6 +3215,46 @@ export function PlayerFateJourney({
           </div>
         </div>
 
+        {/* Spotrac-Style 2-Tab Source Switcher: League Open Market vs Team Pending FAs */}
+        <div
+          role="tablist"
+          aria-label="Free Agent Market Pool"
+          className="flex flex-wrap items-center gap-2 border-b border-[#dfd9cc] pb-3"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={faDockSourceTab === 'LEAGUE'}
+            onClick={() => {
+              setFaDockSourceTab('LEAGUE');
+              setFaShowCount(16);
+            }}
+            className={`min-h-[38px] border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              faDockSourceTab === 'LEAGUE'
+                ? 'border-[#111827] bg-[#111827] text-white'
+                : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#475569] hover:border-[#111827] hover:text-[#111827]'
+            }`}
+          >
+            League Open Market ({faPool.length})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={faDockSourceTab === 'INTERNAL'}
+            onClick={() => {
+              setFaDockSourceTab('INTERNAL');
+              setFaShowCount(16);
+            }}
+            className={`min-h-[38px] border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              faDockSourceTab === 'INTERNAL'
+                ? 'border-[#15803d] bg-[#15803d] text-white'
+                : 'border-[#16a34a]/40 bg-[#f0fdf4] text-[#14532d] hover:border-[#15803d]'
+            }`}
+          >
+            {baseTeam.city} Pending FAs ({internalFaPool.length}) · Comp-Pick Safe
+          </button>
+        </div>
+
         {/* Search + Critical Need Position Quick Filters */}
         <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -2786,7 +3468,7 @@ export function PlayerFateJourney({
                           <span>Added to Grid (Undo)</span>
                         </button>
                       ) : (
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() =>
@@ -2798,10 +3480,20 @@ export function PlayerFateJourney({
                                 'Backloaded'
                               )
                             }
-                            className="inline-flex items-center justify-center gap-1 bg-[#1c1917] px-3 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#2d5a43] transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center gap-1 bg-[#1c1917] px-2.5 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#2d5a43] transition-colors cursor-pointer"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             <span>Add to Roster Grid</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              addSignFATransaction(fa, 1, 1.2, 0, 'Flat')
+                            }
+                            title="1-Tap Vet Minimum 1-yr / $1.2M deal"
+                            className="border border-[#15803d] bg-[#f0fdf4] px-2 py-2 font-mono-ledger text-[10px] font-bold text-[#14532d] hover:bg-[#dcfce7] transition-colors cursor-pointer"
+                          >
+                            Vet Min ($1.2M)
                           </button>
                           <button
                             type="button"
@@ -2936,7 +3628,7 @@ export function PlayerFateJourney({
                       <span>Added to Roster Grid (Tap to Remove)</span>
                     </button>
                   ) : (
-                    <>
+                    <div className="flex flex-1 flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() =>
@@ -2948,21 +3640,30 @@ export function PlayerFateJourney({
                             'Backloaded'
                           )
                         }
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#1c1917] py-2 px-3 text-xs font-semibold text-[#f6f3ec] active:bg-[#2d5a43]"
+                        className="flex-1 min-w-[140px] min-h-[38px] inline-flex items-center justify-center gap-1.5 bg-[#1c1917] py-2 px-3 text-xs font-semibold text-[#f6f3ec] active:bg-[#2d5a43]"
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        <span>+ Add to Roster Grid</span>
+                        <span>+ Add to Grid</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addSignFATransaction(fa, 1, 1.2, 0, 'Flat')
+                        }
+                        className="min-h-[38px] border border-[#15803d] bg-[#f0fdf4] py-2 px-2.5 font-mono-ledger text-[11px] font-bold text-[#14532d]"
+                      >
+                        Vet Min ($1.2M)
                       </button>
                       <button
                         type="button"
                         onClick={() =>
                           openFreeAgencyModal({ freeAgentId: fa.id })
                         }
-                        className="border border-[#1c1917] bg-[#fcfaf6] py-2 px-3 font-mono-ledger text-xs font-semibold text-[#1c1917]"
+                        className="min-h-[38px] border border-[#1c1917] bg-[#fcfaf6] py-2 px-3 font-mono-ledger text-xs font-semibold text-[#1c1917]"
                       >
-                        Customize
+                        Edit
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>

@@ -13,6 +13,7 @@ import {
 import { createDraftedPlayer, generateRookieContract } from './draftEngine';
 import { applyPlayerExtension, createSignedFreeAgentPlayer } from './freeAgencyEngine';
 import {
+  CapCalculationMode,
   CompPickTrackerSummary,
   DeadCapEntry,
   DerivedTeamCapState,
@@ -34,7 +35,8 @@ import {
 export function computeDerivedTeamCapState(
   baseTeam: TeamSeedData,
   transactions: Transaction[],
-  capGrowthRate: number = DEFAULT_CAP_GROWTH_RATE
+  capGrowthRate: number = DEFAULT_CAP_GROWTH_RATE,
+  capCalculationMode: CapCalculationMode = 'TOP_51'
 ): DerivedTeamCapState {
   // 1. Deep-clone roster, dead money ledger, and draft picks
   const roster: Player[] = baseTeam.roster.map((p) => ({
@@ -344,14 +346,19 @@ export function computeDerivedTeamCapState(
     activePlayerHits.sort((a, b) => b.hit - a.hit);
     const activeRosterCount = activePlayerHits.length;
 
-    const allRosterCap = roundCap(
-      activePlayerHits.reduce((acc, item) => acc + item.hit, 0)
-    );
     const totalCashSpend = roundCap(
       activePlayerHits.reduce((acc, item) => acc + item.cash, 0)
     );
 
     const minBaseline = REPLACEMENT_MIN_SALARY_BY_YEAR[y];
+    const full53List = activePlayerHits
+      .slice(0, Math.max(53, activePlayerHits.length))
+      .map((x) => x.hit);
+    while (full53List.length < 53) {
+      full53List.push(minBaseline);
+    }
+    const allRosterCap = roundCap(full53List.reduce((acc, h) => acc + h, 0));
+
     const top51List = activePlayerHits.slice(0, 51).map((x) => x.hit);
     while (top51List.length < 51) {
       top51List.push(minBaseline);
@@ -359,6 +366,8 @@ export function computeDerivedTeamCapState(
 
     const activeTop51Cap = roundCap(top51List.reduce((acc, h) => acc + h, 0));
     const replacementLevelCutoff = roundCap(top51List[50] ?? minBaseline);
+    const activeCountedCap =
+      capCalculationMode === 'FULL_53' ? allRosterCap : activeTop51Cap;
 
     const deadMoneyTotal = roundCap(
       deadCapLedger.reduce((acc, entry) => acc + (entry.amountsByYear[y] ?? 0), 0)
@@ -379,7 +388,7 @@ export function computeDerivedTeamCapState(
     netRookiePoolImpact = roundCap(netRookiePoolImpact);
 
     const totalCapCommitments = roundCap(
-      activeTop51Cap + deadMoneyTotal + netRookiePoolImpact
+      activeCountedCap + deadMoneyTotal + netRookiePoolImpact
     );
     const effectiveCapSpace = roundCap(adjustedCapCeiling - totalCapCommitments);
 
@@ -415,6 +424,7 @@ export function computeDerivedTeamCapState(
       adjustedCapCeiling,
       activeTop51Cap,
       allRosterCap,
+      activeCountedCap,
       totalCashSpend,
       deadMoneyTotal,
       rookiePoolReserve,
@@ -433,6 +443,7 @@ export function computeDerivedTeamCapState(
     teamId: baseTeam.id,
     teamName: `${baseTeam.city} ${baseTeam.name}`,
     capGrowthRate,
+    capCalculationMode,
     roster,
     deadCapLedger,
     draftPicks,

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Sparkles } from 'lucide-react';
+import { ChevronDown, RotateCcw, Search, Sparkles } from 'lucide-react';
 import {
   computeRealContractXRay,
   evaluatePlayerLongevity,
@@ -15,6 +15,8 @@ import {
   POSITION_GROUPS,
   POSITIONAL_AGING_CURVES,
   PositionGroup,
+  simulateCutOrTrade,
+  simulateRestructure,
 } from '@/engine';
 import { useGMStore } from '@/store/useGMStore';
 import { JargonTip } from './JargonTooltip';
@@ -27,6 +29,7 @@ export function RosterMatrix() {
   const {
     baseTeam,
     derivedState,
+    transactions,
     positionFilter,
     searchQuery,
     selectedPlayerId,
@@ -34,10 +37,65 @@ export function RosterMatrix() {
     setSearchQuery,
     selectPlayer,
     openFreeAgencyModal,
+    addCutTransaction,
+    addRestructureTransaction,
+    addQuickTradeTransaction,
+    removeTransaction,
   } = useGMStore();
 
   const [viewMode, setViewMode] = useState<MatrixViewMode>('POSITION');
   const [sortCriterion, setSortCriterion] = useState<SortCriterion>('CAP_HIT');
+  const [openActionMenuPlayerId, setOpenActionMenuPlayerId] = useState<
+    string | null
+  >(null);
+
+  const activePlayerTxMap = useMemo(() => {
+    const map = new Map<string, { txId: string; label: string }>();
+    for (const tx of transactions) {
+      if (!tx.enabled) continue;
+      if (tx.type === 'EXTENSION') {
+        map.set(tx.playerId, {
+          txId: tx.id,
+          label: `Extended (${tx.newYearsAdded}yr, $${tx.apy}M/yr)`,
+        });
+      } else if (tx.type === 'RESTRUCTURE') {
+        map.set(tx.playerId, {
+          txId: tx.id,
+          label: `Restructured (${tx.actionYear})`,
+        });
+      } else if (tx.type === 'FRANCHISE_TAG') {
+        map.set(tx.playerId, {
+          txId: tx.id,
+          label: `Tagged ($${tx.tagSalary.toFixed(1)}M)`,
+        });
+      } else if (tx.type === 'FIFTH_YEAR_OPTION') {
+        map.set(tx.playerId, {
+          txId: tx.id,
+          label: `5th-Yr Opt ($${tx.optionAmount.toFixed(1)}M)`,
+        });
+      } else if (tx.type === 'TRADE') {
+        for (const inc of tx.incomingPlayers) {
+          map.set(inc.id, {
+            txId: tx.id,
+            label: `Acquired (${tx.partnerTeamName})`,
+          });
+        }
+      } else if (tx.type === 'SIGN_FA') {
+        map.set(`fa-${tx.id}-${tx.freeAgent.id}`, {
+          txId: tx.id,
+          label: 'New FA Signing',
+        });
+        map.set(`fa-signed-${tx.freeAgent.id}`, {
+          txId: tx.id,
+          label: 'New FA Signing',
+        });
+      }
+    }
+    return map;
+  }, [transactions]);
+
+  const formatCapDelta = (savings: number) =>
+    savings >= 0 ? `+$${savings.toFixed(1)}M` : `−$${Math.abs(savings).toFixed(1)}M`;
 
   const capHealth = useMemo(
     () => evaluateTeamCapHealth(derivedState),
@@ -110,6 +168,9 @@ export function RosterMatrix() {
     const forecast = forecastsByPlayerId[player.id];
     const xray = computeRealContractXRay(player);
     const isSelected = selectedPlayerId === player.id;
+    const activePlayerTx = activePlayerTxMap.get(player.id);
+    const isModifiedRow = Boolean(activePlayerTx);
+    const isActionMenuOpen = openActionMenuPlayerId === player.id;
     let viableCounter = 0;
 
     const fateColor =
@@ -125,13 +186,21 @@ export function RosterMatrix() {
         key={player.id}
         onClick={() => selectPlayer(player.id, forecast.recommendedActionTab)}
         className={`board-row group cursor-pointer transition-colors ${
-          isSelected ? 'bg-[#ede8dd]' : 'hover:bg-[#fcfaf6]'
+          isModifiedRow
+            ? 'bg-[#eff6ff] hover:bg-[#dbeafe]'
+            : isSelected
+            ? 'bg-[#ede8dd]'
+            : 'hover:bg-[#fcfaf6]'
         }`}
       >
         {/* Sticky Player Column */}
         <th
           scope="row"
-          className="sticky left-0 z-10 bg-[#f6f3ec] group-hover:bg-[#fcfaf6] py-3.5 pr-4 font-normal transition-colors"
+          className={`sticky left-0 z-10 py-3.5 pr-4 font-normal transition-colors ${
+            isModifiedRow
+              ? 'border-l-4 border-l-[#2563eb] bg-[#eff6ff] group-hover:bg-[#dbeafe] pl-2.5'
+              : 'bg-[#f6f3ec] group-hover:bg-[#fcfaf6]'
+          }`}
         >
           <div className="flex items-center gap-3">
             <PlayerAvatar
@@ -158,9 +227,166 @@ export function RosterMatrix() {
 
         {/* Fate Forecast, Real Contract X-Ray & Quick Lever Column */}
         <td className="py-3.5 px-4 align-middle">
-          <div className={`text-xs font-semibold ${fateColor}`}>
-            {forecast.badgeLabel}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className={`text-xs font-semibold ${fateColor}`}>
+              {forecast.badgeLabel}
+            </div>
+            <div className="relative flex items-center gap-1.5">
+              {activePlayerTx ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeTransaction(activePlayerTx.txId);
+                  }}
+                  title={`Undo ${activePlayerTx.label}`}
+                  className="inline-flex items-center gap-1 border border-[#2563eb] bg-[#2563eb] px-2 py-0.5 font-mono-ledger text-[10px] font-semibold text-white hover:bg-[#1d4ed8] cursor-pointer"
+                >
+                  <RotateCcw className="h-2.5 w-2.5" />
+                  <span>Undo</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenActionMenuPlayerId(
+                      isActionMenuOpen ? null : player.id
+                    );
+                  }}
+                  aria-expanded={isActionMenuOpen}
+                  className={`inline-flex items-center gap-1 border px-2 py-0.5 font-mono-ledger text-[10px] font-semibold transition-colors cursor-pointer ${
+                    isActionMenuOpen
+                      ? 'border-[#111827] bg-[#111827] text-white'
+                      : 'border-[#cbd5e1] bg-white text-[#111827] hover:border-[#111827]'
+                  }`}
+                >
+                  <span>Action</span>
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              )}
+
+              {isActionMenuOpen &&
+                (() => {
+                  const restr = simulateRestructure(player, 2026, 1.0, 1);
+                  const preCut = simulateCutOrTrade(
+                    player,
+                    2026,
+                    'PRE_JUNE_1_CUT'
+                  );
+                  const postCut = simulateCutOrTrade(
+                    player,
+                    2026,
+                    'POST_JUNE_1_CUT'
+                  );
+                  const quickTrade = simulateCutOrTrade(
+                    player,
+                    2026,
+                    'PRE_JUNE_1_TRADE'
+                  );
+                  const actions = [
+                    {
+                      label: 'Restructure (Max)',
+                      detail: `→ ${formatCapDelta(restr.currentYearCapSavings)}`,
+                      detailClass: 'text-[#15803d]',
+                      hoverClass: 'hover:bg-[#eff6ff]',
+                      disabled: restr.currentYearCapSavings <= 0.05,
+                      onSelect: () => addRestructureTransaction(player, 1.0, 1, 2026),
+                    },
+                    {
+                      label: 'Release (Pre-6/1)',
+                      detail: `→ ${formatCapDelta(preCut.currentYearCapSavings)} ($${preCut.currentYearDeadCap.toFixed(1)}M dead)`,
+                      detailClass: 'text-[#78350f]',
+                      hoverClass: 'hover:bg-[#fef3c7]',
+                      disabled: false,
+                      onSelect: () => addCutTransaction(player, 'PRE_JUNE_1_CUT', 2026),
+                    },
+                    {
+                      label: 'Release (Post-6/1)',
+                      detail: `→ ${formatCapDelta(postCut.currentYearCapSavings)} ($${postCut.currentYearDeadCap.toFixed(1)}M dead)`,
+                      detailClass: 'text-[#78350f]',
+                      hoverClass: 'hover:bg-[#fef3c7]',
+                      disabled: false,
+                      onSelect: () => addCutTransaction(player, 'POST_JUNE_1_CUT', 2026),
+                    },
+                    {
+                      label: 'Trade (Quick Sim)',
+                      detail: `→ ${formatCapDelta(quickTrade.currentYearCapSavings)} ($${quickTrade.currentYearDeadCap.toFixed(1)}M dead)`,
+                      detailClass: 'text-[#1e3a5f]',
+                      hoverClass: 'hover:bg-[#eff6ff]',
+                      disabled: false,
+                      onSelect: () => addQuickTradeTransaction(player, 'PRE_JUNE_1', 2026),
+                    },
+                  ];
+
+                  return (
+                    <div
+                      role="menu"
+                      aria-label={`Quick actions for ${player.name}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute left-0 top-full mt-1 z-30 w-72 border-2 border-[#111827] bg-white shadow-xl divide-y divide-[#e2e8f0] text-left"
+                    >
+                      <div className="flex items-center justify-between bg-[#f8fafc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#475569]">
+                        <span>1-Tap Move ({player.name})</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenActionMenuPlayerId(null);
+                          }}
+                          className="text-[#475569] hover:text-[#111827] cursor-pointer px-1"
+                          aria-label="Close action menu"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {actions.map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          disabled={item.disabled}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            item.onSelect();
+                            setOpenActionMenuPlayerId(null);
+                          }}
+                          className={`w-full px-3 py-2 flex items-center justify-between text-xs ${item.hoverClass} disabled:opacity-40 cursor-pointer`}
+                        >
+                          <span className="font-semibold text-[#111827]">
+                            {item.label}
+                          </span>
+                          <span
+                            className={`font-mono-ledger text-[11px] font-bold ${item.detailClass}`}
+                          >
+                            {item.detail}
+                          </span>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenActionMenuPlayerId(null);
+                          selectPlayer(
+                            player.id,
+                            forecast.recommendedActionTab
+                          );
+                        }}
+                        className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-[#1e3a5f] bg-[#f8fafc] hover:bg-[#e2e8f0] cursor-pointer"
+                      >
+                        <span>Custom 4-Door…</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  );
+                })()}
+            </div>
           </div>
+          {activePlayerTx && (
+            <div className="mt-0.5 inline-block border border-[#93c5fd] bg-white px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-[#1d4ed8]">
+              ✓ {activePlayerTx.label}
+            </div>
+          )}
           <div className="mt-0.5 flex flex-wrap items-center gap-2 font-mono-ledger text-[11px] text-[#57534e]">
             <span>{forecast.shortActionLabel}</span>
             <span>·</span>
@@ -447,7 +673,9 @@ export function RosterMatrix() {
         tabIndex={0}
         role="region"
         aria-labelledby="roster-horizon-table-caption"
-        className="table-wrapper overflow-x-auto"
+        className={`table-wrapper overflow-x-auto ${
+          openActionMenuPlayerId ? 'pb-48' : ''
+        }`}
       >
         <table className="w-full border-collapse text-left">
           <caption id="roster-horizon-table-caption" className="sr-only">

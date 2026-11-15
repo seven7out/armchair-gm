@@ -259,6 +259,8 @@ export type Transaction =
 // Derived Cap State Interfaces
 // ============================================================================
 
+export type CapCalculationMode = 'TOP_51' | 'FULL_53';
+
 export interface CompPickTrackerSummary {
   cfaQualifyingLosses: { name: string; position: PositionGroup; estApy: number; projectedRound: number }[];
   cfaQualifyingSignings: { name: string; position: PositionGroup; apy: number }[];
@@ -274,6 +276,7 @@ export interface YearCapBreakdown {
   adjustedCapCeiling: number;
   activeTop51Cap: number;
   allRosterCap: number;
+  activeCountedCap?: number;
   totalCashSpend: number;               // Owner's actual cash outlay in this year ($M)
   deadMoneyTotal: number;
   rookiePoolReserve: number;
@@ -311,6 +314,7 @@ export interface DerivedTeamCapState {
   teamId: string;
   teamName: string;
   capGrowthRate: number;
+  capCalculationMode?: CapCalculationMode;
   roster: Player[];
   deadCapLedger: DeadCapEntry[];
   draftPicks: DraftPick[];

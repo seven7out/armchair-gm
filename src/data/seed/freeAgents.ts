@@ -423,3 +423,265 @@ export function getLeagueWideFreeAgentPool(
     ...dynamicTargets.sort((a, b) => b.marketApy - a.marketApy).slice(0, 60),
   ];
 }
+
+const DET_PENDING_INTERNAL_FAS: FreeAgentTarget[] = [
+  {
+    id: 'fa-internal-det-anzalone',
+    name: 'Alex Anzalone',
+    position: 'LB',
+    ageIn2026: 31,
+    tier: 'Starter',
+    overallRating: 82,
+    accruedSeasons: 9,
+    previousTeam: 'DET',
+    headshotUrl: 'https://a.espncdn.com/i/headshots/nfl/players/full/3051908.png',
+    marketApy: 7.5,
+    marketYears: 2,
+    marketGuaranteedPct: 0.55,
+    scoutingNote:
+      'Former Lions green-dot defensive captain & signal caller; re-signing never cancels Comp Picks.',
+    predictionFeatures: {
+      originType: 'UNDER_CONTRACT_VETERAN',
+      incumbentTeamCapSpace: 21.8,
+      scheduledCapHit: 7.5,
+      netCutSavings: 6.0,
+      deadCapOnCut: 1.2,
+      franchiseTagCost: 24.4,
+      priorTagsCount: 0,
+      hasPositionalSuccessorOrBlock: false,
+    },
+  },
+  {
+    id: 'fa-internal-det-reader',
+    name: 'D.J. Reader',
+    position: 'IDL',
+    ageIn2026: 32,
+    tier: 'Starter',
+    overallRating: 81,
+    accruedSeasons: 10,
+    previousTeam: 'DET',
+    headshotUrl: 'https://a.espncdn.com/i/headshots/nfl/players/full/2971834.png',
+    marketApy: 8.5,
+    marketYears: 1,
+    marketGuaranteedPct: 0.65,
+    scoutingNote:
+      'Pending Detroit nose tackle & run-stuffing anchor; Comp-Pick-safe internal re-signing candidate.',
+    predictionFeatures: {
+      originType: 'UNDER_CONTRACT_VETERAN',
+      incumbentTeamCapSpace: 21.8,
+      scheduledCapHit: 8.5,
+      netCutSavings: 4.0,
+      deadCapOnCut: 3.7,
+      franchiseTagCost: 22.9,
+      priorTagsCount: 0,
+      hasPositionalSuccessorOrBlock: false,
+    },
+  },
+  {
+    id: 'fa-internal-det-glasgow',
+    name: 'Graham Glasgow',
+    position: 'OL',
+    ageIn2026: 33,
+    tier: 'Rotation',
+    overallRating: 76,
+    accruedSeasons: 10,
+    previousTeam: 'DET',
+    headshotUrl: 'https://a.espncdn.com/i/headshots/nfl/players/full/2576900.png',
+    marketApy: 4.5,
+    marketYears: 1,
+    marketGuaranteedPct: 0.5,
+    scoutingNote:
+      'Veteran interior OL depth (LG/C/RG versatility) carrying $2.88M void dead money in 2026.',
+    predictionFeatures: {
+      originType: 'UNDER_CONTRACT_VETERAN',
+      incumbentTeamCapSpace: 21.8,
+      scheduledCapHit: 4.5,
+      netCutSavings: 4.0,
+      deadCapOnCut: 2.88,
+      franchiseTagCost: 23.4,
+      priorTagsCount: 0,
+      hasPositionalSuccessorOrBlock: false,
+    },
+  },
+  {
+    id: 'fa-internal-det-raymond',
+    name: 'Kalif Raymond',
+    position: 'WR',
+    ageIn2026: 32,
+    tier: 'Rotation',
+    overallRating: 75,
+    accruedSeasons: 9,
+    previousTeam: 'DET',
+    headshotUrl: 'https://a.espncdn.com/i/headshots/nfl/players/full/3115303.png',
+    marketApy: 3.5,
+    marketYears: 1,
+    marketGuaranteedPct: 0.45,
+    scoutingNote:
+      'All-Pro punt returner and explosive slot/motion gadget option in Detroit.',
+    predictionFeatures: {
+      originType: 'UNDER_CONTRACT_VETERAN',
+      incumbentTeamCapSpace: 21.8,
+      scheduledCapHit: 3.5,
+      netCutSavings: 3.0,
+      deadCapOnCut: 0.9,
+      franchiseTagCost: 25.4,
+      priorTagsCount: 0,
+      hasPositionalSuccessorOrBlock: false,
+    },
+  },
+  {
+    id: 'fa-internal-det-robertson',
+    name: 'Amik Robertson',
+    position: 'CB',
+    ageIn2026: 28,
+    tier: 'Starter',
+    overallRating: 77,
+    accruedSeasons: 6,
+    previousTeam: 'DET',
+    headshotUrl: 'https://a.espncdn.com/i/headshots/nfl/players/full/4242282.png',
+    marketApy: 6.0,
+    marketYears: 2,
+    marketGuaranteedPct: 0.5,
+    scoutingNote:
+      'Inside/outside cornerback depth; Comp-Pick-safe re-signing.',
+    predictionFeatures: {
+      originType: 'UNDER_CONTRACT_VETERAN',
+      incumbentTeamCapSpace: 21.8,
+      scheduledCapHit: 6.0,
+      netCutSavings: 4.0,
+      deadCapOnCut: 0,
+      franchiseTagCost: 20.9,
+      priorTagsCount: 0,
+      hasPositionalSuccessorOrBlock: false,
+    },
+  },
+  {
+    id: 'fa-internal-det-zeitler',
+    name: 'Kevin Zeitler',
+    position: 'OL',
+    ageIn2026: 36,
+    tier: 'Starter',
+    overallRating: 80,
+    accruedSeasons: 14,
+    previousTeam: 'DET',
+    headshotUrl: 'https://a.espncdn.com/i/headshots/nfl/players/full/14908.png',
+    marketApy: 7.0,
+    marketYears: 1,
+    marketGuaranteedPct: 0.7,
+    scoutingNote:
+      'Proven pass-protecting RG bridge; internal/street re-signings preserve 2027 Comp Picks.',
+    predictionFeatures: {
+      originType: 'UNDER_CONTRACT_VETERAN',
+      incumbentTeamCapSpace: 21.8,
+      scheduledCapHit: 7.0,
+      netCutSavings: 5.0,
+      deadCapOnCut: 0,
+      franchiseTagCost: 23.4,
+      priorTagsCount: 0,
+      hasPositionalSuccessorOrBlock: false,
+    },
+  },
+  {
+    id: 'fa-internal-det-muhammad',
+    name: 'Al-Quadin Muhammad',
+    position: 'EDGE',
+    ageIn2026: 31,
+    tier: 'Rotation',
+    overallRating: 75,
+    accruedSeasons: 9,
+    previousTeam: 'DET',
+    headshotUrl: 'https://a.espncdn.com/i/headshots/nfl/players/full/3051917.png',
+    marketApy: 3.2,
+    marketYears: 1,
+    marketGuaranteedPct: 0.4,
+    scoutingNote:
+      'Rotational edge setter familiar with Detroit defense; Comp-Pick Safe.',
+    predictionFeatures: {
+      originType: 'UNDER_CONTRACT_VETERAN',
+      incumbentTeamCapSpace: 21.8,
+      scheduledCapHit: 3.2,
+      netCutSavings: 2.0,
+      deadCapOnCut: 0,
+      franchiseTagCost: 26.8,
+      priorTagsCount: 0,
+      hasPositionalSuccessorOrBlock: false,
+    },
+  },
+];
+
+/**
+ * Returns the selected team's own pending/departed free agents for internal re-signing.
+ * Marked with `originType: 'UNDER_CONTRACT_VETERAN'` / team abbreviation so re-signing
+ * an internal player is always Comp-Pick Safe (`countsTowardCompFormula: false`).
+ */
+export function getTeamInternalFreeAgents(teamId: string): FreeAgentTarget[] {
+  const team = SEED_TEAMS[teamId];
+  if (!team) return [];
+
+  const activeNames = new Set(team.roster.map((p) => p.name.toLowerCase()));
+  const results: FreeAgentTarget[] = [];
+  const seen = new Set<string>();
+
+  if (team.id === 'DET') {
+    for (const detFa of DET_PENDING_INTERNAL_FAS) {
+      if (!activeNames.has(detFa.name.toLowerCase())) {
+        seen.add(detFa.name.toLowerCase());
+        results.push(detFa);
+      }
+    }
+  }
+
+  for (const fa of SEED_FREE_AGENTS) {
+    if (
+      fa.previousTeam.toUpperCase() === team.abbreviation.toUpperCase() &&
+      !activeNames.has(fa.name.toLowerCase()) &&
+      !seen.has(fa.name.toLowerCase())
+    ) {
+      seen.add(fa.name.toLowerCase());
+      results.push({
+        ...fa,
+        id: `fa-internal-${team.id.toLowerCase()}-${fa.id}`,
+        predictionFeatures: {
+          ...fa.predictionFeatures,
+          originType: 'UNDER_CONTRACT_VETERAN',
+          netCutSavings: Math.max(4, fa.predictionFeatures.netCutSavings),
+        },
+      });
+    }
+  }
+
+  for (const loss of team.departingCfaLosses ?? []) {
+    const cleanName = loss.name.replace(/\s*\(Dead Cap\)\s*/i, '').trim();
+    const lower = cleanName.toLowerCase();
+    if (!cleanName || activeNames.has(lower) || seen.has(lower)) continue;
+    seen.add(lower);
+    const tagCost =
+      FRANCHISE_TAG_BY_POSITION_2026[loss.position]?.franchiseTag ?? 20.9;
+    results.push({
+      id: `fa-internal-${team.id.toLowerCase()}-${lower.replace(/[^a-z0-9]+/g, '-')}`,
+      name: cleanName,
+      position: loss.position,
+      ageIn2026: 29,
+      tier: loss.estApy >= 12 ? 'Starter' : 'Rotation',
+      overallRating: loss.estApy >= 14 ? 84 : loss.estApy >= 8 ? 79 : 75,
+      accruedSeasons: 6,
+      previousTeam: team.abbreviation,
+      marketApy: roundCap(Math.max(2.0, loss.estApy)),
+      marketYears: loss.estApy >= 10 ? 3 : 2,
+      marketGuaranteedPct: 0.52,
+      scoutingNote: `Pending ${team.city} ${loss.position} (est. $${loss.estApy.toFixed(1)}M/yr). Re-signing internal pending FAs preserves Comp Picks.`,
+      predictionFeatures: {
+        originType: 'UNDER_CONTRACT_VETERAN',
+        incumbentTeamCapSpace: team.initialRollover2026,
+        scheduledCapHit: roundCap(loss.estApy),
+        netCutSavings: 5.0,
+        deadCapOnCut: 0,
+        franchiseTagCost: tagCost,
+        priorTagsCount: 0,
+        hasPositionalSuccessorOrBlock: false,
+      },
+    });
+  }
+
+  return results;
+}

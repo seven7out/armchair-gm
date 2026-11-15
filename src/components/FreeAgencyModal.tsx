@@ -19,6 +19,7 @@ import {
 } from '@/engine';
 import {
   getLeagueWideFreeAgentPool,
+  getTeamInternalFreeAgents,
   SEED_FREE_AGENTS,
 } from '@/data/seed/freeAgents';
 import { useGMStore } from '@/store/useGMStore';
@@ -43,7 +44,12 @@ export function FreeAgencySimulatorView({
     () => getLeagueWideFreeAgentPool(derivedState.teamId),
     [derivedState.teamId]
   );
+  const internalPool = useMemo(
+    () => getTeamInternalFreeAgents(derivedState.teamId),
+    [derivedState.teamId]
+  );
 
+  const [faSourceTab, setFaSourceTab] = useState<'INTERNAL' | 'LEAGUE'>('LEAGUE');
   const [posFilter, setPosFilter] = useState<PositionGroup | 'ALL'>(
     freeAgencyPositionFilter
   );
@@ -67,29 +73,42 @@ export function FreeAgencySimulatorView({
     setYears(fa.marketYears);
     setApy(fa.marketApy);
     setGuaranteedPct(fa.marketGuaranteedPct);
+    setStructure('Backloaded');
   };
 
   useEffect(() => {
     setPosFilter(freeAgencyPositionFilter);
     if (preselectedFreeAgentId) {
+      const internalMatch = internalPool.find(
+        (f) => f.id === preselectedFreeAgentId
+      );
+      if (internalMatch) {
+        setFaSourceTab('INTERNAL');
+        handleSelectFA(internalMatch);
+        return;
+      }
       const match = fullPool.find((f) => f.id === preselectedFreeAgentId);
       if (match) {
+        setFaSourceTab('LEAGUE');
         handleSelectFA(match);
         return;
       }
     }
+    const activePool = faSourceTab === 'INTERNAL' ? internalPool : fullPool;
     if (freeAgencyPositionFilter !== 'ALL') {
-      const firstAtPos = fullPool.find(
+      const firstAtPos = activePool.find(
         (f) => f.position === freeAgencyPositionFilter
       );
       if (firstAtPos) {
         handleSelectFA(firstAtPos);
       }
     }
-  }, [preselectedFreeAgentId, freeAgencyPositionFilter, fullPool]);
+  }, [preselectedFreeAgentId, freeAgencyPositionFilter, fullPool, internalPool]);
+
+  const activeSourcePool = faSourceTab === 'INTERNAL' ? internalPool : fullPool;
 
   const filteredPool = useMemo(() => {
-    return fullPool.filter((fa) => {
+    return activeSourcePool.filter((fa) => {
       if (posFilter !== 'ALL' && fa.position !== posFilter) return false;
       if (
         faSearch.trim() !== '' &&
@@ -100,7 +119,7 @@ export function FreeAgencySimulatorView({
       }
       return true;
     });
-  }, [fullPool, posFilter, faSearch]);
+  }, [activeSourcePool, posFilter, faSearch]);
 
   const offer = useMemo(
     () =>
@@ -187,9 +206,66 @@ export function FreeAgencySimulatorView({
         {/* Left 5 Cols: Open Market Index + Comp Pick Cancellation Ledger */}
         <div className="lg:col-span-5 lg:pr-8 space-y-6">
           <div>
+            {/* Spotrac-Style 2-Tab Switcher: Team Pending FAs vs League Free Agents */}
+            <div className="grid grid-cols-2 border-2 border-[#111827] bg-white mb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setFaSourceTab('INTERNAL');
+                  if (internalPool.length > 0) {
+                    handleSelectFA(internalPool[0]);
+                  }
+                }}
+                className={`p-2 text-left transition-colors cursor-pointer ${
+                  faSourceTab === 'INTERNAL'
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'text-[#111827] hover:bg-[#f1f5f9]'
+                }`}
+              >
+                <div className="font-mono-ledger text-xs font-bold">
+                  {derivedState.teamId} Pending FAs ({internalPool.length})
+                </div>
+                <div
+                  className={`text-[10px] ${
+                    faSourceTab === 'INTERNAL' ? 'text-[#e2e8f0]' : 'text-[#475569]'
+                  }`}
+                >
+                  Re-signings never cancel Comp Picks
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFaSourceTab('LEAGUE');
+                  if (fullPool.length > 0) {
+                    handleSelectFA(fullPool[0]);
+                  }
+                }}
+                className={`border-l border-[#d6d0c4] p-2 text-left transition-colors cursor-pointer ${
+                  faSourceTab === 'LEAGUE'
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'text-[#111827] hover:bg-[#f1f5f9]'
+                }`}
+              >
+                <div className="font-mono-ledger text-xs font-bold">
+                  League Free Agents ({fullPool.length})
+                </div>
+                <div
+                  className={`text-[10px] ${
+                    faSourceTab === 'LEAGUE' ? 'text-[#e2e8f0]' : 'text-[#475569]'
+                  }`}
+                >
+                  UFAs &amp; projected Street FAs
+                </div>
+              </button>
+            </div>
+
             <div className="flex items-baseline justify-between mb-2">
               <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
-                League-Wide Open Market &amp; Street FA Pool ({filteredPool.length})
+                {faSourceTab === 'INTERNAL'
+                  ? `${derivedState.teamId} Pending / Expiring FAs (${filteredPool.length})`
+                  : `League-Wide Open Market (${filteredPool.length})`}
               </h3>
               <span className="font-mono-ledger text-[10px] text-[#2d5a43]">
                 <JargonTip term="COMP_PICK">
@@ -325,7 +401,16 @@ export function FreeAgencySimulatorView({
             </div>
 
             {/* Live Pre-Commit Warning for Selected FA (Shown First) */}
-            {!selectedPrediction.countsTowardCompFormula ? (
+            {selectedFA.id.startsWith('fa-internal-') ||
+            selectedFA.previousTeam.toUpperCase() ===
+              derivedState.teamId.toUpperCase() ? (
+              <div className="text-[11px] text-[#2d5a43]">
+                <strong>✓ Safe Internal Re-Signing:</strong> Re-signing{' '}
+                {selectedFA.name} ({derivedState.teamId} pending FA) will{' '}
+                <strong>NOT</strong> cancel any of your{' '}
+                {compSummary.netProjectedCompPicks.length} projected comp picks.
+              </div>
+            ) : !selectedPrediction.countsTowardCompFormula ? (
               <div className="text-[11px] text-[#2d5a43]">
                 <strong>✓ Safe Signing Stamp:</strong> {selectedFA.name} is a
                 projected Cap Casualty (
@@ -533,6 +618,96 @@ export function FreeAgencySimulatorView({
             </div>
           )}
 
+          {/* Spotrac 4-Preset Quick Signing Bar */}
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8379] mb-2">
+              1-Tap Signing Presets
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setYears(1);
+                  setApy(1.2);
+                  setGuaranteedPct(0);
+                  setStructure('Flat');
+                }}
+                className={`border p-2 text-left text-xs transition-colors cursor-pointer ${
+                  years === 1 && apy <= 1.25 && structure === 'Flat'
+                    ? 'border-[#1e3a5f] bg-[#eff6ff]'
+                    : 'border-[#dfd9cc] bg-[#fcfaf6] hover:border-[#111827]'
+                }`}
+              >
+                <div className="font-bold text-[#111827]">Vet Minimum</div>
+                <div className="font-mono-ledger text-[10px] text-[#475569]">
+                  1 yr, $1.2M
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setYears(selectedFA.marketYears);
+                  setApy(selectedFA.marketApy);
+                  setGuaranteedPct(selectedFA.marketGuaranteedPct);
+                  setStructure('Backloaded');
+                }}
+                className={`border p-2 text-left text-xs transition-colors cursor-pointer ${
+                  years === selectedFA.marketYears &&
+                  Math.abs(apy - selectedFA.marketApy) < 0.05 &&
+                  structure === 'Backloaded'
+                    ? 'border-[#1e3a5f] bg-[#eff6ff]'
+                    : 'border-[#dfd9cc] bg-[#fcfaf6] hover:border-[#111827]'
+                }`}
+              >
+                <div className="font-bold text-[#111827]">Market Value</div>
+                <div className="font-mono-ledger text-[10px] text-[#15803d]">
+                  {selectedFA.marketYears} yr, ${selectedFA.marketApy.toFixed(1)}M
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setYears(selectedFA.marketYears);
+                  setApy(selectedFA.marketApy);
+                  setGuaranteedPct(selectedFA.marketGuaranteedPct);
+                  setStructure('VoidHeavy');
+                }}
+                className={`border p-2 text-left text-xs transition-colors cursor-pointer ${
+                  structure === 'VoidHeavy'
+                    ? 'border-[#1e3a5f] bg-[#eff6ff]'
+                    : 'border-[#dfd9cc] bg-[#fcfaf6] hover:border-[#111827]'
+                }`}
+              >
+                <div className="font-bold text-[#111827]">Cap-Saver Void</div>
+                <div className="font-mono-ledger text-[10px] text-[#475569]">
+                  {selectedFA.marketYears} yr · Min Yr 1
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setYears(selectedFA.marketYears);
+                  setApy(selectedFA.marketApy);
+                  setGuaranteedPct(selectedFA.marketGuaranteedPct);
+                  setStructure('FrontLoaded');
+                }}
+                className={`border p-2 text-left text-xs transition-colors cursor-pointer ${
+                  structure === 'FrontLoaded'
+                    ? 'border-[#1e3a5f] bg-[#eff6ff]'
+                    : 'border-[#dfd9cc] bg-[#fcfaf6] hover:border-[#111827]'
+                }`}
+              >
+                <div className="font-bold text-[#111827]">Front-Loaded</div>
+                <div className="font-mono-ledger text-[10px] text-[#475569]">
+                  $0 Late Dead
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Sliders */}
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
             <div>
@@ -547,9 +722,9 @@ export function FreeAgencySimulatorView({
               <input
                 id={apySliderId}
                 type="range"
-                min={2}
+                min={1.0}
                 max={45}
-                step={0.5}
+                step={0.2}
                 value={apy}
                 onChange={(e) => setApy(parseFloat(e.target.value))}
                 className="w-full accent-[#1c1917]"

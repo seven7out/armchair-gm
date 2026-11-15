@@ -8,6 +8,7 @@ import { useGMStore } from '@/store/useGMStore';
 export function ScenarioStackDrawer() {
   const {
     transactions,
+    baselineState,
     derivedState,
     isScenarioDrawerOpen,
     setScenarioDrawerOpen,
@@ -15,6 +16,11 @@ export function ScenarioStackDrawer() {
     removeTransaction,
     resetScenarioStack,
   } = useGMStore();
+
+  const baseSpace26 = baselineState.years[2026].effectiveCapSpace;
+  const currentSpace26 = derivedState.years[2026].effectiveCapSpace;
+  const netGainLoss26 =
+    Math.round((currentSpace26 - baseSpace26) * 100) / 100;
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -137,6 +143,49 @@ export function ScenarioStackDrawer() {
           >
             <X className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Spotrac-Style Original vs Adjusted Summary Scorecard */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-[#dfd9cc] bg-[#fcfaf6] px-6 py-3 font-mono-ledger text-xs">
+          <div>
+            <div className="text-[10px] uppercase text-[#8a8379]">Orig &apos;26 Cap</div>
+            <div className="font-semibold text-[#111827]">
+              {baseSpace26 >= 0 ? '+$' : '−$'}
+              {Math.abs(baseSpace26).toFixed(2)}M
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase text-[#8a8379]">Adj &apos;26 Cap</div>
+            <div
+              className={`font-bold ${
+                currentSpace26 < 0 ? 'text-[#b91c1c]' : 'text-[#15803d]'
+              }`}
+            >
+              {currentSpace26 >= 0 ? '+$' : '−$'}
+              {Math.abs(currentSpace26).toFixed(2)}M
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase text-[#8a8379]">Cap Gain/Loss</div>
+            <div
+              className={`font-bold ${
+                netGainLoss26 > 0
+                  ? 'text-[#15803d]'
+                  : netGainLoss26 < 0
+                  ? 'text-[#b91c1c]'
+                  : 'text-[#475569]'
+              }`}
+            >
+              {netGainLoss26 > 0 ? '+$' : netGainLoss26 < 0 ? '−$' : '$'}
+              {Math.abs(netGainLoss26).toFixed(2)}M
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase text-[#8a8379]">Active Roster</div>
+            <div className="font-semibold text-[#111827]">
+              {derivedState.roster.length} / 53
+            </div>
+          </div>
         </div>
 
         {/* Live 4-Year Cap Strip */}
