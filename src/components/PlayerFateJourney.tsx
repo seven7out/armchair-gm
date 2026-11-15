@@ -106,6 +106,7 @@ export function PlayerFateJourney({
   const [deviceLayoutMode, setDeviceLayoutMode] = useState<
     'AUTO' | 'PHONE' | 'DESKTOP'
   >('AUTO');
+  const [showAllMobileRoster, setShowAllMobileRoster] = useState(false);
 
   const activeCapState = isCurrentState ? baselineState : derivedState;
   const space2026 = activeCapState.years[2026].effectiveCapSpace;
@@ -591,6 +592,15 @@ export function PlayerFateJourney({
       ? 'block max-w-[480px] mx-auto'
       : 'block md:hidden';
 
+  const isFilteredRoster =
+    searchQuery.trim().length > 0 ||
+    posFilter !== 'ALL' ||
+    timelineFilter !== 'ALL';
+  const mobileVisibleRows =
+    isFilteredRoster || showAllMobileRoster
+      ? filteredTimelineRows
+      : filteredTimelineRows.slice(0, 15);
+
   return (
     <div className="mx-auto max-w-[1440px] px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
       {/* 1. Mode Header (Current State vs Team Builder) + View Mode Switcher */}
@@ -611,10 +621,10 @@ export function PlayerFateJourney({
             </h1>
           </div>
 
-          {/* Primary View Mode Switcher + Phone/Desktop Toggle + Mode Action */}
+          {/* Primary View Mode Switcher + Desktop Preview Toggle + Mode Action */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Phone vs Desktop Layout Switcher */}
-            <div className="inline-flex border border-[#1c1917] bg-[#f6f3ec] p-0.5">
+            {/* Phone vs Desktop Layout Switcher (hidden on small screens already in Phone View) */}
+            <div className="hidden md:inline-flex border border-[#1c1917] bg-[#f6f3ec] p-0.5">
               <button
                 type="button"
                 onClick={() =>
@@ -866,38 +876,40 @@ export function PlayerFateJourney({
         )}
 
         {/* Search & Position Filter Bar (Shared by Both Views) */}
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2.5 flex-1">
-            <div className="relative flex-1 min-w-[220px] max-w-xs">
+        <div className="mt-4 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2.5 flex-1">
+            <div className="relative flex-1 min-w-0 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a8379]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Filter ${baseTeam.name} ${activeCapState.roster.length}-man roster...`}
-                className="w-full border border-[#111827] bg-white py-2 pl-9 pr-3 text-sm text-[#111827] placeholder:text-[#64748b] focus:outline-none"
+                className="w-full min-h-[40px] border border-[#111827] bg-white py-2 pl-9 pr-3 text-sm text-[#111827] placeholder:text-[#64748b] focus:outline-none"
               />
             </div>
 
-            <GlobalPlayerSearch
-              placeholder="Or lookup any NFL player (age, yrs left, deal)..."
-              className="w-64 sm:w-72"
-            />
+            <div className="hidden sm:block">
+              <GlobalPlayerSearch
+                placeholder="Or lookup any NFL player (age, yrs left, deal)..."
+                className="w-64 lg:w-72"
+              />
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs font-bold uppercase tracking-[0.08em] text-[#475569]">
-              Position:
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible">
+            <span className="shrink-0 mr-1 text-xs font-bold uppercase tracking-[0.08em] text-[#475569]">
+              Pos:
             </span>
             {ALL_POSITIONS.map((pos) => (
               <button
                 key={pos}
                 type="button"
                 onClick={() => setPosFilter(pos)}
-                className={`px-2.5 py-1 font-mono-ledger text-xs font-semibold transition-colors cursor-pointer ${
+                className={`shrink-0 snap-start min-h-[36px] px-3 py-1 font-mono-ledger text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                   posFilter === pos
                     ? 'bg-[#1e3a5f] text-white'
-                    : 'text-[#334155] hover:bg-[#ebe6dc] hover:text-[#111827]'
+                    : 'bg-[#f1f5f9] sm:bg-transparent text-[#334155] hover:bg-[#ebe6dc] hover:text-[#111827]'
                 }`}
               >
                 {pos}
@@ -911,39 +923,39 @@ export function PlayerFateJourney({
           VIEW MODE 1: VISUAL CONTRACT & EXTENSION BAR TIMELINE (2026–2031)
          ===================================================================== */}
       {viewMode === 'TIMELINE_BARS' && (
-        <section className="border border-[#d6d0c4] bg-white p-5 space-y-5 shadow-2xs">
+        <section className="border border-[#d6d0c4] bg-white p-3.5 sm:p-5 space-y-4 sm:space-y-5 shadow-2xs">
           {/* Visual Legend + Quick Filter Pills */}
-          <div className="flex flex-col gap-4 border-b border-[#d6d0c4] pb-4">
+          <div className="flex flex-col gap-3 sm:gap-4 border-b border-[#d6d0c4] pb-3.5 sm:pb-4">
             {/* 4-Box Visual Key + Rating Scale Key */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-              <span className="text-xs font-bold uppercase tracking-[0.1em] text-[#334155]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 sm:gap-x-5 sm:gap-y-2 text-[11px] sm:text-xs">
+              <span className="hidden sm:inline text-xs font-bold uppercase tracking-[0.1em] text-[#334155]">
                 Bar Legend:
               </span>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-4 w-7 bg-[#1e3a5f] border border-[#1e3a5f] rounded-xs" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#1e3a5f] border border-[#1e3a5f] rounded-xs" />
                 <span className="text-[#111827] font-semibold">
-                  Locked Year
+                  Locked
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-4 w-7 bg-[#fef3c7] border-2 border-[#d97706] rounded-xs" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#fef3c7] border-2 border-[#d97706] rounded-xs" />
                 <span className="text-[#78350f] font-semibold">
-                  Cut / Restructure Risk
+                  Cut Risk
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-4 w-7 bg-[#dcfce7] border-2 border-dashed border-[#15803d] rounded-xs" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#dcfce7] border-2 border-dashed border-[#15803d] rounded-xs" />
                 <span className="text-[#14532d] font-semibold">
-                  Extension Window
+                  Ext. Window
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-4 w-7 bg-[#fee2e2] border border-dashed border-[#dc2626] rounded-xs" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#fee2e2] border border-dashed border-[#dc2626] rounded-xs" />
                 <span className="text-[#991b1b] font-semibold">
-                  Dead Cap / Age Cliff
+                  Dead / Cliff
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 border-l border-[#d6d0c4] pl-4 text-xs text-[#334155]">
+              <div className="hidden sm:flex items-center gap-1.5 border-l border-[#d6d0c4] pl-4 text-xs text-[#334155]">
                 <span className="font-mono-ledger font-bold text-[#1e3a5f]">
                   Rating (0–99):
                 </span>
@@ -953,26 +965,26 @@ export function PlayerFateJourney({
               </div>
             </div>
 
-            {/* Quick Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            {/* Single-Row Swipeable Quick Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 snap-x lg:flex-wrap lg:overflow-visible text-xs">
               {(
                 [
                   { id: 'ALL', label: `All Roster (${timelineRows.length})` },
                   {
                     id: 'HIGH_EXT_LIKELY',
-                    label: 'High Extension Likelihood (70%+)',
+                    label: 'High Ext. Likelihood (70%+)',
                   },
                   {
                     id: 'CUT_RISK_YEARS',
-                    label: 'Has Cut-Risk / Paper Years',
+                    label: 'Cut-Risk / Fake Years',
                   },
                   { id: 'EXPIRING_2026', label: 'Expiring After 2026' },
-                  { id: 'VOID_BILLS', label: 'Void-Year Ghost Bills' },
+                  { id: 'VOID_BILLS', label: 'Void-Year Bills' },
                   ...(!isCurrentState && activeSignFaTxByPlayerId.size > 0
                     ? [
                         {
                           id: 'ADDED_FA' as TimelineQuickFilter,
-                          label: `Newly Added FAs (${activeSignFaTxByPlayerId.size / 2})`,
+                          label: `Added FAs (${activeSignFaTxByPlayerId.size / 2})`,
                         },
                       ]
                     : []),
@@ -982,7 +994,7 @@ export function PlayerFateJourney({
                   key={pill.id}
                   type="button"
                   onClick={() => setTimelineFilter(pill.id)}
-                  className={`border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`shrink-0 snap-start whitespace-nowrap min-h-[36px] border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                     timelineFilter === pill.id
                       ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
                       : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155] hover:border-[#111827] hover:text-[#111827]'
@@ -1450,7 +1462,7 @@ export function PlayerFateJourney({
 
           {/* IPHONE / PIXEL MOBILE VIEW: Zero-Scroll 6-Year Visual Timeline Cards */}
           <div className={`${mobileBlockClass} space-y-3`}>
-            {filteredTimelineRows.map((row) => {
+            {mobileVisibleRows.map((row) => {
               const {
                 player,
                 forecast,
@@ -1479,13 +1491,13 @@ export function PlayerFateJourney({
               return (
                 <div
                   key={`mob-${player.id}`}
-                  className={`border p-3.5 space-y-3 transition-colors ${
+                  className={`border p-3 space-y-2.5 transition-colors ${
                     isNewlySignedFa
                       ? 'border-2 border-[#15803d] bg-[#f0fdf4]'
                       : 'border-[#d6d0c4] bg-white'
                   }`}
                 >
-                  {/* Card Row 1: Identity + Extension Probability Pill + Dossier */}
+                  {/* Card Row 1: Identity + Status Badge */}
                   <div className="flex items-start justify-between gap-2">
                     <button
                       type="button"
@@ -1507,12 +1519,11 @@ export function PlayerFateJourney({
                       />
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate font-editorial text-base font-bold text-[#111827] underline decoration-[#94a3b8] underline-offset-2">
+                          <span className="truncate font-editorial text-base font-bold text-[#111827]">
                             {player.name}
                           </span>
                           <span className="shrink-0 border border-[#cbd5e1] bg-[#f8fafc] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#111827]">
-                            {player.position} · Age {player.ageIn2026} · Rating{' '}
-                            {player.overallRating}/99
+                            {player.position} · Age {player.ageIn2026} · {player.overallRating}/99
                           </span>
                         </div>
                         <div className="mt-0.5 font-mono-ledger text-xs font-medium text-[#334155]">
@@ -1520,44 +1531,37 @@ export function PlayerFateJourney({
                           {career.expectedRemainingStarterYears === 1
                             ? ''
                             : 's'}{' '}
-                          left (thru ~Age {career.projectedRetirementAge}) ·
-                          Est. ${forecast.projectedMarketApy.toFixed(1)}M/yr
+                          left · Est. ${forecast.projectedMarketApy.toFixed(1)}M/yr
                         </div>
                       </div>
                     </button>
 
-                    <div className="flex flex-col items-end gap-1 shrink-0">
+                    <div className="shrink-0">
                       {isNewlySignedFa ? (
-                        <span className="border border-[#15803d] bg-[#15803d] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-white">
+                        <span className="inline-block border border-[#15803d] bg-[#15803d] px-2 py-0.5 font-mono-ledger text-[10px] font-bold text-white">
                           ★ NEW FA
                         </span>
                       ) : activePlayerTx ? (
-                        <span className="border border-[#16a34a] bg-[#dcfce7] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#14532d]">
+                        <span className="inline-block border border-[#16a34a] bg-[#dcfce7] px-2 py-0.5 font-mono-ledger text-[10px] font-bold text-[#14532d]">
                           ✓ {activePlayerTx.type}
                         </span>
                       ) : (
                         <span
-                          className={`border px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${extBadgeColor}`}
+                          className={`inline-block border px-2 py-0.5 font-mono-ledger text-[10px] font-bold ${extBadgeColor}`}
                         >
                           {extensionLikelihoodPct}% Ext.
                         </span>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => openPlayerDossier(player, baseTeam.id)}
-                        className="border border-[#cbd5e1] bg-[#f8fafc] px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-[#334155]"
-                      >
-                        Dossier
-                      </button>
                     </div>
                   </div>
 
-                  {/* Card Row 2: Full-Width 6-Year Mini Visual Bar (2026–2031) — Fits 100% on Phone! */}
+                  {/* Card Row 2: Full-Width 6-Year Mini Visual Bar (2026–2031) — Fits 100% on Phone */}
                   <div className="grid grid-cols-6 gap-1">
                     {cells.map((cell) => {
                       const targetActionYear: LeagueYear =
                         cell.year <= 2029 ? (cell.year as LeagueYear) : 2029;
                       const shortYr = `'${String(cell.year).slice(2)}`;
+                      const hit = cell.capHit ?? 0;
 
                       let boxStyle =
                         'border border-dashed border-[#cbd5e1] bg-[#f8fafc] text-[#475569]';
@@ -1566,23 +1570,24 @@ export function PlayerFateJourney({
                       if (cell.segmentType === 'LOCKED_CONTRACT') {
                         boxStyle =
                           'bg-[#1e3a5f] text-white border border-[#1e3a5f]';
-                        statusShort = `$${(cell.capHit ?? 0).toFixed(1)}M`;
+                        statusShort =
+                          hit >= 10 ? `$${hit.toFixed(0)}M` : `$${hit.toFixed(1)}M`;
                       } else if (cell.segmentType === 'PAPER_CUT_RISK') {
                         boxStyle =
                           'bg-[#fef3c7] text-[#78350f] border-2 border-[#d97706]';
-                        statusShort = `✂$${(cell.capHit ?? 0).toFixed(0)}M`;
+                        statusShort = `✂$${hit.toFixed(0)}M`;
                       } else if (cell.segmentType === 'EXTENSION_WINDOW') {
                         boxStyle =
                           'bg-[#dcfce7] text-[#14532d] border-2 border-dashed border-[#15803d]';
                         statusShort = cell.isStartOfSpan
-                          ? `${extensionLikelihoodPct}% Ext`
+                          ? `${extensionLikelihoodPct}%`
                           : `~$${forecast.projectedMarketApy.toFixed(0)}M`;
                       } else if (cell.segmentType === 'VOID_GHOST_BILL') {
                         boxStyle =
                           'bg-[#fee2e2] text-[#991b1b] border border-dashed border-[#dc2626]';
-                        statusShort = `Void`;
+                        statusShort = 'Void';
                       } else if (cell.isAtOrPastCliff) {
-                        statusShort = `Cliff`;
+                        statusShort = 'Cliff';
                       }
 
                       return (
@@ -1602,12 +1607,13 @@ export function PlayerFateJourney({
                                   targetActionYear
                                 )
                           }
-                          className={`flex flex-col items-center justify-between py-2 px-1 text-center font-mono-ledger transition-opacity active:opacity-80 cursor-pointer ${boxStyle}`}
+                          className={`flex flex-col items-center justify-between min-h-[46px] py-1.5 px-1 text-center font-mono-ledger transition-opacity active:opacity-80 cursor-pointer ${boxStyle}`}
                         >
-                          <span className="text-[10px] opacity-85">
-                            {shortYr} · {cell.age}y
-                          </span>
-                          <span className="mt-0.5 text-[11px] font-bold leading-tight truncate max-w-full">
+                          <div className="flex items-baseline justify-between w-full px-0.5 text-[9px] leading-none opacity-85">
+                            <span>{shortYr}</span>
+                            <span>{cell.age}y</span>
+                          </div>
+                          <span className="mt-1 text-[11px] font-bold leading-tight truncate max-w-full">
                             {statusShort}
                           </span>
                         </button>
@@ -1615,16 +1621,16 @@ export function PlayerFateJourney({
                     })}
                   </div>
 
-                  {/* Card Row 3: Mode-Aware Footer Actions */}
-                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-[#dfd9cc]">
+                  {/* Card Row 3: Thumb-Friendly Mode-Aware Footer Actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#dfd9cc]">
                     {isCurrentState ? (
                       <>
                         <button
                           type="button"
                           onClick={() => openPlayerDossier(player, baseTeam.id)}
-                          className="border border-[#dfd9cc] bg-[#fcfaf6] px-2.5 py-1 font-mono-ledger text-[10px] font-semibold text-[#1c1917]"
+                          className="min-h-[36px] border border-[#cbd5e1] bg-[#f8fafc] px-3 py-1.5 text-xs font-semibold text-[#111827] active:bg-[#ebe6dc]"
                         >
-                          Scouting Dossier
+                          Dossier
                         </button>
                         <button
                           type="button"
@@ -1635,9 +1641,9 @@ export function PlayerFateJourney({
                               actionYear: 2026,
                             })
                           }
-                          className="inline-flex items-center gap-1 bg-[#1c1917] px-2.5 py-1 font-mono-ledger text-[10px] font-semibold text-[#f6f3ec]"
+                          className="min-h-[36px] inline-flex items-center gap-1 bg-[#1e3a5f] px-3.5 py-1.5 text-xs font-semibold text-white active:bg-[#162d4a]"
                         >
-                          <span>Modify in Builder →</span>
+                          <span>Modify in Team Builder →</span>
                         </button>
                       </>
                     ) : (
@@ -1647,10 +1653,10 @@ export function PlayerFateJourney({
                             <button
                               type="button"
                               onClick={() => removeTransaction(faTxId)}
-                              className="inline-flex items-center gap-1 border border-[#b84a27] bg-[#b84a27] px-2.5 py-1 font-mono-ledger text-[10px] font-semibold text-[#f6f3ec]"
+                              className="min-h-[36px] inline-flex items-center gap-1 border border-[#b91c1c] bg-[#b91c1c] px-3 py-1.5 text-[11px] font-semibold text-white"
                             >
-                              <X className="h-3 w-3" />
-                              <span>Remove Added FA</span>
+                              <X className="h-3.5 w-3.5" />
+                              <span>Remove FA</span>
                             </button>
                           ) : activePlayerTx ? (
                             <button
@@ -1658,9 +1664,9 @@ export function PlayerFateJourney({
                               onClick={() =>
                                 removeTransaction(activePlayerTx.txId)
                               }
-                              className="inline-flex items-center gap-1 border border-[#2d5a43] bg-[#2d5a43] px-2.5 py-1 font-mono-ledger text-[10px] font-semibold text-[#f6f3ec]"
+                              className="min-h-[36px] inline-flex items-center gap-1 border border-[#15803d] bg-[#15803d] px-3 py-1.5 text-[11px] font-semibold text-white"
                             >
-                              <span>Undo {activePlayerTx.label}</span>
+                              <span>Undo {activePlayerTx.type}</span>
                             </button>
                           ) : (
                             <>
@@ -1684,10 +1690,10 @@ export function PlayerFateJourney({
                                         row.lastActiveContractYear
                                       )
                                     }
-                                    className="border border-[#2d5a43] bg-[#2d5a43]/15 px-2.5 py-1 font-mono-ledger text-[10px] font-bold text-[#2d5a43]"
+                                    className="min-h-[36px] border border-[#15803d] bg-[#dcfce7] px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#14532d]"
                                   >
                                     + Extend (~$
-                                    {forecast.projectedMarketApy.toFixed(1)}M/yr)
+                                    {forecast.projectedMarketApy.toFixed(1)}M)
                                   </button>
                                 )}
                               {forecast.bestCutSavings2026 >= 2.5 && (
@@ -1700,7 +1706,7 @@ export function PlayerFateJourney({
                                       2026
                                     )
                                   }
-                                  className="border border-[#b84a27] bg-[#b84a27]/10 px-2.5 py-1 font-mono-ledger text-[10px] font-bold text-[#b84a27]"
+                                  className="min-h-[36px] border border-[#d97706] bg-[#fef3c7] px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#78350f]"
                                 >
                                   ✂ Cut (+$
                                   {forecast.bestCutSavings2026.toFixed(1)}M)
@@ -1717,7 +1723,7 @@ export function PlayerFateJourney({
                                       2026
                                     )
                                   }
-                                  className="border border-[#1c1917] bg-[#fcfaf6] px-2 py-1 font-mono-ledger text-[10px] font-semibold text-[#1c1917]"
+                                  className="min-h-[36px] border border-[#111827] bg-white px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#111827]"
                                 >
                                   Restructure (+$
                                   {forecast.maxRestructureSavings2026.toFixed(1)}
@@ -1737,9 +1743,9 @@ export function PlayerFateJourney({
                               2026
                             )
                           }
-                          className="inline-flex items-center gap-1 font-mono-ledger text-[10px] font-semibold text-[#1c1917] underline"
+                          className="min-h-[36px] inline-flex items-center gap-1 px-2 text-xs font-semibold text-[#111827] underline"
                         >
-                          <span>4-Door Options →</span>
+                          <span>4 Doors →</span>
                         </button>
                       </>
                     )}
@@ -1747,6 +1753,18 @@ export function PlayerFateJourney({
                 </div>
               );
             })}
+
+            {!isFilteredRoster && filteredTimelineRows.length > 15 && (
+              <button
+                type="button"
+                onClick={() => setShowAllMobileRoster((prev) => !prev)}
+                className="w-full min-h-[44px] border-2 border-[#111827] bg-[#f7f5f0] px-4 py-2.5 text-xs font-bold text-[#111827] active:bg-[#ebe6dc]"
+              >
+                {showAllMobileRoster
+                  ? 'Show Top 15 Contracts Only ▲'
+                  : `Show All ${filteredTimelineRows.length} Players (+${filteredTimelineRows.length - 15} More Starters, Rookies & Depth) ▼`}
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -2556,23 +2574,23 @@ export function PlayerFateJourney({
         </div>
 
         {/* Search + Critical Need Position Quick Filters */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-64">
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8a8379]" />
               <input
                 type="text"
                 value={faSearchQuery}
                 onChange={(e) => setFaSearchQuery(e.target.value)}
                 placeholder="Search free agents by name or team..."
-                className="w-full border border-[#1c1917] bg-[#f6f3ec] py-1.5 pl-8 pr-3 text-xs text-[#1c1917] placeholder:text-[#8a8379] focus:outline-none"
+                className="w-full min-h-[40px] border border-[#1c1917] bg-[#f6f3ec] py-1.5 pl-8 pr-3 text-xs text-[#1c1917] placeholder:text-[#8a8379] focus:outline-none"
               />
             </div>
 
             {criticalPositions2026Or2027.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b84a27]">
-                  Your Starter Needs:
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 snap-x sm:flex-wrap">
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b84a27]">
+                  Needs:
                 </span>
                 {criticalPositions2026Or2027.map((needPos) => (
                   <button
@@ -2581,7 +2599,7 @@ export function PlayerFateJourney({
                     onClick={() =>
                       setFaPosFilter(faPosFilter === needPos ? 'ALL' : needPos)
                     }
-                    className={`border px-2 py-0.5 font-mono-ledger text-[10px] font-semibold transition-colors cursor-pointer ${
+                    className={`shrink-0 snap-start min-h-[32px] border px-2.5 py-1 font-mono-ledger text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                       faPosFilter === needPos
                         ? 'border-[#b84a27] bg-[#b84a27] text-[#f6f3ec]'
                         : 'border-[#b84a27]/50 bg-[#b84a27]/10 text-[#b84a27] hover:bg-[#b84a27] hover:text-[#f6f3ec]'
@@ -2594,19 +2612,19 @@ export function PlayerFateJourney({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8379]">
-              Filter FA Position:
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 snap-x lg:flex-wrap lg:overflow-visible">
+            <span className="shrink-0 mr-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8379]">
+              Pos:
             </span>
             {ALL_POSITIONS.map((pos) => (
               <button
                 key={pos}
                 type="button"
                 onClick={() => setFaPosFilter(pos)}
-                className={`px-2 py-0.5 font-mono-ledger text-[11px] transition-colors cursor-pointer ${
+                className={`shrink-0 snap-start min-h-[34px] px-2.5 py-1 font-mono-ledger text-xs whitespace-nowrap transition-colors cursor-pointer ${
                   faPosFilter === pos
                     ? 'bg-[#1c1917] font-semibold text-[#f6f3ec]'
-                    : 'text-[#57534e] hover:bg-[#ede8dd] hover:text-[#1c1917]'
+                    : 'bg-[#ede8dd] sm:bg-transparent text-[#57534e] hover:bg-[#ede8dd] hover:text-[#1c1917]'
                 }`}
               >
                 {pos}

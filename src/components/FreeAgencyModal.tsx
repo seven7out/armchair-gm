@@ -163,7 +163,7 @@ export function FreeAgencySimulatorView({
   )?.loss;
 
   return (
-    <div className={isModal ? 'p-7' : 'mx-auto max-w-[1440px] px-6 py-8 space-y-6'}>
+    <div className={isModal ? 'p-4 sm:p-7' : 'mx-auto max-w-[1440px] px-4 sm:px-6 py-6 sm:py-8 space-y-6'}>
       {!isModal && (
         <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-6">
           <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#8a8379]">
@@ -745,17 +745,17 @@ export function FreeAgencyModal() {
       onClick={(e) => {
         if (e.target === dialogRef.current) setFreeAgencyModalOpen(false);
       }}
-      className="m-auto w-full max-w-5xl border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-xl backdrop:bg-[#1c1917]/30"
+      className="mt-auto mb-0 sm:m-auto w-full max-w-5xl max-h-[92dvh] overflow-y-auto border-t-2 sm:border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-xl backdrop:bg-[#1c1917]/40"
     >
-      <div className="flex items-center justify-between border-b border-[#dfd9cc] px-7 py-4">
-        <h2 id={titleId} className="font-editorial text-xl text-[#1c1917]">
+      <div className="sticky top-0 z-20 bg-[#f6f3ec] flex items-center justify-between border-b border-[#dfd9cc] px-4 py-3.5 sm:px-7 sm:py-4">
+        <h2 id={titleId} className="font-editorial text-lg sm:text-xl text-[#1c1917]">
           Free Agency & Contract Structure Desk
         </h2>
         <button
           type="button"
           onClick={() => setFreeAgencyModalOpen(false)}
           aria-label="Close Free Agency Simulator"
-          className="p-1 text-[#8a8379] hover:text-[#1c1917] cursor-pointer"
+          className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center border border-[#1c1917] bg-[#fcfaf6] text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] cursor-pointer"
         >
           <X className="h-4 w-4" />
         </button>

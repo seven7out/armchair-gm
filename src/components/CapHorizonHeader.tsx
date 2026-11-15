@@ -401,20 +401,24 @@ export function CapHorizonHeader() {
         )}
 
         {/* MOBILE COMPACT 4-YEAR CAP PILL STRIP (Visible on Phone <768px so sticky header stays slim) */}
-        <div className="md:hidden px-3 py-2 bg-white border-b border-[#d6d0c4]">
+        <div className="md:hidden px-3 py-2 bg-white border-b border-[#d6d0c4] space-y-2">
           <div className="grid grid-cols-5 items-center gap-1.5">
             {LEAGUE_YEARS.map((year) => {
               const yData = displayCapState.years[year];
               const isOverCap = yData.effectiveCapSpace < 0;
+              const isActiveReceipt = receiptYear === year;
               return (
                 <button
                   key={year}
                   type="button"
-                  onClick={() => {
-                    setShowMobileCapDetails(true);
-                    setReceiptYear((prev) => (prev === year ? null : year));
-                  }}
-                  className="flex flex-col items-center border border-[#d6d0c4] bg-[#f7f5f0] py-1.5 px-1 text-center"
+                  onClick={() =>
+                    setReceiptYear((prev) => (prev === year ? null : year))
+                  }
+                  className={`flex flex-col items-center border py-1.5 px-1 text-center transition-colors ${
+                    isActiveReceipt
+                      ? 'border-[#1e3a5f] bg-[#eff6ff]'
+                      : 'border-[#d6d0c4] bg-[#f7f5f0] active:bg-[#ebe6dc]'
+                  }`}
                 >
                   <span className="font-mono-ledger text-[11px] font-semibold text-[#334155]">
                     &apos;{String(year).slice(2)}{' '}
@@ -440,6 +444,42 @@ export function CapHorizonHeader() {
               <span>{showMobileCapDetails ? '▲' : '▼'}</span>
             </button>
           </div>
+
+          {receiptYear !== null && (
+            <div className="border border-[#d6d0c4] bg-[#f7f5f0] px-2.5 py-1.5 font-mono-ledger text-[11px] flex items-center justify-between gap-2 text-[#111827]">
+              {(() => {
+                const rData = displayCapState.years[receiptYear];
+                return (
+                  <div className="leading-snug">
+                    <strong className="text-[#475569] mr-1">{receiptYear}:</strong>
+                    Cap ${rData.baseLeagueCap.toFixed(1)}M + Roll $
+                    {rData.rolloverFromPriorYear.toFixed(1)}M − Top-51 $
+                    {rData.activeTop51Cap.toFixed(1)}M − Dead $
+                    {rData.deadMoneyTotal.toFixed(1)}M − Rookies $
+                    {rData.netRookiePoolImpact.toFixed(1)}M ={' '}
+                    <strong
+                      className={
+                        rData.effectiveCapSpace < 0
+                          ? 'text-[#b91c1c]'
+                          : 'text-[#15803d]'
+                      }
+                    >
+                      {rData.effectiveCapSpace < 0 ? '−$' : '+$'}
+                      {Math.abs(rData.effectiveCapSpace).toFixed(1)}M
+                    </strong>
+                  </div>
+                );
+              })()}
+              <button
+                type="button"
+                onClick={() => setReceiptYear(null)}
+                aria-label="Close cap math breakdown"
+                className="shrink-0 px-1.5 py-0.5 text-xs text-[#475569]"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 4-Year Cap Horizon Strip — Full on Desktop (md+), Expandable on Phone */}
@@ -596,9 +636,9 @@ export function CapHorizonHeader() {
           })}
         </div>
 
-        {/* Expandable "Spendable Now" Math Receipt */}
+        {/* Expandable "Spendable Now" Math Receipt (Desktop md+) */}
         {receiptYear !== null && (
-          <div className="border border-[#d6d0c4] bg-white px-3.5 py-2 mb-3 text-xs shadow-2xs">
+          <div className="hidden md:block border border-[#d6d0c4] bg-white px-3.5 py-2 mb-3 text-xs shadow-2xs">
             {(() => {
               const rData = displayCapState.years[receiptYear];
               return (
@@ -664,26 +704,31 @@ export function CapHorizonHeader() {
       </div>
     </header>
 
-    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — 2 Primary Modes */}
+    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — Thumb Reach Across Modes + Needs */}
     <nav
       aria-label="Mobile Primary Mode Switcher"
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-[#111827] bg-white/98 backdrop-blur-md pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_12px_rgba(17,24,39,0.1)]"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-[#111827] bg-white/98 backdrop-blur-md pb-[max(0.45rem,env(safe-area-inset-bottom,0px))] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] shadow-[0_-4px_12px_rgba(17,24,39,0.1)]"
     >
-      <div className="grid grid-cols-2 divide-x divide-[#d6d0c4]">
+      <div className="grid grid-cols-3 divide-x divide-[#d6d0c4]">
         <button
           type="button"
-          onClick={() => setActiveTab('player-fate')}
-          className={`flex flex-col items-center justify-center py-2.5 px-2 text-center transition-colors ${
+          onClick={() => {
+            if (activeTab !== 'player-fate') {
+              setActiveTab('player-fate');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center justify-center min-h-[52px] py-2 px-1.5 text-center transition-colors ${
             isCurrentStateMode
               ? 'bg-[#1e3a5f] text-white'
               : 'text-[#111827] hover:bg-[#f1f5f9]'
           }`}
         >
-          <span className="text-xs sm:text-sm font-bold leading-tight">
-            1. Roster Grid &amp; Needs
+          <span className="text-xs font-bold leading-tight">
+            1. Roster Grid
           </span>
           <span
-            className={`mt-0.5 font-mono-ledger text-[11px] font-medium tracking-wide ${
+            className={`mt-0.5 font-mono-ledger text-[10px] font-medium ${
               isCurrentStateMode ? 'text-[#e2e8f0]' : 'text-[#475569]'
             }`}
           >
@@ -694,26 +739,57 @@ export function CapHorizonHeader() {
         <button
           type="button"
           onClick={() => {
-            if (activeTab !== 'team-builder') {
-              setActiveTab('team-builder');
+            if (activeTab !== 'player-fate' && activeTab !== 'team-builder') {
+              setActiveTab('player-fate');
+              setTimeout(() => {
+                document
+                  .getElementById('positional-needs-matrix')
+                  ?.scrollIntoView({ behavior: 'smooth' });
+              }, 80);
+            } else {
+              document
+                .getElementById('positional-needs-matrix')
+                ?.scrollIntoView({ behavior: 'smooth' });
             }
           }}
-          className={`flex flex-col items-center justify-center py-2.5 px-2 text-center transition-colors ${
+          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1.5 text-center text-[#111827] hover:bg-[#f1f5f9] active:bg-[#ebe6dc] transition-colors"
+        >
+          <span className="text-xs font-bold leading-tight">
+            Needs (&apos;26–&apos;29)
+          </span>
+          <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#b45309]">
+            Jump ↓
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (activeTab !== 'team-builder') {
+              setActiveTab('team-builder');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              document
+                .getElementById('team-builder-workbench')
+                ?.scrollIntoView({ behavior: 'smooth' });
+            }
+          }}
+          className={`flex flex-col items-center justify-center min-h-[52px] py-2 px-1.5 text-center transition-colors ${
             !isCurrentStateMode
               ? 'bg-[#15803d] text-white'
               : 'text-[#111827] hover:bg-[#f1f5f9]'
           }`}
         >
-          <span className="text-xs sm:text-sm font-bold leading-tight">
+          <span className="text-xs font-bold leading-tight">
             2. Team Builder
             {enabledCount > 0 ? ` (${enabledCount})` : ''}
           </span>
           <span
-            className={`mt-0.5 font-mono-ledger text-[11px] font-medium tracking-wide ${
+            className={`mt-0.5 font-mono-ledger text-[10px] font-medium ${
               !isCurrentStateMode ? 'text-[#dcfce7]' : 'text-[#15803d]'
             }`}
           >
-            Modify &amp; Project
+            Modify &amp; Add FAs
           </span>
         </button>
       </div>

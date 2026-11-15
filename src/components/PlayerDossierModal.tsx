@@ -246,11 +246,11 @@ export function PlayerDossierModal() {
       onClick={(e) => {
         if (e.target === dialogRef.current) closePlayerDossier();
       }}
-      className="m-auto w-full max-w-4xl border-2 border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-2xl backdrop:bg-[#1c1917]/60"
+      className="mt-auto mb-0 sm:m-auto w-full max-w-4xl border-t-2 sm:border-2 border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-2xl backdrop:bg-[#1c1917]/60"
     >
-      <div className="max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-7">
+      <div className="max-h-[92dvh] overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-7">
         {/* 1. Dossier Header: Identity, Team, Rating, Age & Market Valuation */}
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-[#1c1917] pb-5">
+        <div className="sticky top-0 z-20 -mx-4 px-4 -mt-4 pt-4 sm:static sm:mx-0 sm:px-0 sm:mt-0 sm:pt-0 bg-[#f6f3ec] flex items-start justify-between gap-3 border-b-2 border-[#1c1917] pb-3.5 sm:pb-5">
           <div className="flex items-start gap-4">
             <PlayerAvatar
               name={player.name}

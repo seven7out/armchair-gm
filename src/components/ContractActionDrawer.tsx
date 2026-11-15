@@ -195,26 +195,25 @@ export function ContractActionDrawer() {
       onClick={(e) => {
         if (e.target === dialogRef.current) selectPlayer(null);
       }}
-      className="m-auto w-full max-w-3xl border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-xl backdrop:bg-[#1c1917]/30"
+      className="mt-auto mb-0 sm:m-auto w-full max-w-3xl max-h-[92dvh] overflow-y-auto border-t-2 sm:border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-2xl backdrop:bg-[#1c1917]/40"
     >
-      {/* Editorial Header */}
-      <div className="flex items-start justify-between border-b border-[#dfd9cc] px-7 py-5">
-        <div className="flex items-center gap-4">
+      {/* Editorial Header (Sticky on Phone Bottom Sheet) */}
+      <div className="sticky top-0 z-20 bg-[#f6f3ec] flex items-start justify-between gap-3 border-b border-[#dfd9cc] px-4 py-3.5 sm:px-7 sm:py-5">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <PlayerAvatar
             name={player.name}
             headshotUrl={player.headshotUrl}
             size="lg"
           />
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#475569]">
+          <div className="min-w-0">
+            <div className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.1em] text-[#475569]">
               {player.position} · Age {player.ageIn2026} · Rating{' '}
               {player.overallRating}/99 · {player.accruedSeasons} Accrued
-              Seasons
             </div>
-            <h2 id={titleId} className="font-editorial mt-1 text-2xl text-[#1c1917]">
+            <h2 id={titleId} className="font-editorial mt-0.5 text-xl sm:text-2xl text-[#1c1917]">
               {player.name}
             </h2>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
               <span
                 className={`font-semibold ${
                   fateForecast.fate === 'CAP_CASUALTY_RISK' ||
@@ -223,14 +222,11 @@ export function ContractActionDrawer() {
                     : 'text-[#2d5a43]'
                 }`}
               >
-                Forecast: {fateForecast.badgeLabel}
+                {fateForecast.badgeLabel}
               </span>
-              <span className="text-[#8a8379]">·</span>
-              <span className="text-[#57534e]">{fateForecast.rationale}</span>
+              <span className="hidden sm:inline text-[#8a8379]">·</span>
+              <span className="hidden sm:inline text-[#57534e]">{fateForecast.rationale}</span>
             </div>
-            {player.notes && (
-              <p className="mt-1 text-xs text-[#8a8379]">{player.notes}</p>
-            )}
           </div>
         </div>
 
@@ -238,14 +234,14 @@ export function ContractActionDrawer() {
           type="button"
           onClick={() => selectPlayer(null)}
           aria-label="Close contract dossier"
-          className="p-1 text-[#8a8379] hover:text-[#1c1917] cursor-pointer"
+          className="min-h-[40px] min-w-[40px] shrink-0 inline-flex items-center justify-center border border-[#1c1917] bg-[#fcfaf6] text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] cursor-pointer"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
       {/* Current 4-Year Ledger Strip + "Real Contract" X-Ray */}
-      <div className="border-b border-[#dfd9cc] bg-[#ede8dd]/50 px-7 py-4 space-y-3">
+      <div className="border-b border-[#dfd9cc] bg-[#ede8dd]/50 px-4 py-3.5 sm:px-7 sm:py-4 space-y-3">
         {/* Real Contract X-Ray Banner */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#dfd9cc] pb-2.5 text-xs">
           <div className="flex flex-wrap items-center gap-2">
@@ -294,7 +290,7 @@ export function ContractActionDrawer() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 divide-x divide-[#dfd9cc]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-0 sm:divide-x divide-[#dfd9cc]">
           {LEAGUE_YEARS.map((yr, idx) => {
             const cy = player.contractYears[yr];
             const hit = getContractYearCapHit(cy);
@@ -302,7 +298,7 @@ export function ContractActionDrawer() {
             return (
               <div
                 key={yr}
-                className={`${idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}`}
+                className={`border sm:border-0 border-[#dfd9cc] bg-[#fcfaf6] sm:bg-transparent p-2 sm:p-0 ${idx === 0 ? 'sm:pr-3' : idx === 3 ? 'sm:pl-3' : 'sm:px-3'}`}
               >
                 <div className="flex items-center justify-between font-mono-ledger text-[11px] text-[#8a8379]">
                   <span>{yr}</span>
@@ -333,7 +329,7 @@ export function ContractActionDrawer() {
       </div>
 
       {/* THE "FOUR DOORS" SIDE-BY-SIDE COMPARISON CARD (Cut vs Trade vs Restructure vs Extend + Baseline) */}
-      <div className="border-b border-[#dfd9cc] bg-[#fcfaf6] px-7 py-4">
+      <div className="border-b border-[#dfd9cc] bg-[#fcfaf6] px-4 py-3.5 sm:px-7 sm:py-4">
         <div className="mb-2 flex items-baseline justify-between">
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
             The &ldquo;Four Doors&rdquo; Side-by-Side Comparison ({actionYear} Impact vs.{' '}
@@ -470,7 +466,7 @@ export function ContractActionDrawer() {
       </div>
 
       {/* Action Mode Tabs */}
-      <div className="flex border-b border-[#dfd9cc] px-7 pt-3 gap-6 text-xs uppercase tracking-[0.1em]">
+      <div className="flex overflow-x-auto no-scrollbar border-b border-[#dfd9cc] px-4 sm:px-7 pt-3 gap-5 sm:gap-6 text-xs uppercase tracking-[0.1em] whitespace-nowrap">
         {(
           [
             { id: 'restructure', label: 'Restructure' },
@@ -483,7 +479,7 @@ export function ContractActionDrawer() {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`pb-2.5 transition-colors cursor-pointer ${
+            className={`shrink-0 pb-2.5 min-h-[36px] transition-colors cursor-pointer ${
               activeTab === tab.id
                 ? 'border-b-2 border-[#1c1917] font-semibold text-[#1c1917]'
                 : 'text-[#8a8379] hover:text-[#1c1917]'
@@ -495,7 +491,7 @@ export function ContractActionDrawer() {
       </div>
 
       {/* Body */}
-      <div className="p-7">
+      <div className="p-4 sm:p-7">
         {activeTab === 'restructure' && (
           <div className="space-y-6">
             <div>
@@ -560,7 +556,7 @@ export function ContractActionDrawer() {
               </div>
             </div>
 
-            <div className="grid grid-cols-4 divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-0 sm:divide-x divide-[#dfd9cc] border-y border-[#dfd9cc] py-4">
               {LEAGUE_YEARS.map((yr, idx) => {
                 const delta = restructureSim.capDeltaByYear[yr];
                 const newHit = getContractYearCapHit(
@@ -569,7 +565,7 @@ export function ContractActionDrawer() {
                 return (
                   <div
                     key={yr}
-                    className={idx === 0 ? 'pr-4' : idx === 3 ? 'pl-4' : 'px-4'}
+                    className={idx === 0 ? 'sm:pr-3' : idx === 3 ? 'sm:pl-3' : 'sm:px-3'}
                   >
                     <div className="font-mono-ledger text-[11px] text-[#8a8379]">
                       {yr} Revised
