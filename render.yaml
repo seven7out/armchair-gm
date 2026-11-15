@@ -5,6 +5,9 @@ services:
     plan: starter
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start
+    customDomains:
+      - thearmchairgm.com
+      - www.thearmchairgm.com
     envVars:
       - key: NODE_VERSION
         value: 22.14.0

@@ -27,9 +27,21 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://thearmchairgm.com'),
   title: 'Armchair GM — Front Office Notebook & Cap Ledger',
   description:
     'An editorial NFL salary cap notebook, multi-year roster horizon, and draft pick trade simulator.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Armchair GM — Front Office Notebook & Cap Ledger',
+    description:
+      'Interactive NFL salary cap manager, multi-year roster timeline, and offseason simulator for all 32 teams.',
+    url: 'https://thearmchairgm.com',
+    siteName: 'Armchair GM',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
