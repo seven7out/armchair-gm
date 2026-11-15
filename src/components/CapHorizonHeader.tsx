@@ -544,8 +544,23 @@ export function CapHorizonHeader() {
                       </strong>
                       Cap ${rData.baseLeagueCap.toFixed(1)}M + Roll $
                       {rData.rolloverFromPriorYear.toFixed(1)}M −{' '}
-                      {activeCapLabel} ${activeCapVal.toFixed(1)}M − Dead $
-                      {rData.deadMoneyTotal.toFixed(1)}M − Rookies $
+                      {activeCapLabel} ${activeCapVal.toFixed(1)}M −{' '}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCompareOriginalBaseline(false);
+                          setActiveTab('team-builder');
+                          window.dispatchEvent(
+                            new CustomEvent('armchair-gm:open-dead-money')
+                          );
+                        }}
+                        title="Jump to itemized Dead Money breakdown"
+                        className="underline decoration-dotted underline-offset-2 text-[#b45309] hover:text-[#111827] cursor-pointer"
+                      >
+                        Dead ${rData.deadMoneyTotal.toFixed(1)}M
+                      </button>{' '}
+                      − Rookies $
                       {rData.netRookiePoolImpact.toFixed(1)}M ={' '}
                       <strong
                         className={
@@ -747,9 +762,21 @@ export function CapHorizonHeader() {
                       {activeCapLabel} ${activeCapVal.toFixed(1)}M
                     </JargonTip>{' '}
                     ·{' '}
-                    <JargonTip term="DEAD_MONEY">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCompareOriginalBaseline(false);
+                        setActiveTab('team-builder');
+                        window.dispatchEvent(
+                          new CustomEvent('armchair-gm:open-dead-money')
+                        );
+                      }}
+                      title="View itemized Dead Money breakdown"
+                      className="underline decoration-dotted underline-offset-2 text-[#b45309] hover:text-[#111827] cursor-pointer"
+                    >
                       Dead ${yData.deadMoneyTotal.toFixed(1)}M
-                    </JargonTip>
+                    </button>
                   </span>
                   {year === 2026 ? (
                     <span className="text-[11px] font-semibold text-[#475569]">

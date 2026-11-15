@@ -3,7 +3,9 @@ import {
   computeDerivedTeamCapState,
   DEFAULT_CAP_GROWTH_RATE,
   evaluateFantasyPlayerSignal,
+  evaluateFreeAgentValueBadge,
   evaluatePlayerLongevity,
+  evaluateTeamCampBattles,
   evaluateTeamFantasyEnvironment,
   generateRookieContract,
   getContractYearCapHit,
@@ -224,6 +226,43 @@ assert(
 );
 console.log(
   `\n6. Fantasy Football Contract Insulation & Landing Spot Checks:\n   ${gibbs.name} (${gibbsEval.depthChartSlot}): ${gibbsEval.badgeLabel} (Insulation ${gibbsEval.insulationScore}/99)\n   ${detEnv.teamName}: OL Grade ${detEnv.olGrade} | QB: ${detEnv.qbStability} (${detEnv.qbName})\n   League Landing Spots Detected: ${landingSpots.length} (Top: ${landingSpots[0].teamAbbr} ${landingSpots[0].position} — ${landingSpots[0].archetypeBadge})\n   Sample Dynasty Audit: ${sampleAudit.totalAudited} players matched, Avg Insulation ${sampleAudit.overallInsulationScore}/99 (Traps: ${sampleAudit.paperContractTraps.length}, Stashes: ${sampleAudit.breakoutStashes.length})`
+);
+
+// 8. Camp Battle Financial Decoder (#10) & Free Agent Value Badges (#12)
+const detCampBattles = evaluateTeamCampBattles(baseState);
+assert(
+  detCampBattles.length === 3,
+  `Expected 3 camp battle room insights (RB/WR/TE) for Detroit, found ${detCampBattles.length}`
+);
+const wrBattle = detCampBattles.find((b) => b.position === 'WR');
+assert(
+  Boolean(wrBattle && wrBattle.leaderDeadCap2026 >= wrBattle.challengerDeadCap2026),
+  'WR camp battle must sort by financial commitment / dead cap leadership'
+);
+
+const primeYoungFa = SEED_FREE_AGENTS.find(
+  (fa) => fa.ageIn2026 <= 26 && fa.overallRating >= 78
+);
+assert(
+  Boolean(primeYoungFa) &&
+    evaluateFreeAgentValueBadge(primeYoungFa!).tier === 'PRIME_BUY',
+  'Young 78+ OVR free agent must evaluate as PRIME_BUY'
+);
+
+const agingExpensiveFa = {
+  ...SEED_FREE_AGENTS[0],
+  position: 'RB' as const,
+  ageIn2026: 30,
+  marketYears: 3,
+  marketApy: 12.5,
+};
+assert(
+  evaluateFreeAgentValueBadge(agingExpensiveFa).tier === 'CLIFF_TRAP',
+  '30-year-old RB on a 3-yr/$12.5M deal must evaluate as CLIFF_TRAP'
+);
+
+console.log(
+  `\n7. Camp Battle & FA Value Badge Checks:\n   Detroit Camp Rooms: ${detCampBattles.map((b) => `${b.position}=${b.badgeLabel} (${b.leaderName} $${b.leaderDeadCap2026}M dead)`).join(' | ')}\n   FA Value Badge Check: ${primeYoungFa!.name} -> ${evaluateFreeAgentValueBadge(primeYoungFa!).badgeLabel} | Aging RB Test -> ${evaluateFreeAgentValueBadge(agingExpensiveFa).badgeLabel}`
 );
 
 console.log('\n✅ ALL DETERMINISTIC CAP ENGINE CHECKS PASSED!');

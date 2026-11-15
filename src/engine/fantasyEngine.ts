@@ -1,10 +1,15 @@
 import {
   DerivedTeamCapState,
+  FreeAgentTarget,
   Player,
   PositionGroup,
   TeamSeedData,
 } from './types';
-import { DEFAULT_CAP_GROWTH_RATE, roundCap } from './constants';
+import {
+  DEFAULT_CAP_GROWTH_RATE,
+  POSITIONAL_AGING_CURVES,
+  roundCap,
+} from './constants';
 import { evaluatePlayerLongevity } from './agingEngine';
 import {
   computeRealContractXRay,
@@ -654,5 +659,191 @@ export function auditFantasyRosterPlayers(
     breakoutStashes,
     ufaTagWatch,
     solidDepth,
+  };
+}
+
+// ============================================================================
+// #10 "Follow the Money" Camp Battle & Touch Share Decoder
+// ============================================================================
+
+export interface TeamCampBattleInsight {
+  position: 'RB' | 'WR' | 'TE';
+  positionLabel: string;
+  leaderId: string;
+  leaderName: string;
+  leaderCapHit2026: number;
+  leaderDeadCap2026: number;
+  leaderNetCutSavings2026: number;
+  challengerId: string;
+  challengerName: string;
+  challengerCapHit2026: number;
+  challengerDeadCap2026: number;
+  challengerNetCutSavings2026: number;
+  deadCapRatio: number;
+  hierarchyType:
+    | 'CLEAR_ALPHA_LOCK'
+    | 'CO_STARTER_INVESTMENT'
+    | 'WIDE_OPEN_COMPETITION';
+  badgeLabel: string;
+  takeaway: string;
+}
+
+const CAMP_BATTLE_POSITIONS: readonly {
+  pos: 'RB' | 'WR' | 'TE';
+  label: string;
+}[] = [
+  { pos: 'RB', label: 'Running Back Room' },
+  { pos: 'WR', label: 'Wide Receiver Room' },
+  { pos: 'TE', label: 'Tight End Room' },
+];
+
+/**
+ * Compare RB / WR / TE depth chart rooms by 2026 Dead Cap vs. Cut Savings to
+ * decode which touch-share battles are financially locked vs. truly open.
+ */
+export function evaluateTeamCampBattles(
+  capState: DerivedTeamCapState
+): TeamCampBattleInsight[] {
+  const insights: TeamCampBattleInsight[] = [];
+
+  for (const { pos, label } of CAMP_BATTLE_POSITIONS) {
+    const candidates = capState.roster
+      .filter((p) => p.position === pos && p.contractYears[2026])
+      .map((player) => {
+        const capHit2026 = roundCap(
+          getContractYearCapHit(player.contractYears[2026])
+        );
+        const cutSim = simulateCutOrTrade(player, 2026, 'PRE_JUNE_1_CUT');
+        const deadCap2026 = roundCap(cutSim.currentYearDeadCap);
+        const netCutSavings2026 = roundCap(cutSim.currentYearCapSavings);
+        const financialCommitScore = deadCap2026 * 0.65 + capHit2026 * 0.35;
+        return {
+          player,
+          capHit2026,
+          deadCap2026,
+          netCutSavings2026,
+          financialCommitScore,
+        };
+      })
+      .sort((a, b) => {
+        if (Math.abs(b.financialCommitScore - a.financialCommitScore) > 0.25) {
+          return b.financialCommitScore - a.financialCommitScore;
+        }
+        return b.player.overallRating - a.player.overallRating;
+      });
+
+    if (candidates.length < 2) continue;
+
+    const leader = candidates[0];
+    const challenger = candidates[1];
+    const deadCapRatio =
+      challenger.deadCap2026 > 0.25
+        ? roundCap(leader.deadCap2026 / challenger.deadCap2026)
+        : leader.deadCap2026 > 0.5
+        ? 10
+        : 1;
+
+    let hierarchyType: TeamCampBattleInsight['hierarchyType'];
+    let badgeLabel: string;
+    let takeaway: string;
+
+    if (
+      leader.deadCap2026 >= 6.0 &&
+      leader.deadCap2026 >= challenger.deadCap2026 * 2.2
+    ) {
+      hierarchyType = 'CLEAR_ALPHA_LOCK';
+      badgeLabel = '🔒 Locked Alpha Role';
+      takeaway = `${leader.player.name} carries $${leader.deadCap2026.toFixed(1)}M in 2026 dead cap vs. $${challenger.deadCap2026.toFixed(1)}M for ${challenger.player.name} (${
+        challenger.netCutSavings2026 >= 1.5
+          ? `$${challenger.netCutSavings2026.toFixed(1)}M cuttable`
+          : 'low-risk depth deal'
+      }). Follow the guaranteed money.`;
+    } else if (leader.deadCap2026 >= 4.0 && challenger.deadCap2026 >= 3.5) {
+      hierarchyType = 'CO_STARTER_INVESTMENT';
+      badgeLabel = '⚖️ Paid Co-Starters';
+      takeaway = `Both ${leader.player.name} ($${leader.deadCap2026.toFixed(1)}M dead cap) and ${challenger.player.name} ($${challenger.deadCap2026.toFixed(1)}M dead cap) have real financial insulation for 2026 touches.`;
+    } else {
+      hierarchyType = 'WIDE_OPEN_COMPETITION';
+      badgeLabel = '🔥 Open Camp Battle';
+      takeaway = `Low dead cap across the ${pos} room (${leader.player.name} $${leader.deadCap2026.toFixed(1)}M vs. ${challenger.player.name} $${challenger.deadCap2026.toFixed(1)}M) — snap share is wide open on merit.`;
+    }
+
+    insights.push({
+      position: pos,
+      positionLabel: label,
+      leaderId: leader.player.id,
+      leaderName: leader.player.name,
+      leaderCapHit2026: leader.capHit2026,
+      leaderDeadCap2026: leader.deadCap2026,
+      leaderNetCutSavings2026: leader.netCutSavings2026,
+      challengerId: challenger.player.id,
+      challengerName: challenger.player.name,
+      challengerCapHit2026: challenger.capHit2026,
+      challengerDeadCap2026: challenger.deadCap2026,
+      challengerNetCutSavings2026: challenger.netCutSavings2026,
+      deadCapRatio,
+      hierarchyType,
+      badgeLabel,
+      takeaway,
+    });
+  }
+
+  return insights;
+}
+
+// ============================================================================
+// #12 Free Agent Value Badges (Ascending Prime Buy vs. Age-Cliff Overpay)
+// ============================================================================
+
+export interface FreeAgentValueBadge {
+  tier: 'PRIME_BUY' | 'CLIFF_TRAP' | 'VALUE_STARTER' | 'FAIR_VET';
+  badgeLabel: string;
+  reason: string;
+}
+
+/**
+ * Classify a 2026 free agent target using positional aging curves and
+ * expected APY/term commitment to flag Ascending Prime Buys vs Age-Cliff Traps.
+ */
+export function evaluateFreeAgentValueBadge(
+  fa: FreeAgentTarget
+): FreeAgentValueBadge {
+  const curve = POSITIONAL_AGING_CURVES[fa.position];
+
+  if (fa.ageIn2026 <= 26 && fa.overallRating >= 78) {
+    return {
+      tier: 'PRIME_BUY',
+      badgeLabel: '🟢 Ascending Prime Buy',
+      reason: `Entering athletic prime (Age ${fa.ageIn2026}) with ${Math.max(1, curve.cliffAge - fa.ageIn2026)}+ peak years before the ${fa.position} age-${curve.cliffAge} cliff.`,
+    };
+  }
+
+  if (
+    fa.ageIn2026 >= curve.cliffAge - 1 &&
+    (fa.marketYears >= 3 || fa.marketApy >= 10)
+  ) {
+    return {
+      tier: 'CLIFF_TRAP',
+      badgeLabel: '🔴 Age-Cliff Overpay Risk',
+      reason: `Age ${fa.ageIn2026} vs. ${fa.position} cliff at ${curve.cliffAge} on a ${fa.marketYears}-yr / $${fa.marketApy.toFixed(1)}M APY commitment.`,
+    };
+  }
+
+  if (
+    fa.overallRating >= 77 &&
+    fa.marketApy <= 8.5 &&
+    fa.ageIn2026 < curve.cliffAge
+  ) {
+    return {
+      tier: 'VALUE_STARTER',
+      badgeLabel: '🟢 High-Surplus Value',
+      reason: `${fa.overallRating} OVR starter talent at a cap-friendly $${fa.marketApy.toFixed(1)}M APY.`,
+    };
+  }
+
+  return {
+    tier: 'FAIR_VET',
+    badgeLabel: '🔵 Fair-Market Vet',
+    reason: `Standard market rate ($${fa.marketApy.toFixed(1)}M APY) for a ${fa.ageIn2026}-year-old ${fa.position}.`,
   };
 }

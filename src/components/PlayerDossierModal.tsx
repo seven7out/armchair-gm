@@ -18,6 +18,8 @@ import {
   computeRealContractXRay,
   evaluateRosterPlayerFate,
   getContractYearCapHit,
+  getDraftPickTradeValue,
+  getPlayerTradeValue,
   LEAGUE_YEARS,
   Player,
   POSITIONAL_MARKET_COMPS,
@@ -206,6 +208,7 @@ export function PlayerDossierModal() {
     selectTeam,
     selectPlayer,
     setActiveTab,
+    addTradeTransaction,
   } = useGMStore();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -237,6 +240,43 @@ export function PlayerDossierModal() {
     derivedState.years[2026].effectiveCapSpace
   );
   const marketComps = POSITIONAL_MARKET_COMPS[player.position] ?? [];
+
+  // #7 Instant "Can We Trade For [Player]?" computation when viewing another team's player
+  const cy26 = player.contractYears[2026];
+  const acquiringCapHit2026 =
+    Math.round(
+      ((cy26?.baseSalary ?? 0) +
+        (cy26?.rosterBonus ?? 0) +
+        (cy26?.workoutBonus ?? 0)) *
+        100
+    ) / 100;
+  const sellerKeptDeadBonus2026 =
+    Math.round((cy26?.proratedBonus ?? 0) * 100) / 100;
+  const activeTeamSpace2026 = derivedState.years[2026].effectiveCapSpace;
+  const postTradeCapSpace2026 =
+    Math.round((activeTeamSpace2026 - acquiringCapHit2026) * 100) / 100;
+  const canAffordTradeNow = postTradeCapSpace2026 >= 0;
+
+  const targetRichHillValue = getPlayerTradeValue(player, 'RichHill', 2026);
+  const availablePicks = [...derivedState.draftPicks].sort((a, b) => {
+    const valA = getDraftPickTradeValue(a.overallPick, 'RichHill', a.year - 2026);
+    const valB = getDraftPickTradeValue(b.overallPick, 'RichHill', b.year - 2026);
+    return (
+      Math.abs(valA - targetRichHillValue) -
+      Math.abs(valB - targetRichHillValue)
+    );
+  });
+  const suggestedPick = availablePicks[0] ?? null;
+  const suggestedPickValue = suggestedPick
+    ? getDraftPickTradeValue(
+        suggestedPick.overallPick,
+        'RichHill',
+        suggestedPick.year - 2026
+      )
+    : 0;
+  const suggestedPickLabel = suggestedPick
+    ? `${suggestedPick.year} Rd ${suggestedPick.round} (#${suggestedPick.overallPick})`
+    : 'Pick Package';
 
   return (
     <dialog
@@ -600,48 +640,125 @@ export function PlayerDossierModal() {
         )}
 
         {/* 5. Action Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-[#1c1917] pt-4">
-          <div className="text-xs text-[#57534e]">
-            Want to simulate a move for <strong>{player.name}</strong>?
-          </div>
+        <div className="space-y-3 border-t-2 border-[#1c1917] pt-4">
+          {!isOnActiveTeam && cy26 && (
+            <div className="border border-[#1c1917] bg-[#fcfaf6] p-3.5 sm:p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#1c1917]">
+                  ⚡ Instant Trade Simulator · Can {derivedState.teamName} Acquire{' '}
+                  {player.name}?
+                </div>
+                <span
+                  className={`border px-2 py-0.5 font-mono-ledger text-[11px] font-bold ${
+                    canAffordTradeNow
+                      ? 'border-[#16a34a] bg-[#dcfce7] text-[#14532d]'
+                      : 'border-[#dc2626] bg-[#fee2e2] text-[#991b1b]'
+                  }`}
+                >
+                  {canAffordTradeNow
+                    ? `✅ Fits 2026 Cap (+$${postTradeCapSpace2026.toFixed(1)}M Left)`
+                    : `⚠️ Needs +$${Math.abs(postTradeCapSpace2026).toFixed(1)}M Cap Space`}
+                </span>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {isOnActiveTeam ? (
-              <button
-                type="button"
-                onClick={() => {
-                  closePlayerDossier();
-                  selectPlayer(player.id, fate.recommendedActionTab, 2026);
-                }}
-                className="bg-[#1c1917] px-4 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
-              >
-                Open 4-Door GM Drawer (Cut / Trade / Restructure / Extend) →
-              </button>
-            ) : (
-              <>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs">
+                <div className="border border-[#dfd9cc] bg-[#f6f3ec] p-2.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">
+                    {derivedState.teamId} 2026 Cap Hit
+                  </div>
+                  <div className="mt-0.5 font-mono-ledger text-base font-bold text-[#1c1917]">
+                    ${acquiringCapHit2026.toFixed(2)}M
+                  </div>
+                  <div className="text-[11px] text-[#57534e]">
+                    {teamId} keeps ${sellerKeptDeadBonus2026.toFixed(2)}M dead bonus
+                  </div>
+                </div>
+
+                <div className="border border-[#dfd9cc] bg-[#f6f3ec] p-2.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">
+                    Matched Trade Price
+                  </div>
+                  <div className="mt-0.5 font-mono-ledger text-base font-bold text-[#1e3a5f]">
+                    {suggestedPickLabel}
+                  </div>
+                  <div className="text-[11px] text-[#57534e]">
+                    Rich Hill: {targetRichHillValue} pts vs {suggestedPickValue} pts
+                  </div>
+                </div>
+
+                <div className="flex items-center sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addTradeTransaction({
+                        partnerTeamId: teamId,
+                        partnerTeamName: teamData
+                          ? `${teamData.city} ${teamData.name}`
+                          : teamId,
+                        designation: 'PRE_JUNE_1',
+                        outgoingPlayers: [],
+                        incomingPlayers: [player],
+                        outgoingPickIds: suggestedPick ? [suggestedPick.id] : [],
+                        incomingPicks: [],
+                        tradeValueSent: suggestedPickValue,
+                        tradeValueReceived: targetRichHillValue,
+                      });
+                      closePlayerDossier();
+                      setActiveTab('team-builder');
+                    }}
+                    className="w-full sm:w-auto bg-[#2d5a43] px-4 py-2.5 text-xs font-bold text-[#f6f3ec] hover:bg-[#1e402f] transition-colors cursor-pointer"
+                  >
+                    ⚡ Acquire {player.name.split(' ').pop()} for{' '}
+                    {suggestedPick ? `Rd ${suggestedPick.round}` : 'Draft Value'} →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-[#57534e]">
+              Want to simulate a move for <strong>{player.name}</strong>?
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {isOnActiveTeam ? (
                 <button
                   type="button"
                   onClick={() => {
-                    selectTeam(teamId);
                     closePlayerDossier();
                     selectPlayer(player.id, fate.recommendedActionTab, 2026);
                   }}
-                  className="border border-[#1c1917] bg-[#fcfaf6] px-4 py-2 text-xs font-semibold text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
-                >
-                  Switch to {teamData?.name} &amp; Manage Contract →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    closePlayerDossier();
-                    setActiveTab('draft');
-                  }}
                   className="bg-[#1c1917] px-4 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
                 >
-                  Open Trade Wizard to Acquire {player.name} →
+                  Open 4-Door GM Drawer (Cut / Trade / Restructure / Extend) →
                 </button>
-              </>
-            )}
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      selectTeam(teamId);
+                      closePlayerDossier();
+                      selectPlayer(player.id, fate.recommendedActionTab, 2026);
+                    }}
+                    className="border border-[#1c1917] bg-[#fcfaf6] px-4 py-2 text-xs font-semibold text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+                  >
+                    Switch to {teamData?.name} &amp; Manage Contract →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closePlayerDossier();
+                      setActiveTab('draft');
+                    }}
+                    className="bg-[#1c1917] px-4 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
+                  >
+                    Custom Trade Package Builder →
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

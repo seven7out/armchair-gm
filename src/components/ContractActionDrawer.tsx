@@ -73,6 +73,27 @@ export function ContractActionDrawer() {
     'PRE_JUNE_1' | 'POST_JUNE_1'
   >('PRE_JUNE_1');
 
+  const [showTeammateCompare, setShowTeammateCompare] = useState(false);
+  const [compareTeammateId, setCompareTeammateId] = useState<string>('');
+  const comparableTeammates = useMemo(() => {
+    if (!player) return [];
+    return derivedState.roster
+      .filter((p) => p.id !== player.id && p.contractYears[actionYear])
+      .sort((a, b) => {
+        const aSamePos = a.position === player.position ? 1 : 0;
+        const bSamePos = b.position === player.position ? 1 : 0;
+        if (bSamePos !== aSamePos) return bSamePos - aSamePos;
+        return (
+          getContractYearCapHit(b.contractYears[actionYear]) -
+          getContractYearCapHit(a.contractYears[actionYear])
+        );
+      });
+  }, [derivedState.roster, player, actionYear]);
+  const selectedTeammate =
+    comparableTeammates.find((p) => p.id === compareTeammateId) ??
+    comparableTeammates[0] ??
+    null;
+
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -902,6 +923,194 @@ export function ContractActionDrawer() {
                 </button>
               </div>
             </div>
+
+            {/* Yellow #8: Collapsible "Keep One / Cut One" Side-by-Side Teammate Comparator */}
+            {selectedTeammate && (() => {
+              const teammateCut = simulateCutOrTrade(
+                selectedTeammate,
+                actionYear,
+                'PRE_JUNE_1_CUT'
+              );
+              const playerHit = preJuneCut.currentYearOriginalCapHit;
+              const teammateHit = teammateCut.currentYearOriginalCapHit;
+              const playerLastName = player.name.split(' ').pop() ?? player.name;
+              const teammateLastName =
+                selectedTeammate.name.split(' ').pop() ?? selectedTeammate.name;
+
+              return (
+                <div className="border-t border-[#dfd9cc] pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowTeammateCompare((v) => !v)}
+                    className="flex w-full items-center justify-between border border-[#dfd9cc] bg-[#fcfaf6] px-3.5 py-2.5 text-left text-xs font-semibold text-[#1e3a5f] hover:border-[#1c1917] transition-colors cursor-pointer"
+                  >
+                    <span>
+                      ⚖️ Compare &ldquo;Keep One / Cut One&rdquo; vs.{' '}
+                      {selectedTeammate.name} ({selectedTeammate.position})
+                    </span>
+                    <span className="font-mono-ledger text-[11px] text-[#57534e]">
+                      {showTeammateCompare ? 'Hide ▲' : 'Compare ▾'}
+                    </span>
+                  </button>
+
+                  {showTeammateCompare && (
+                    <div className="mt-3 border border-[#dfd9cc] bg-[#fcfaf6] p-4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#57534e]">
+                          Side-by-Side Cap Relief ({actionYear} Pre-June 1)
+                        </span>
+                        <label className="flex items-center gap-1.5 text-[11px] text-[#57534e]">
+                          <span>Compare against:</span>
+                          <select
+                            value={selectedTeammate.id}
+                            onChange={(e) => setCompareTeammateId(e.target.value)}
+                            className="border border-[#c7bfb0] bg-[#f6f3ec] px-2 py-1 text-xs font-medium text-[#1c1917]"
+                          >
+                            {comparableTeammates.slice(0, 18).map((tm) => (
+                              <option key={tm.id} value={tm.id}>
+                                {tm.name} ({tm.position} · $
+                                {getContractYearCapHit(
+                                  tm.contractYears[actionYear]
+                                ).toFixed(1)}
+                                M)
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="border border-[#dfd9cc] bg-[#f6f3ec] p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-editorial text-sm font-bold text-[#1c1917]">
+                              {player.name}
+                            </span>
+                            <span className="font-mono-ledger text-[11px] text-[#57534e]">
+                              {player.position} · Age {player.ageIn2026} ·{' '}
+                              {player.overallRating} OVR
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5 font-mono-ledger text-[11px] pt-1 border-t border-[#dfd9cc]">
+                            <div>
+                              <div className="text-[#8a8379]">Cap Hit</div>
+                              <div className="font-bold text-[#1c1917]">
+                                ${playerHit.toFixed(1)}M
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[#8a8379]">Cut Saves</div>
+                              <div
+                                className={`font-bold ${
+                                  preJuneCut.currentYearCapSavings >= 0
+                                    ? 'text-[#2d5a43]'
+                                    : 'text-[#b84a27]'
+                                }`}
+                              >
+                                {preJuneCut.currentYearCapSavings >= 0
+                                  ? '+$'
+                                  : '−$'}
+                                {Math.abs(
+                                  preJuneCut.currentYearCapSavings
+                                ).toFixed(1)}
+                                M
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[#8a8379]">Dead Cap</div>
+                              <div className="font-bold text-[#b84a27]">
+                                ${preJuneCut.currentYearDeadCap.toFixed(1)}M
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              addCutTransaction(
+                                player,
+                                'PRE_JUNE_1_CUT',
+                                actionYear
+                              )
+                            }
+                            className="w-full border border-[#1c1917] bg-[#fcfaf6] py-1.5 text-[11px] font-semibold text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+                          >
+                            Keep {teammateLastName} · Cut {playerLastName} (
+                            {preJuneCut.currentYearCapSavings >= 0 ? '+$' : '−$'}
+                            {Math.abs(preJuneCut.currentYearCapSavings).toFixed(1)}
+                            M)
+                          </button>
+                        </div>
+
+                        <div className="border border-[#dfd9cc] bg-[#f6f3ec] p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-editorial text-sm font-bold text-[#1c1917]">
+                              {selectedTeammate.name}
+                            </span>
+                            <span className="font-mono-ledger text-[11px] text-[#57534e]">
+                              {selectedTeammate.position} · Age{' '}
+                              {selectedTeammate.ageIn2026} ·{' '}
+                              {selectedTeammate.overallRating} OVR
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5 font-mono-ledger text-[11px] pt-1 border-t border-[#dfd9cc]">
+                            <div>
+                              <div className="text-[#8a8379]">Cap Hit</div>
+                              <div className="font-bold text-[#1c1917]">
+                                ${teammateHit.toFixed(1)}M
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[#8a8379]">Cut Saves</div>
+                              <div
+                                className={`font-bold ${
+                                  teammateCut.currentYearCapSavings >= 0
+                                    ? 'text-[#2d5a43]'
+                                    : 'text-[#b84a27]'
+                                }`}
+                              >
+                                {teammateCut.currentYearCapSavings >= 0
+                                  ? '+$'
+                                  : '−$'}
+                                {Math.abs(
+                                  teammateCut.currentYearCapSavings
+                                ).toFixed(1)}
+                                M
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[#8a8379]">Dead Cap</div>
+                              <div className="font-bold text-[#b84a27]">
+                                ${teammateCut.currentYearDeadCap.toFixed(1)}M
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              addCutTransaction(
+                                selectedTeammate,
+                                'PRE_JUNE_1_CUT',
+                                actionYear
+                              );
+                              selectPlayer(null);
+                            }}
+                            className="w-full border border-[#1c1917] bg-[#1c1917] py-1.5 text-[11px] font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
+                          >
+                            Keep {playerLastName} · Cut {teammateLastName} (
+                            {teammateCut.currentYearCapSavings >= 0
+                              ? '+$'
+                              : '−$'}
+                            {Math.abs(
+                              teammateCut.currentYearCapSavings
+                            ).toFixed(1)}
+                            M)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1067,6 +1276,70 @@ export function ContractActionDrawer() {
                 );
               })}
             </div>
+
+            {/* Red #11: "Extend Early vs. Wait 1 Year vs. Double-Tag" Cost Comparison */}
+            {(() => {
+              const fateApy = fateForecast.projectedMarketApy;
+              const extendNow3YrTotal = Math.round(fateApy * 3 * 10) / 10;
+              const waitOneYearApy = Math.round(fateApy * 1.075 * 10) / 10;
+              const waitOneYear3YrTotal = Math.round(waitOneYearApy * 3 * 10) / 10;
+              const waitingPenalty =
+                Math.round((waitOneYear3YrTotal - extendNow3YrTotal) * 10) / 10;
+              const tag1 = franchiseTagAmount;
+              const tag2 = Math.round(franchiseTagAmount * 1.2 * 10) / 10;
+              const doubleTagTotal = Math.round((tag1 + tag2) * 10) / 10;
+
+              return (
+                <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-3.5 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#57534e]">
+                      Cost of Waiting · Extend Early vs. Wait 1 Yr vs. Double-Tag
+                    </span>
+                    <span className="font-mono-ledger text-[11px] font-bold text-[#15803d]">
+                      Extending Now Saves +${waitingPenalty.toFixed(1)}M vs. Waiting
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs font-mono-ledger">
+                    <div className="border border-[#15803d]/40 bg-[#f0fdf4] p-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#15803d]">
+                        1. Extend Early Now
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-[#111827]">
+                        ${fateApy.toFixed(1)}M/yr · ${extendNow3YrTotal.toFixed(1)}M
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-[#334155]">
+                        Locks {actionYear}–{actionYear + 2} rate &amp; spreads bonus
+                      </div>
+                    </div>
+
+                    <div className="border border-[#d97706]/40 bg-[#fffbeb] p-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#b45309]">
+                        2. Wait Until {actionYear + 1} (+7.5% Cap)
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-[#111827]">
+                        ${waitOneYearApy.toFixed(1)}M/yr · +${waitingPenalty.toFixed(1)}M
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-[#57534e]">
+                        ${waitOneYear3YrTotal.toFixed(1)}M over 3 yrs as cap rises
+                      </div>
+                    </div>
+
+                    <div className="border border-[#dc2626]/40 bg-[#fef2f2] p-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#b91c1c]">
+                        3. Double Franchise Tag (120%)
+                      </div>
+                      <div className="mt-1 text-sm font-bold text-[#111827]">
+                        ${doubleTagTotal.toFixed(1)}M (2 yrs Gtd)
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-[#57534e]">
+                        Yr 1 ${tag1.toFixed(1)}M + Yr 2 ${tag2.toFixed(1)}M spike
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div>
               <button

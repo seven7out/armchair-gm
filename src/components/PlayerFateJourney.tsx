@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -32,11 +32,14 @@ import {
   computeRealContractXRay,
   evaluateFantasyPlayerSignal,
   evaluateFreeAgentTarget,
+  evaluateFreeAgentValueBadge,
   evaluateFutureSeasonRosterOutlook,
+  evaluateTeamCampBattles,
   evaluateTeamFantasyEnvironment,
   evaluateTeamPositionalNeedsByYear,
   FantasyPlayerEvaluation,
   FantasySignalType,
+  FreeAgentValueBadge,
   FutureRosterBucket,
   FutureSeasonPlayerEvaluation,
   generateRookieContract,
@@ -114,6 +117,18 @@ function getFantasySignalBadgeClass(signal: FantasySignalType): string {
       return 'border-[#d97706] bg-[#fef3c7] text-[#92400e]';
     default:
       return 'border-[#94a3b8] bg-[#f1f5f9] text-[#334155]';
+  }
+}
+
+function getFaValueBadgeClass(tier: FreeAgentValueBadge['tier']): string {
+  switch (tier) {
+    case 'PRIME_BUY':
+    case 'VALUE_STARTER':
+      return 'border-[#16a34a]/60 bg-[#f0fdf4] text-[#14532d]';
+    case 'CLIFF_TRAP':
+      return 'border-[#dc2626]/60 bg-[#fef2f2] text-[#991b1b]';
+    default:
+      return 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155]';
   }
 }
 
@@ -214,6 +229,24 @@ export function PlayerFateJourney({
       return next;
     });
   };
+
+  useEffect(() => {
+    const handleOpenDeadMoney = () => {
+      setRosterCategoryTab('DEAD_MONEY');
+      setOpenActionMenuPlayerId(null);
+      setTimeout(() => {
+        document
+          .getElementById('dead-money-ledger-section')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 60);
+    };
+    window.addEventListener('armchair-gm:open-dead-money', handleOpenDeadMoney);
+    return () =>
+      window.removeEventListener(
+        'armchair-gm:open-dead-money',
+        handleOpenDeadMoney
+      );
+  }, []);
 
   const loadSleeperLeagueRoster = async (
     leagueId: string,
@@ -464,10 +497,18 @@ export function PlayerFateJourney({
       .map((player) => buildPlayerContractTimelineRow(player, space2026))
       .sort((a, b) => {
         if (!isCurrentState) {
-          // Put newly signed Free Agents right at the top when added so the user immediately sees them in the grid!
-          const aIsNewFa = isNewFaPlayerId(a.player.id) ? 1 : 0;
-          const bIsNewFa = isNewFaPlayerId(b.player.id) ? 1 : 0;
-          if (aIsNewFa !== bIsNewFa) return bIsNewFa - aIsNewFa;
+          // Put newly signed Free Agents & Trade Acquisitions right at the top so the user immediately sees them in the grid!
+          const aIsNew =
+            isNewFaPlayerId(a.player.id) ||
+            activePlayerTxMap.get(a.player.id)?.type === 'TRADE_IN'
+              ? 1
+              : 0;
+          const bIsNew =
+            isNewFaPlayerId(b.player.id) ||
+            activePlayerTxMap.get(b.player.id)?.type === 'TRADE_IN'
+              ? 1
+              : 0;
+          if (aIsNew !== bIsNew) return bIsNew - aIsNew;
         }
 
         return (
@@ -475,7 +516,7 @@ export function PlayerFateJourney({
           getContractYearCapHit(a.player.contractYears[2026])
         );
       });
-  }, [activeCapState.roster, space2026, isCurrentState]);
+  }, [activeCapState.roster, space2026, isCurrentState, activePlayerTxMap]);
 
   const effectiveTab =
     !isCurrentState && enabledMovesCount === 0 && rosterCategoryTab === 'MODIFIED'
@@ -501,6 +542,11 @@ export function PlayerFateJourney({
 
   const teamFantasyEnv = useMemo(
     () => (isFantasyLens ? evaluateTeamFantasyEnvironment(activeCapState) : null),
+    [isFantasyLens, activeCapState]
+  );
+
+  const teamCampBattles = useMemo(
+    () => (isFantasyLens ? evaluateTeamCampBattles(activeCapState) : []),
     [isFantasyLens, activeCapState]
   );
 
@@ -1523,6 +1569,7 @@ export function PlayerFateJourney({
                         <div className="space-y-2">
                           {solverInternalFas.map(({ fa }) => {
                             const existingTx = activeSignFaTxByPlayerId.get(fa.id);
+                            const valueBadge = evaluateFreeAgentValueBadge(fa);
                             return (
                               <div
                                 key={`solv-int-${fa.id}`}
@@ -1536,6 +1583,14 @@ export function PlayerFateJourney({
                                     Age {fa.ageIn2026} · Mkt {fa.marketYears}yr / $
                                     {fa.marketApy.toFixed(1)}M
                                   </div>
+                                  <span
+                                    title={valueBadge.reason}
+                                    className={`mt-1 inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${getFaValueBadgeClass(
+                                      valueBadge.tier
+                                    )}`}
+                                  >
+                                    {valueBadge.badgeLabel}
+                                  </span>
                                 </div>
                                 {existingTx ? (
                                   <button
@@ -1593,6 +1648,7 @@ export function PlayerFateJourney({
                         <div className="space-y-2">
                           {solverLeagueFas.map(({ fa }) => {
                             const existingTx = activeSignFaTxByPlayerId.get(fa.id);
+                            const valueBadge = evaluateFreeAgentValueBadge(fa);
                             return (
                               <div
                                 key={`solv-lg-${fa.id}`}
@@ -1609,6 +1665,14 @@ export function PlayerFateJourney({
                                     Age {fa.ageIn2026} · {fa.marketYears}yr / $
                                     {fa.marketApy.toFixed(1)}M
                                   </div>
+                                  <span
+                                    title={valueBadge.reason}
+                                    className={`mt-1 inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${getFaValueBadgeClass(
+                                      valueBadge.tier
+                                    )}`}
+                                  >
+                                    {valueBadge.badgeLabel}
+                                  </span>
                                 </div>
                                 {existingTx ? (
                                   <button
@@ -1982,6 +2046,56 @@ export function PlayerFateJourney({
                   )}
                 </div>
               </div>
+
+              {/* Red #10: Follow the Money — RB / WR / TE Camp Battle & Touch Share Decoder */}
+              {teamCampBattles.length > 0 && (
+                <div className="border border-[#d6d0c4] bg-white p-3.5 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#1e3a5f]">
+                      Follow the Money · RB / WR / TE Touch-Share &amp; Camp Battle Decoder (2026 Dead Cap Lock)
+                    </div>
+                    <span className="font-mono-ledger text-[10px] text-[#64748b]">
+                      Coaches play who carries dead money
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+                    {teamCampBattles.map((battle) => {
+                      const badgeTone =
+                        battle.hierarchyType === 'CLEAR_ALPHA_LOCK'
+                          ? 'border-[#16a34a]/50 bg-[#f0fdf4] text-[#14532d]'
+                          : battle.hierarchyType === 'CO_STARTER_INVESTMENT'
+                          ? 'border-[#2563eb]/50 bg-[#eff6ff] text-[#1e3a5f]'
+                          : 'border-[#d97706]/50 bg-[#fffbeb] text-[#92400e]';
+                      return (
+                        <div
+                          key={battle.position}
+                          className="border border-[#dfd9cc] bg-[#fcfaf6] p-3 space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono-ledger text-[11px] font-bold text-[#111827]">
+                              {battle.position} Room
+                            </span>
+                            <span
+                              className={`border px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${badgeTone}`}
+                            >
+                              {battle.badgeLabel}
+                            </span>
+                          </div>
+                          <div className="font-mono-ledger text-[11px] text-[#334155]">
+                            <strong>#1 {battle.leaderName}</strong> ($
+                            {battle.leaderDeadCap2026.toFixed(1)}M dead) vs.{' '}
+                            <strong>#2 {battle.challengerName}</strong> ($
+                            {battle.challengerDeadCap2026.toFixed(1)}M dead)
+                          </div>
+                          <p className="text-[11px] leading-snug text-[#475569]">
+                            {battle.takeaway}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* 1-Tap Signal Filter Strip for Active Roster Grid Below */}
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-xs">
@@ -2379,7 +2493,10 @@ export function PlayerFateJourney({
           CATEGORY TAB VIEW: DEAD MONEY LEDGER (Prior + Session Cuts/Trades)
          ===================================================================== */}
       {effectiveTab === 'DEAD_MONEY' && (
-        <section className="border border-[#d6d0c4] bg-white p-4 sm:p-5 space-y-4 shadow-2xs">
+        <section
+          id="dead-money-ledger-section"
+          className="border border-[#d6d0c4] bg-white p-4 sm:p-5 space-y-4 shadow-2xs scroll-mt-24"
+        >
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[#dfd9cc] pb-3">
             <div>
               <h2 className="font-editorial text-xl sm:text-2xl text-[#111827]">
@@ -4507,6 +4624,7 @@ export function PlayerFateJourney({
                 const isNeedPos = criticalPositions2026Or2027.includes(
                   fa.position
                 );
+                const faValueBadge = evaluateFreeAgentValueBadge(fa);
 
                 return (
                   <tr
@@ -4538,6 +4656,14 @@ export function PlayerFateJourney({
                                 Fills {fa.position} Need
                               </span>
                             )}
+                            <span
+                              title={faValueBadge.reason}
+                              className={`border px-2 py-0.5 font-mono-ledger text-[11px] font-bold ${getFaValueBadgeClass(
+                                faValueBadge.tier
+                              )}`}
+                            >
+                              {faValueBadge.badgeLabel}
+                            </span>
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5 font-mono-ledger text-xs">
                             <span className="text-[#334155] font-medium">
@@ -4677,6 +4803,7 @@ export function PlayerFateJourney({
             const existingTxId = activeSignFaTxByPlayerId.get(fa.id);
             const isAdded = Boolean(existingTxId);
             const isNeedPos = criticalPositions2026Or2027.includes(fa.position);
+            const faValueBadge = evaluateFreeAgentValueBadge(fa);
 
             return (
               <div
@@ -4708,6 +4835,14 @@ export function PlayerFateJourney({
                             Fills {fa.position} Need
                           </span>
                         )}
+                        <span
+                          title={faValueBadge.reason}
+                          className={`border px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${getFaValueBadgeClass(
+                            faValueBadge.tier
+                          )}`}
+                        >
+                          {faValueBadge.badgeLabel}
+                        </span>
                       </div>
                       <div className="mt-0.5 font-mono-ledger text-xs font-medium text-[#334155]">
                         From {fa.previousTeam} ·{' '}
