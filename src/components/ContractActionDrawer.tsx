@@ -357,11 +357,11 @@ export function ContractActionDrawer() {
         </div>
       </div>
 
-      {/* THE "FOUR DOORS" SIDE-BY-SIDE COMPARISON CARD (Cut vs Trade vs Restructure vs Extend + Baseline) */}
+      {/* SIDE-BY-SIDE CONTRACT OPTIONS COMPARISON (Cut vs Trade vs Restructure vs Extend + Baseline) */}
       <div className="border-b border-[#dfd9cc] bg-[#fcfaf6] px-4 py-3.5 sm:px-7 sm:py-4">
         <div className="mb-2 flex items-baseline justify-between">
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8379]">
-            The &ldquo;Four Doors&rdquo; Side-by-Side Comparison ({actionYear} Impact vs.{' '}
+            Contract Options Comparison ({actionYear} Impact vs.{' '}
             {actionYear + 1} Bill)
           </span>
           <span className="text-[10px] text-[#8a8379]">
@@ -370,7 +370,7 @@ export function ContractActionDrawer() {
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5 text-xs">
-          {/* Door 0: Do Nothing Baseline */}
+          {/* Baseline: Keep As-Is */}
           <div className="border border-[#dfd9cc] bg-[#f6f3ec]/70 p-2.5">
             <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
               Baseline
@@ -384,7 +384,7 @@ export function ContractActionDrawer() {
             </div>
           </div>
 
-          {/* Door 1: Restructure */}
+          {/* Restructure */}
           <button
             type="button"
             onClick={() => setActiveTab('restructure')}
@@ -395,7 +395,7 @@ export function ContractActionDrawer() {
             }`}
           >
             <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
-              Door 1 · Stay
+              Stay · Restructure
             </div>
             <div className="font-semibold text-[#1c1917]">Restructure</div>
             <div className="mt-1 font-mono-ledger text-xs font-semibold text-[#2d5a43]">
@@ -406,7 +406,7 @@ export function ContractActionDrawer() {
             </div>
           </button>
 
-          {/* Door 2: Release (Best of Pre/Post June 1) */}
+          {/* Release (Best of Pre/Post June 1) */}
           <button
             type="button"
             onClick={() => setActiveTab('cut')}
@@ -417,7 +417,7 @@ export function ContractActionDrawer() {
             }`}
           >
             <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
-              Door 2 · Release
+              Release / Cut
             </div>
             <div className="font-semibold text-[#1c1917]">Cut (Best)</div>
             <div
@@ -435,7 +435,7 @@ export function ContractActionDrawer() {
             </div>
           </button>
 
-          {/* Door 3: Trade */}
+          {/* Trade */}
           <button
             type="button"
             onClick={() => setActiveTab('trade')}
@@ -446,7 +446,7 @@ export function ContractActionDrawer() {
             }`}
           >
             <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
-              Door 3 · Trade
+              Trade
             </div>
             <div className="font-semibold text-[#1c1917]">Trade Away</div>
             <div
@@ -464,7 +464,7 @@ export function ContractActionDrawer() {
             </div>
           </button>
 
-          {/* Door 4: Extend */}
+          {/* Extend */}
           <button
             type="button"
             onClick={() => setActiveTab('extend')}
@@ -475,7 +475,7 @@ export function ContractActionDrawer() {
             }`}
           >
             <div className="text-[10px] uppercase tracking-wider text-[#8a8379]">
-              Door 4 · Extend
+              Extend
             </div>
             <div className="font-semibold text-[#1c1917]">+{extYears} Yr Deal</div>
             <div

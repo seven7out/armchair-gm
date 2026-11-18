@@ -549,7 +549,7 @@ export function CapCheckupJourney() {
                             onClick={() => selectPlayer(player.id, 'cut')}
                             className="border border-[#dfd9cc] bg-[#fcfaf6] px-2.5 py-1.5 text-[11px] text-[#57534e] hover:border-[#1c1917] hover:text-[#1c1917] cursor-pointer"
                           >
-                            4 Doors
+                            Edit Contract
                           </button>
                         </div>
                       </div>

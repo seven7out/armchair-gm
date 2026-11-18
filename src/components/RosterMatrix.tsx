@@ -384,7 +384,7 @@ export function RosterMatrix() {
                         }}
                         className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-[#1e3a5f] bg-[#f8fafc] hover:bg-[#e2e8f0] cursor-pointer"
                       >
-                        <span>Custom 4-Door…</span>
+                        <span>Edit Contract…</span>
                         <span>→</span>
                       </button>
                     </div>

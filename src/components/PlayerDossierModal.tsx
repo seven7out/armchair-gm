@@ -741,7 +741,7 @@ export function PlayerDossierModal() {
                   }}
                   className="bg-[#1c1917] px-4 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
                 >
-                  Open 4-Door GM Drawer (Cut / Trade / Restructure / Extend) →
+                  Edit Contract (Cut / Trade / Restructure / Extend) →
                 </button>
               ) : (
                 <>

@@ -907,7 +907,7 @@ export function PlayerFateJourney({
           }}
           className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-[#1e3a5f] bg-[#f8fafc] hover:bg-[#e2e8f0] cursor-pointer"
         >
-          <span>Custom 4-Door Modal…</span>
+          <span>Edit Contract Options…</span>
           <span>→</span>
         </button>
       </div>
@@ -1221,7 +1221,7 @@ export function PlayerFateJourney({
                   }
                   className="inline-flex items-center gap-1 text-xs font-semibold text-[#1c1917] hover:underline cursor-pointer"
                 >
-                  <span>4-Door X-Ray ({targetYear})</span>
+                  <span>Contract Options ({targetYear})</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -3157,7 +3157,7 @@ export function PlayerFateJourney({
                                 title={`${player.name} (${cell.year}): Locked Contract ($${cell.capHit?.toFixed(2)}M cap hit). ${
                                   isCurrentState
                                     ? 'Click for Scouting Dossier or open Team Builder to modify.'
-                                    : 'Click to open 4-Door options.'
+                                    : 'Click to edit contract options.'
                                 }`}
                                 className={`w-[calc(100%-4px)] h-14 bg-[#1e3a5f] text-white px-2.5 py-1.5 flex flex-col justify-between text-left hover:bg-[#152c4a] transition-colors cursor-pointer ${roundedClass}`}
                               >
@@ -3666,7 +3666,7 @@ export function PlayerFateJourney({
                           }
                           className="min-h-[36px] inline-flex items-center gap-1 px-2 text-xs font-semibold text-[#111827] underline"
                         >
-                          <span>4 Doors →</span>
+                          <span>Edit Contract →</span>
                         </button>
                       </>
                     )}
