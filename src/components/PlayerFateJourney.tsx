@@ -110,15 +110,15 @@ let sleeperPlayersDirectoryCache: Record<string, SleeperPlayerRecord> | null =
 function getFantasySignalBadgeClass(signal: FantasySignalType): string {
   switch (signal) {
     case 'INSULATED_ALPHA':
-      return 'border-[#16a34a] bg-[#dcfce7] text-[#14532d]';
+      return 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200';
     case 'PAPER_TRAP':
-      return 'border-[#dc2626] bg-[#fee2e2] text-[#991b1b]';
+      return 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200';
     case 'BREAKOUT_STASH':
-      return 'border-[#7c3aed] bg-[#ede9fe] text-[#4c1d95]';
+      return 'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200';
     case 'TAG_OR_UFA_WATCH':
-      return 'border-[#d97706] bg-[#fef3c7] text-[#92400e]';
+      return 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200';
     default:
-      return 'border-[#94a3b8] bg-[#f1f5f9] text-[#334155]';
+      return 'bg-slate-100 text-slate-600';
   }
 }
 
@@ -126,11 +126,11 @@ function getFaValueBadgeClass(tier: FreeAgentValueBadge['tier']): string {
   switch (tier) {
     case 'PRIME_BUY':
     case 'VALUE_STARTER':
-      return 'border-[#16a34a]/60 bg-[#f0fdf4] text-[#14532d]';
+      return 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200';
     case 'CLIFF_TRAP':
-      return 'border-[#dc2626]/60 bg-[#fef2f2] text-[#991b1b]';
+      return 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200';
     default:
-      return 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155]';
+      return 'bg-slate-100 text-slate-600';
   }
 }
 
@@ -1230,54 +1230,54 @@ export function PlayerFateJourney({
       : filteredTimelineRows.slice(0, 15);
 
   return (
-    <div className="mx-auto max-w-[1440px] px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
-      {/* 1. Unified Header + Smart Playbooks + Mobile Layout Switch */}
-      <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 sm:p-6">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-4">
+    <div className="mx-auto max-w-[1440px] px-3 sm:px-6 py-5 sm:py-7 space-y-5">
+      {/* 1. Open Fintech Header + Compact Playbooks & Controls (No Box Clutter) */}
+      <section className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2.5">
             {isCurrentState && (
-              <span className="bg-[#b45309] px-2 py-0.5 font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-white shrink-0">
+              <span className="rounded-md bg-amber-50 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-inset ring-amber-300 shrink-0">
                 Original Baseline
               </span>
             )}
-            <h1 className="font-editorial text-[clamp(1.35rem,1rem+1.5vw,1.95rem)] font-bold leading-tight text-[#111827]">
-              {baseTeam.city} {baseTeam.name} · {activeCapState.roster.length}-Man Roster
+            <h1 className="font-editorial text-[clamp(1.35rem,1rem+1.3vw,1.8rem)] font-bold tracking-tight text-slate-900">
+              {baseTeam.city} {baseTeam.name} · {activeCapState.roster.length}-Man Ledger
             </h1>
           </div>
 
-          {/* 1-Tap GM Playbooks, Share Build & Compact View Toggles */}
+          {/* Sleek Fintech Action Pills & Segmented View Controls */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={applyAutoCapReliefPlaybook}
               title="Auto-apply up to 3 top restructures and clean casualty cuts to clear cap space"
-              className="inline-flex items-center gap-1 border border-[#15803d] bg-[#f0fdf4] px-2.5 py-1.5 text-xs font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-600 hover:text-white transition-colors cursor-pointer"
             >
               <Zap className="h-3.5 w-3.5" />
-              <span>⚡ Auto-Clear Cap</span>
+              <span>Auto-Clear Cap</span>
             </button>
 
             <button
               type="button"
               onClick={applyExtendCorePillarsPlaybook}
               title="Extend up to 3 prime young core starters (85+ OVR, age <= 27) entering extension windows"
-              className="inline-flex items-center gap-1 border border-[#1e3a5f] bg-[#eff6ff] px-2.5 py-1.5 text-xs font-semibold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer"
             >
               <Lock className="h-3.5 w-3.5" />
-              <span>🔒 Extend Core Pillars</span>
+              <span>Extend Core Pillars</span>
             </button>
 
             <button
               type="button"
               onClick={toggleFantasyLens}
               title="Focus on QB/RB/WR/TE contract insulation, paper-contract traps, rookie landing spots & Sleeper roster audit"
-              className={`inline-flex items-center gap-1 border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                 isFantasyLens
-                  ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
-                  : 'border-[#7c3aed]/60 bg-[#f5f3ff] text-[#4c1d95] hover:bg-[#7c3aed] hover:text-white'
+                  ? 'bg-violet-600 text-white shadow-2xs'
+                  : 'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200 hover:bg-violet-100'
               }`}
             >
-              <span>🏈 Fantasy Lens{isFantasyLens ? ' · ON' : ''}</span>
+              <span>Fantasy Lens{isFantasyLens ? ' · On' : ''}</span>
             </button>
 
             <button
@@ -1294,33 +1294,33 @@ export function PlayerFateJourney({
                 setTimeout(() => setCopiedShareUrl(false), 2500);
               }}
               title="Copy shareable link with your current team & offseason moves"
-              className="inline-flex items-center gap-1 border border-[#111827] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#111827] hover:bg-[#111827] hover:text-white transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
             >
               {copiedShareUrl ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-[#15803d]" />
-                  <span>✓ Link Copied!</span>
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="text-emerald-700">Copied</span>
                 </>
               ) : (
                 <>
-                  <Link2 className="h-3.5 w-3.5" />
-                  <span>🔗 Share Build</span>
+                  <Link2 className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Share</span>
                 </>
               )}
             </button>
 
             {/* Phone vs Desktop Layout Switcher */}
-            <div className="hidden md:inline-flex border border-[#c7bfb0] bg-[#f6f3ec] p-0.5">
+            <div className="hidden md:inline-flex rounded-lg bg-slate-100 p-0.5">
               <button
                 type="button"
                 onClick={() =>
                   setDeviceLayoutMode((m) => (m === 'PHONE' ? 'AUTO' : 'PHONE'))
                 }
-                title="Preview iPhone / Pixel Mobile Card View"
-                className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
+                title="Preview Mobile Card View"
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all cursor-pointer ${
                   deviceLayoutMode === 'PHONE'
-                    ? 'bg-[#1c1917] text-[#f6f3ec]'
-                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Smartphone className="h-3.5 w-3.5" />
@@ -1333,11 +1333,11 @@ export function PlayerFateJourney({
                     m === 'DESKTOP' ? 'AUTO' : 'DESKTOP'
                   )
                 }
-                title="Force Full Desktop Table"
-                className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
+                title="Force Desktop Ledger Table"
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all cursor-pointer ${
                   deviceLayoutMode === 'DESKTOP'
-                    ? 'bg-[#1c1917] text-[#f6f3ec]'
-                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Monitor className="h-3.5 w-3.5" />
@@ -1345,14 +1345,14 @@ export function PlayerFateJourney({
               </button>
             </div>
 
-            <div className="inline-flex border border-[#dfd9cc] bg-[#f6f3ec] p-0.5">
+            <div className="inline-flex rounded-lg bg-slate-100 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode('TIMELINE_BARS')}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                   viewMode === 'TIMELINE_BARS'
-                    ? 'bg-[#1c1917] text-[#f6f3ec]'
-                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <BarChart3 className="h-3.5 w-3.5" />
@@ -1361,10 +1361,10 @@ export function PlayerFateJourney({
               <button
                 type="button"
                 onClick={() => setViewMode('BUCKET_CARDS')}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                   viewMode === 'BUCKET_CARDS'
-                    ? 'bg-[#1c1917] text-[#f6f3ec]'
-                    : 'text-[#1c1917] hover:bg-[#ede8dd]'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
@@ -1374,119 +1374,66 @@ export function PlayerFateJourney({
           </div>
         </div>
 
-        {/* Baseline Peek Banner OR Quick Workbench Jump + Move Log */}
+        {/* Baseline Peek Banner OR Live Move Chips (Compact single row when moves exist) */}
         {isCurrentState ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#dfd9cc] pb-3 text-xs">
-            <span className="font-mono-ledger font-semibold text-[#b45309]">
-              Comparing untouched baseline ({enabledMovesCount} move
-              {enabledMovesCount === 1 ? '' : 's'} paused from view)
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50/90 px-3.5 py-2 text-xs ring-1 ring-inset ring-amber-200">
+            <span className="font-mono-ledger font-medium text-amber-800">
+              Viewing untouched baseline ({enabledMovesCount} move
+              {enabledMovesCount === 1 ? '' : 's'} paused)
             </span>
             <button
               type="button"
               onClick={() => setCompareOriginalBaseline(false)}
-              className="border border-[#15803d] bg-[#15803d] px-3 py-1 font-semibold text-white hover:bg-[#14532d] transition-colors cursor-pointer"
+              className="rounded-md bg-amber-700 px-3 py-1 font-medium text-white hover:bg-amber-800 transition-colors cursor-pointer"
             >
               Return to Projected Moves →
             </button>
           </div>
-        ) : (
-          <div className="mt-3 space-y-2.5 border-b border-[#dfd9cc] pb-3 text-xs">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#475569]">
-                  Tools:
-                </span>
-                {(
-                  [
-                    ['fa-dock', '+ Free Agents'],
-                    ['cap-fixes', 'Cap Fixes'],
-                    ['draft-trade', 'Trades & Draft'],
-                    ['ledger', '4-Yr Ledger'],
-                  ] as [TeamBuilderSubTab, string][]
-                ).map(([tabKey, label]) => (
-                  <button
-                    key={tabKey}
-                    type="button"
-                    onClick={() => {
-                      setTeamBuilderSubTab(tabKey);
-                      document
-                        .getElementById('team-builder-workbench')
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }}
-                    className={`border px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
-                      teamBuilderSubTab === tabKey
-                        ? 'border-[#1c1917] bg-[#1c1917] text-[#f6f3ec]'
-                        : 'border-[#dfd9cc] bg-[#f6f3ec] text-[#1c1917] hover:border-[#1c1917]'
+        ) : transactions.length > 0 ? (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <span className="shrink-0 font-mono-ledger text-[11px] font-semibold text-slate-500">
+              Active Moves ({enabledMovesCount}):
+            </span>
+            {transactions.map((tx, idx) => (
+              <div
+                key={tx.id}
+                className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-mono-ledger ${
+                  tx.enabled
+                    ? 'bg-indigo-50 text-indigo-900 ring-1 ring-inset ring-indigo-200'
+                    : 'bg-slate-100 text-slate-400 line-through'
+                }`}
+              >
+                <span className="font-semibold">#{idx + 1}</span>
+                <span>{tx.label}</span>
+                {tx.capDelta2026 !== 0 && (
+                  <span
+                    className={`font-semibold ${
+                      tx.capDelta2026 >= 0 ? 'text-emerald-600' : 'text-rose-600'
                     }`}
                   >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {enabledMovesCount > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="border border-[#2d5a43]/40 bg-[#2d5a43]/10 px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-[#2d5a43]">
-                    {enabledMovesCount} Active Move
-                    {enabledMovesCount === 1 ? '' : 's'}
+                    {formatCapDelta(tx.capDelta2026)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={resetScenarioStack}
-                    className="inline-flex items-center gap-1 border border-[#b84a27]/40 bg-[#b84a27]/10 px-2.5 py-1 text-[11px] font-semibold text-[#b84a27] hover:bg-[#b84a27] hover:text-[#f6f3ec] cursor-pointer"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    <span>Reset</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Live Chronological Move Log with Per-Move 1-Tap Undo */}
-            {transactions.length > 0 && (
-              <div className="pt-0.5">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                  {transactions.map((tx, idx) => (
-                    <div
-                      key={tx.id}
-                      className={`shrink-0 inline-flex items-center gap-2 border px-2.5 py-1 text-[11px] font-mono-ledger ${
-                        tx.enabled
-                          ? 'border-[#2563eb]/50 bg-[#eff6ff] text-[#1e3a5f]'
-                          : 'border-[#cbd5e1] bg-[#f8fafc] text-[#64748b] opacity-60 line-through'
-                      }`}
-                    >
-                      <span className="font-bold text-[#475569]">
-                        #{idx + 1}
-                      </span>
-                      <span className="font-semibold text-[#111827]">
-                        {tx.label}
-                      </span>
-                      {tx.capDelta2026 !== 0 && (
-                        <span
-                          className={`font-bold ${
-                            tx.capDelta2026 >= 0
-                              ? 'text-[#15803d]'
-                              : 'text-[#b91c1c]'
-                          }`}
-                        >
-                          {formatCapDelta(tx.capDelta2026)}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeTransaction(tx.id)}
-                        title={`Undo move #${idx + 1}: ${tx.label}`}
-                        className="inline-flex items-center gap-0.5 border border-[#b91c1c]/40 bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#b91c1c] hover:bg-[#b91c1c] hover:text-white transition-colors cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeTransaction(tx.id)}
+                  title={`Undo move #${idx + 1}: ${tx.label}`}
+                  className="ml-0.5 rounded-full px-1 text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
               </div>
-            )}
+            ))}
+            <button
+              type="button"
+              onClick={resetScenarioStack}
+              className="shrink-0 ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-rose-600 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span>Reset</span>
+            </button>
           </div>
-        )}
+        ) : null}
 
         {/* Actionable "2026 Team Needs — Tap Any Need to Solve It" Strip */}
         {(() => {
@@ -1517,53 +1464,63 @@ export function PlayerFateJourney({
           return (
             <div
               id="need-solver-strip"
-              className="scroll-mt-24 mt-3 border-b border-[#dfd9cc] pb-3 space-y-2.5"
+              className="scroll-mt-24 space-y-2.5"
             >
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.08em] text-[#b84a27] mr-1">
-                  2026 Needs (Tap to Fill):
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400 mr-1">
+                  2026 Needs:
                 </span>
-                {needRows.length === 0 ? (
-                  <span className="border border-[#16a34a] bg-[#f0fdf4] px-2.5 py-1 font-mono-ledger text-xs font-semibold text-[#14532d]">
-                    ✓ All 2026 Starter Spots Filled
-                  </span>
-                ) : (
-                  needRows.map((row) => {
-                    const isCritical =
-                      row.cellsByYear[2026].urgency === 'CRITICAL_NEED';
-                    const isOpen = selectedNeedSolverPos === row.position;
-                    return (
-                      <button
-                        key={row.position}
-                        type="button"
-                        onClick={() =>
-                          setSelectedNeedSolverPos(
-                            isOpen ? null : row.position
-                          )
-                        }
-                        className={`shrink-0 min-h-[34px] border px-2.5 py-1 font-mono-ledger text-xs font-bold transition-colors cursor-pointer ${
+              {needRows.length === 0 ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono-ledger text-xs font-medium text-emerald-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  All 2026 Starter Spots Filled
+                </span>
+              ) : (
+                needRows.map((row) => {
+                  const isCritical =
+                    row.cellsByYear[2026].urgency === 'CRITICAL_NEED';
+                  const isOpen = selectedNeedSolverPos === row.position;
+                  return (
+                    <button
+                      key={row.position}
+                      type="button"
+                      onClick={() =>
+                        setSelectedNeedSolverPos(
+                          isOpen ? null : row.position
+                        )
+                      }
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono-ledger text-xs font-medium transition-colors cursor-pointer ${
+                        isOpen
+                          ? 'bg-slate-900 text-white'
+                          : isCritical
+                          ? 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-100'
+                          : 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200 hover:bg-amber-100'
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
                           isOpen
-                            ? 'border-[#111827] bg-[#111827] text-white'
+                            ? 'bg-white'
                             : isCritical
-                            ? 'border-[#dc2626] bg-[#fee2e2] text-[#991b1b] hover:bg-[#fecaca]'
-                            : 'border-[#d97706] bg-[#fef3c7] text-[#92400e] hover:bg-[#fde68a]'
+                            ? 'bg-rose-500'
+                            : 'bg-amber-500'
                         }`}
-                      >
-                        ★ Need {row.position}
-                      </button>
-                    );
-                  })
-                )}
-                <a
-                  href="#positional-needs-matrix"
-                  className="ml-auto font-mono-ledger text-[11px] font-semibold text-[#475569] hover:text-[#111827] underline"
-                >
-                  Full Needs Grid ↓
-                </a>
-              </div>
+                      />
+                      {row.position}
+                    </button>
+                  );
+                })
+              )}
+              <a
+                href="#positional-needs-matrix"
+                className="ml-auto font-mono-ledger text-[11px] font-medium text-slate-500 hover:text-slate-900"
+              >
+                Positional Matrix ↓
+              </a>
+            </div>
 
-              {selectedNeedSolverPos && (
-                <div className="border-2 border-[#111827] bg-white p-3.5 sm:p-4 space-y-3 shadow-md">
+            {selectedNeedSolverPos && (
+              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm">
                   <div className="flex items-center justify-between border-b border-[#dfd9cc] pb-2">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-[#b84a27]" />
@@ -1844,140 +1801,132 @@ export function PlayerFateJourney({
           );
         })()}
 
-        {/* Consolidated Roster & Market Category Tabs */}
-        <div className="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-[#dfd9cc] pb-3 text-xs">
-          {(
-            [
-              {
-                id: 'ACTIVE',
-                label: `Active Roster (${activeCapState.roster.length})`,
-              },
-              {
-                id: 'DEAD_MONEY',
-                label: `Dead Money (${activeCapState.deadCapLedger.length} · $${activeCapState.years[2026].deadMoneyTotal.toFixed(1)}M)`,
-              },
-              {
-                id: 'DRAFT_PICKS',
-                label: `Draft Picks (${activeCapState.draftPicks.length})`,
-              },
-              ...(!isCurrentState && enabledMovesCount > 0
-                ? [
-                    {
-                      id: 'MODIFIED' as RosterCategoryTab,
-                      label: `Modified Moves (${enabledMovesCount})`,
-                    },
-                  ]
-                : []),
-            ] as { id: RosterCategoryTab; label: string }[]
-          ).map((cat) => (
+        {/* Linear-Style Underline Navigation & Market Links */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200">
+          <div className="flex items-center gap-5 overflow-x-auto no-scrollbar text-xs">
+            {(
+              [
+                {
+                  id: 'ACTIVE',
+                  label: `Active Roster (${activeCapState.roster.length})`,
+                },
+                {
+                  id: 'DEAD_MONEY',
+                  label: `Dead Money (${activeCapState.deadCapLedger.length} · $${activeCapState.years[2026].deadMoneyTotal.toFixed(1)}M)`,
+                },
+                {
+                  id: 'DRAFT_PICKS',
+                  label: `Draft Picks (${activeCapState.draftPicks.length})`,
+                },
+                ...(!isCurrentState && enabledMovesCount > 0
+                  ? [
+                      {
+                        id: 'MODIFIED' as RosterCategoryTab,
+                        label: `Modified (${enabledMovesCount})`,
+                      },
+                    ]
+                  : []),
+              ] as { id: RosterCategoryTab; label: string }[]
+            ).map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  setRosterCategoryTab(cat.id);
+                  setOpenActionMenuPlayerId(null);
+                }}
+                className={`shrink-0 whitespace-nowrap pb-2.5 pt-1 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
+                  effectiveTab === cat.id
+                    ? cat.id === 'MODIFIED'
+                      ? 'border-indigo-600 text-indigo-700 font-semibold'
+                      : 'border-slate-900 text-slate-900 font-semibold'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3 pb-1.5 text-xs">
             <button
-              key={cat.id}
               type="button"
               onClick={() => {
-                setRosterCategoryTab(cat.id);
-                setOpenActionMenuPlayerId(null);
+                setCompareOriginalBaseline(false);
+                setFaDockSourceTab('INTERNAL');
+                setTeamBuilderSubTab('fa-dock');
+                setTimeout(() => {
+                  document
+                    .getElementById('add-free-agents-dock')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 60);
               }}
-              className={`shrink-0 whitespace-nowrap min-h-[36px] border px-3 py-1.5 font-mono-ledger text-xs font-semibold transition-colors cursor-pointer ${
-                effectiveTab === cat.id
-                  ? cat.id === 'MODIFIED'
-                    ? 'border-[#2563eb] bg-[#2563eb] text-white'
-                    : 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
-                  : 'border-[#d6d0c4] bg-white text-[#334155] hover:border-[#111827] hover:text-[#111827]'
-              }`}
+              className="font-medium text-emerald-700 hover:text-emerald-800 cursor-pointer"
             >
-              {cat.label}
+              + Pending FAs ({internalFaPool.length})
             </button>
-          ))}
-
-          <button
-            type="button"
-            onClick={() => {
-              setCompareOriginalBaseline(false);
-              setFaDockSourceTab('INTERNAL');
-              setTeamBuilderSubTab('fa-dock');
-              setTimeout(() => {
-                document
-                  .getElementById('add-free-agents-dock')
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 60);
-            }}
-            className="shrink-0 whitespace-nowrap min-h-[36px] border border-[#15803d] bg-[#f0fdf4] px-3 py-1.5 font-mono-ledger text-xs font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
-          >
-            + Pending FAs ({internalFaPool.length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setCompareOriginalBaseline(false);
-              setFaDockSourceTab('LEAGUE');
-              setTeamBuilderSubTab('fa-dock');
-              setTimeout(() => {
-                document
-                  .getElementById('add-free-agents-dock')
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 60);
-            }}
-            className="shrink-0 whitespace-nowrap min-h-[36px] border border-[#1c1917] bg-[#fcfaf6] px-3 py-1.5 font-mono-ledger text-xs font-semibold text-[#111827] hover:bg-[#1c1917] hover:text-white transition-colors cursor-pointer"
-          >
-            + Open Market FAs
-          </button>
+            <span className="text-slate-300">·</span>
+            <button
+              type="button"
+              onClick={() => {
+                setCompareOriginalBaseline(false);
+                setFaDockSourceTab('LEAGUE');
+                setTeamBuilderSubTab('fa-dock');
+                setTimeout(() => {
+                  document
+                    .getElementById('add-free-agents-dock')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 60);
+              }}
+              className="font-medium text-slate-600 hover:text-slate-900 cursor-pointer"
+            >
+              + Open Market FAs
+            </button>
+          </div>
         </div>
 
-        {/* Search & Position Filter Bar (Shown for Active Roster & Modified Roster Tabs) */}
+        {/* Single Clean Search & Position Filter Bar (Shown for Active / Modified Roster Tabs) */}
         {(effectiveTab === 'ACTIVE' || effectiveTab === 'MODIFIED') && (
-        <div className="mt-4 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2.5 flex-1">
-            <div className="relative flex-1 min-w-0 sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a8379]" />
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Filter ${baseTeam.name} ${activeCapState.roster.length}-man roster...`}
-                className="w-full min-h-[40px] border border-[#111827] bg-white py-2 pl-9 pr-3 text-sm text-[#111827] placeholder:text-[#64748b] focus:outline-none"
+                className="w-full min-h-[38px] rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none shadow-2xs"
               />
             </div>
 
-            <div className="hidden sm:block">
-              <GlobalPlayerSearch
-                placeholder="Or lookup any NFL player (age, yrs left, deal)..."
-                className="w-64 lg:w-72"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible">
-            <span className="shrink-0 mr-1 text-xs font-bold uppercase tracking-[0.08em] text-[#475569]">
-              Pos:
-            </span>
-            <button
-              type="button"
-              onClick={toggleFantasyLens}
-              className={`shrink-0 snap-start min-h-[36px] border px-2.5 py-1 font-mono-ledger text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                isFantasyLens
-                  ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
-                  : 'border-[#7c3aed]/50 bg-[#f5f3ff] text-[#4c1d95] hover:bg-[#ede9fe]'
-              }`}
-            >
-              🏈 Fantasy{isFantasyLens ? ' (Skill)' : ''}
-            </button>
-            {ALL_POSITIONS.map((pos) => (
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 lg:flex-wrap lg:overflow-visible">
               <button
-                key={pos}
                 type="button"
-                onClick={() => setPosFilter(pos)}
-                className={`shrink-0 snap-start min-h-[36px] px-3 py-1 font-mono-ledger text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                  posFilter === pos
-                    ? 'bg-[#1e3a5f] text-white'
-                    : 'bg-[#f1f5f9] sm:bg-transparent text-[#334155] hover:bg-[#ebe6dc] hover:text-[#111827]'
+                onClick={toggleFantasyLens}
+                className={`shrink-0 rounded-md px-2.5 py-1 font-mono-ledger text-xs font-medium whitespace-nowrap transition-colors cursor-pointer mr-1 ${
+                  isFantasyLens
+                    ? 'bg-violet-600 text-white'
+                    : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
                 }`}
               >
-                {pos}
+                Fantasy{isFantasyLens ? ' (Skill)' : ''}
               </button>
-            ))}
+              {ALL_POSITIONS.map((pos) => (
+                <button
+                  key={pos}
+                  type="button"
+                  onClick={() => setPosFilter(pos)}
+                  className={`shrink-0 rounded-md px-2.5 py-1 font-mono-ledger text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                    posFilter === pos
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  {pos}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
         )}
       </section>
 
@@ -1985,12 +1934,12 @@ export function PlayerFateJourney({
           FANTASY FOOTBALL LENS HUB (INSULATION · LANDING SPOTS · SLEEPER AUDIT)
          ===================================================================== */}
       {isFantasyLens && teamFantasyEnv && (
-        <section className="border-2 border-[#7c3aed]/50 bg-[#fcfaf6] p-4 sm:p-5 space-y-4 shadow-2xs">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-3.5">
+        <section className="rounded-xl border border-violet-200 bg-white p-4 sm:p-5 space-y-4 shadow-2xs">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100 pb-3.5">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-[#7c3aed] px-2 py-0.5 font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-white">
-                  🏈 Fantasy Football Lens
+                <span className="rounded-md bg-violet-600 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold uppercase tracking-wider text-white">
+                  Fantasy Football Lens
                 </span>
                 <span className="font-mono-ledger text-xs font-semibold text-[#334155]">
                   {baseTeam.abbreviation} OL Grade {teamFantasyEnv.olGrade} ·{' '}
@@ -2192,10 +2141,10 @@ export function PlayerFateJourney({
                 {(
                   [
                     { id: 'ALL', label: 'All Skill Players (QB/RB/WR/TE)' },
-                    { id: 'INSULATED_ALPHA', label: '🔒 Insulated Alphas' },
-                    { id: 'PAPER_TRAP', label: '⚠️ Paper Traps (Sell)' },
-                    { id: 'BREAKOUT_STASH', label: '🚀 Breakout Stashes (Buy)' },
-                    { id: 'TAG_OR_UFA_WATCH', label: '⏳ 2027 UFA / Tag' },
+                    { id: 'INSULATED_ALPHA', label: 'Insulated Alphas' },
+                    { id: 'PAPER_TRAP', label: 'Paper Traps (Sell)' },
+                    { id: 'BREAKOUT_STASH', label: 'Breakout Stashes (Buy)' },
+                    { id: 'TAG_OR_UFA_WATCH', label: '2027 UFA / Tag' },
                   ] as { id: 'ALL' | FantasySignalType; label: string }[]
                 ).map((sig) => (
                   <button
@@ -2434,9 +2383,9 @@ export function PlayerFateJourney({
               {/* 3 Actionable Dynasty Audit Columns */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 text-xs">
                 {/* Column 1: Paper Traps */}
-                <div className="border border-[#fca5a5] bg-[#fef2f2]/60 p-3.5 space-y-2.5">
-                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-[#991b1b]">
-                    ⚠️ Paper Traps — Sell Before Cut ({fantasyAuditReport.paperContractTraps.length})
+                <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3.5 space-y-2.5">
+                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-rose-700">
+                    Paper Traps — Sell Before Cut ({fantasyAuditReport.paperContractTraps.length})
                   </div>
                   {fantasyAuditReport.paperContractTraps.length === 0 ? (
                     <p className="text-[11px] text-[#475569]">
@@ -2490,9 +2439,9 @@ export function PlayerFateJourney({
                 </div>
 
                 {/* Column 2: Breakout Stashes */}
-                <div className="border border-[#c4b5fd] bg-[#f5f3ff]/70 p-3.5 space-y-2.5">
-                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-[#4c1d95]">
-                    🚀 Breakout Stashes — Buy Low ({fantasyAuditReport.breakoutStashes.length})
+                <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3.5 space-y-2.5">
+                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-violet-700">
+                    Breakout Stashes — Buy Low ({fantasyAuditReport.breakoutStashes.length})
                   </div>
                   {fantasyAuditReport.breakoutStashes.length === 0 ? (
                     <p className="text-[11px] text-[#475569]">
@@ -2543,9 +2492,9 @@ export function PlayerFateJourney({
                 </div>
 
                 {/* Column 3: Insulated Cornerstones + UFA/Tag Watch */}
-                <div className="border border-[#86efac] bg-[#f0fdf4]/70 p-3.5 space-y-2.5">
-                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-[#14532d]">
-                    🔒 Insulated Core &amp; 2027 UFA Watch (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3.5 space-y-2.5">
+                  <div className="font-mono-ledger text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+                    Insulated Core &amp; 2027 UFA Watch (
                     {fantasyAuditReport.insulatedCornerstones.length +
                       fantasyAuditReport.ufaTagWatch.length}
                     )
@@ -2798,68 +2747,41 @@ export function PlayerFateJourney({
          ===================================================================== */}
       {(effectiveTab === 'ACTIVE' || effectiveTab === 'MODIFIED') &&
         viewMode === 'TIMELINE_BARS' && (
-        <section className="border border-[#d6d0c4] bg-white p-3.5 sm:p-5 space-y-4 sm:space-y-5 shadow-2xs">
-          {/* Visual Legend + Quick Filter Pills */}
-          <div className="flex flex-col gap-3 sm:gap-4 border-b border-[#d6d0c4] pb-3.5 sm:pb-4">
-            {/* 4-Box Visual Key + Rating Scale Key */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 sm:gap-x-5 sm:gap-y-2 text-[11px] sm:text-xs">
-              <span className="hidden sm:inline text-xs font-bold uppercase tracking-[0.1em] text-[#334155]">
-                Bar Legend:
-              </span>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#1e3a5f] border border-[#1e3a5f] rounded-xs" />
-                <span className="text-[#111827] font-semibold">
-                  Locked
-                </span>
+        <section className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+          {/* Sleek Fintech Legend + Filter Chips Bar */}
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between border-b border-slate-200 px-4 py-3 bg-slate-50/50">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-3.5 rounded-sm bg-slate-900" />
+                <span className="text-slate-700 font-medium">Locked</span>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#fef3c7] border-2 border-[#d97706] rounded-xs" />
-                <span className="text-[#78350f] font-semibold">
-                  Cut Risk
-                </span>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-3.5 rounded-sm bg-amber-100 ring-1 ring-inset ring-amber-400" />
+                <span className="text-amber-800 font-medium">Cut Risk</span>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#dcfce7] border-2 border-dashed border-[#15803d] rounded-xs" />
-                <span className="text-[#14532d] font-semibold">
-                  Ext. Window
-                </span>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-3.5 rounded-sm bg-emerald-100 ring-1 ring-inset ring-emerald-400" />
+                <span className="text-emerald-800 font-medium">Ext. Window</span>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="inline-block h-3.5 w-5 sm:h-4 sm:w-7 bg-[#fee2e2] border border-dashed border-[#dc2626] rounded-xs" />
-                <span className="text-[#991b1b] font-semibold">
-                  Dead / Cliff
-                </span>
-              </div>
-              <div className="hidden sm:flex items-center gap-1.5 border-l border-[#d6d0c4] pl-4 text-xs text-[#334155]">
-                <span className="font-mono-ledger font-bold text-[#1e3a5f]">
-                  Rating (0–99):
-                </span>
-                <span>
-                  90+ All-Pro · 82–89 Plus Starter · 75–81 Solid Starter
-                </span>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-3.5 rounded-sm bg-rose-100 ring-1 ring-inset ring-rose-300" />
+                <span className="text-rose-700 font-medium">Void / Cliff</span>
               </div>
             </div>
 
-            {/* Single-Row Swipeable Quick Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 snap-x lg:flex-wrap lg:overflow-visible text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar lg:flex-wrap text-xs">
               {(
                 [
-                  { id: 'ALL', label: `All Roster (${timelineRows.length})` },
-                  {
-                    id: 'HIGH_EXT_LIKELY',
-                    label: 'High Ext. Likelihood (70%+)',
-                  },
-                  {
-                    id: 'CUT_RISK_YEARS',
-                    label: 'Cut-Risk / Fake Years',
-                  },
-                  { id: 'EXPIRING_2026', label: 'Expiring After 2026' },
-                  { id: 'VOID_BILLS', label: 'Void-Year Bills' },
+                  { id: 'ALL', label: `All (${timelineRows.length})` },
+                  { id: 'HIGH_EXT_LIKELY', label: 'High Ext. (70%+)' },
+                  { id: 'CUT_RISK_YEARS', label: 'Cut Risk' },
+                  { id: 'EXPIRING_2026', label: "Expiring '26" },
+                  { id: 'VOID_BILLS', label: 'Void Bills' },
                   ...(!isCurrentState && signedFaCount > 0
                     ? [
                         {
                           id: 'ADDED_FA' as TimelineQuickFilter,
-                          label: `Added FAs (${signedFaCount})`,
+                          label: `Signed FAs (${signedFaCount})`,
                         },
                       ]
                     : []),
@@ -2869,10 +2791,10 @@ export function PlayerFateJourney({
                   key={pill.id}
                   type="button"
                   onClick={() => setTimelineFilter(pill.id)}
-                  className={`shrink-0 snap-start whitespace-nowrap min-h-[36px] border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`shrink-0 rounded-md px-2.5 py-1 text-[11px] font-medium whitespace-nowrap transition-colors cursor-pointer ${
                     timelineFilter === pill.id
-                      ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
-                      : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155] hover:border-[#111827] hover:text-[#111827]'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
                   }`}
                 >
                   {pill.label}
@@ -2881,7 +2803,7 @@ export function PlayerFateJourney({
             </div>
           </div>
 
-          {/* DESKTOP VIEW: Horizontal Multi-Year Contract & Extension Bar Table */}
+          {/* DESKTOP VIEW: Clean Linear/Fintech Contract Gantt Table */}
           <div
             tabIndex={0}
             role="region"
@@ -2892,11 +2814,11 @@ export function PlayerFateJourney({
           >
             <table className="w-full min-w-[1120px] border-collapse text-left">
               <thead>
-                <tr className="border-b-2 border-[#111827] text-xs uppercase tracking-[0.08em] text-[#334155]">
-                  <th className="sticky left-0 z-10 bg-white py-3 pr-4 w-[315px]">
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="sticky left-0 z-10 bg-slate-50/95 backdrop-blur-xs py-2.5 pl-4 pr-4 w-[315px]">
                     {isCurrentState
-                      ? `Player (${filteredTimelineRows.length}) · Ext. Likelihood`
-                      : `Player (${filteredTimelineRows.length}) · Ext. Likelihood & Actions`}
+                      ? `Player (${filteredTimelineRows.length})`
+                      : `Player (${filteredTimelineRows.length}) · Controls`}
                   </th>
                   {TIMELINE_HORIZON_YEARS.map((yr) => {
                     const yCap =
@@ -2906,25 +2828,25 @@ export function PlayerFateJourney({
                     return (
                       <th
                         key={yr}
-                        className="py-3 px-1.5 text-center w-[135px] border-l border-[#dfd9cc]"
+                        className="py-2.5 px-1.5 text-center w-[135px] border-l border-slate-100"
                       >
-                        <div className="font-editorial text-base font-normal text-[#1c1917]">
+                        <div className="font-mono-ledger text-xs font-bold text-slate-800">
                           {yr}
                         </div>
                         {yCap ? (
                           <div
-                            className={`font-mono-ledger text-[10px] font-normal ${
+                            className={`font-mono-ledger text-[10px] font-medium ${
                               yCap.effectiveCapSpace < 0
-                                ? 'text-[#b84a27]'
-                                : 'text-[#2d5a43]'
+                                ? 'text-rose-600'
+                                : 'text-emerald-600'
                             }`}
                           >
                             {yCap.effectiveCapSpace >= 0 ? '+$' : '−$'}
                             {Math.abs(yCap.effectiveCapSpace).toFixed(0)}M space
                           </div>
                         ) : (
-                          <div className="font-mono-ledger text-[10px] font-normal text-[#8a8379]">
-                            Future Horizon
+                          <div className="font-mono-ledger text-[10px] font-normal text-slate-400">
+                            Projection
                           </div>
                         )}
                       </th>
@@ -2933,7 +2855,7 @@ export function PlayerFateJourney({
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#dfd9cc]">
+              <tbody className="divide-y divide-slate-100">
                 {filteredTimelineRows.map((row, rowIdx) => {
                   const {
                     player,
@@ -2963,10 +2885,10 @@ export function PlayerFateJourney({
 
                   const extBadgeColor =
                     extensionLikelihoodTier === 'HIGH'
-                      ? 'text-[#14532d] bg-[#dcfce7] border-[#16a34a]'
+                      ? 'text-emerald-700 bg-emerald-50 ring-1 ring-inset ring-emerald-200'
                       : extensionLikelihoodTier === 'MEDIUM'
-                      ? 'text-[#92400e] bg-[#fef3c7] border-[#d97706]'
-                      : 'text-[#334155] bg-[#f1f5f9] border-[#94a3b8]';
+                      ? 'text-amber-800 bg-amber-50 ring-1 ring-inset ring-amber-200'
+                      : 'text-slate-600 bg-slate-100';
                   const fEval = isFantasyLens
                     ? fantasyEvalByPlayerId.get(player.id)
                     : undefined;
@@ -2976,8 +2898,8 @@ export function PlayerFateJourney({
                       key={player.id}
                       className={`group transition-colors ${
                         isRowModified
-                          ? 'bg-[#eff6ff] hover:bg-[#dbeafe]'
-                          : 'hover:bg-[#f8fafc]'
+                          ? 'bg-indigo-50/40 hover:bg-indigo-50/70'
+                          : 'hover:bg-slate-50/80'
                       }`}
                     >
                       {/* Left Sticky Player Identity + Extension Probability Column */}
@@ -2985,10 +2907,10 @@ export function PlayerFateJourney({
                         scope="row"
                         className={`sticky left-0 ${
                           isActionMenuOpen ? 'z-30' : 'z-10'
-                        } py-3.5 pr-4 align-middle font-normal border-r border-[#d6d0c4] ${
+                        } py-3 pl-4 pr-4 align-middle font-normal border-r border-slate-100 ${
                           isRowModified
-                            ? 'bg-[#eff6ff] group-hover:bg-[#dbeafe] border-l-4 border-l-[#2563eb] pl-2.5'
-                            : 'bg-white group-hover:bg-[#f8fafc]'
+                            ? 'bg-indigo-50/90 group-hover:bg-indigo-50 border-l-2 border-l-indigo-500 pl-3.5'
+                            : 'bg-white group-hover:bg-slate-50/95'
                         }`}
                       >
                         <div className="flex items-start gap-2.5">
@@ -3013,14 +2935,14 @@ export function PlayerFateJourney({
                                           2026
                                         )
                                   }
-                                  className="truncate font-bold text-sm text-[#111827] hover:text-[#1e3a5f] hover:underline text-left cursor-pointer"
+                                  className="truncate font-semibold text-sm text-slate-900 hover:text-indigo-600 text-left cursor-pointer"
                                 >
                                   {player.name}
                                 </button>
                                 {player.injuryStatus && (
                                   <span
                                     title={`Currently on ${player.injuryStatus} list`}
-                                    className="shrink-0 border border-[#dc2626] bg-[#fef2f2] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#b91c1c]"
+                                    className="shrink-0 rounded bg-rose-50 px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold text-rose-700"
                                   >
                                     {player.injuryStatus}
                                   </span>
@@ -3035,7 +2957,7 @@ export function PlayerFateJourney({
                                       onClick={() =>
                                         openPlayerDossier(player, baseTeam.id)
                                       }
-                                      className="border border-[#cbd5e1] bg-[#f8fafc] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#334155] hover:border-[#111827] hover:text-[#111827] cursor-pointer"
+                                      className="rounded-md bg-slate-100 px-2 py-0.5 font-mono-ledger text-[11px] font-medium text-slate-600 hover:bg-slate-200 hover:text-slate-900 cursor-pointer"
                                     >
                                       Dossier
                                     </button>
@@ -3050,9 +2972,9 @@ export function PlayerFateJourney({
                                         })
                                       }
                                       title={`Modify ${player.name} inside Team Builder`}
-                                      className="border border-[#1e3a5f] bg-[#1e3a5f] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#15803d] hover:border-[#15803d] transition-colors cursor-pointer"
+                                      className="rounded-md bg-slate-900 px-2 py-0.5 font-mono-ledger text-[11px] font-medium text-white hover:bg-slate-800 transition-colors cursor-pointer"
                                     >
-                                      Builder →
+                                      Edit
                                     </button>
                                   </>
                                 ) : (
@@ -3062,7 +2984,7 @@ export function PlayerFateJourney({
                                         type="button"
                                         onClick={() => removeTransaction(faTxId)}
                                         title="Remove newly signed Free Agent from roster grid"
-                                        className="inline-flex items-center gap-0.5 border border-[#b91c1c] bg-[#b91c1c] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#991b1b] cursor-pointer"
+                                        className="inline-flex items-center gap-0.5 rounded-md bg-rose-600 px-2 py-0.5 font-mono-ledger text-[11px] font-medium text-white hover:bg-rose-700 cursor-pointer"
                                       >
                                         <X className="h-3 w-3" />
                                         <span>Undo FA</span>
@@ -3074,7 +2996,7 @@ export function PlayerFateJourney({
                                           removeTransaction(activePlayerTx.txId)
                                         }
                                         title="Undo move on this player"
-                                        className="inline-flex items-center gap-0.5 border border-[#2563eb] bg-[#2563eb] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#1d4ed8] cursor-pointer"
+                                        className="inline-flex items-center gap-0.5 rounded-md bg-indigo-600 px-2 py-0.5 font-mono-ledger text-[11px] font-medium text-white hover:bg-indigo-700 cursor-pointer"
                                       >
                                         <RotateCcw className="h-3 w-3" />
                                         <span>Undo</span>
@@ -3089,10 +3011,10 @@ export function PlayerFateJourney({
                                             prev === player.id ? null : player.id
                                           );
                                         }}
-                                        className={`inline-flex items-center gap-0.5 border px-2 py-0.5 font-mono-ledger text-[11px] font-bold transition-colors cursor-pointer ${
+                                        className={`inline-flex items-center gap-0.5 rounded-md px-2 py-0.5 font-mono-ledger text-[11px] font-medium transition-colors cursor-pointer ${
                                           isActionMenuOpen
-                                            ? 'border-[#111827] bg-[#111827] text-white'
-                                            : 'border-[#1e3a5f] bg-[#eff6ff] text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white'
+                                            ? 'bg-slate-900 text-white'
+                                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
                                         }`}
                                       >
                                         <span>Action</span>
@@ -3104,7 +3026,7 @@ export function PlayerFateJourney({
                                       onClick={() =>
                                         openPlayerDossier(player, baseTeam.id)
                                       }
-                                      className="border border-[#cbd5e1] bg-[#f8fafc] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#334155] hover:border-[#111827] hover:text-[#111827] cursor-pointer"
+                                      className="rounded-md px-2 py-0.5 font-mono-ledger text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
                                     >
                                       Dossier
                                     </button>
@@ -3120,30 +3042,30 @@ export function PlayerFateJourney({
                               </div>
                             </div>
 
-                            <div className="mt-1 font-mono-ledger text-xs font-medium text-[#334155]">
-                              {player.position} · Age {player.ageIn2026} · Rating{' '}
+                            <div className="mt-0.5 font-mono-ledger text-[11px] text-slate-500">
+                              {player.position} · Age {player.ageIn2026} ·{' '}
                               {player.overallRating}/99 · ~
-                              {career.expectedRemainingStarterYears} starter yr
+                              {career.expectedRemainingStarterYears} yr
                               {career.expectedRemainingStarterYears === 1
                                 ? ''
                                 : 's'}{' '}
                               left
                             </div>
 
-                            {/* Extension Likelihood Pill + Mode-Aware Quick Action */}
+                            {/* Sleek Metadata Pills */}
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               {isNewlySignedFa ? (
-                                <span className="inline-block border border-[#15803d] bg-[#15803d] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white">
-                                  ★ NEW FA SIGNING
+                                <span className="inline-block rounded-md bg-emerald-600 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold text-white">
+                                  New FA Signing
                                 </span>
                               ) : activePlayerTx ? (
-                                <span className="inline-block border border-[#16a34a] bg-[#dcfce7] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#14532d]">
-                                  ✓ {activePlayerTx.label}
+                                <span className="inline-block rounded-md bg-emerald-50 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                                  {activePlayerTx.label}
                                 </span>
                               ) : (
                                 <>
                                   <span
-                                    className={`inline-block border px-2 py-0.5 font-mono-ledger text-[11px] font-semibold ${extBadgeColor}`}
+                                    className={`inline-block rounded-md px-2 py-0.5 font-mono-ledger text-[10px] font-medium ${extBadgeColor}`}
                                   >
                                     {extensionLikelihoodPct}% Ext. Likelihood
                                   </span>
@@ -3151,15 +3073,15 @@ export function PlayerFateJourney({
                                     forecast.projectedCompPickRound && (
                                       <span
                                         title={`If ${player.name} walks in 2027 UFA (~$${forecast.projectedMarketApy.toFixed(1)}M/yr), projects a 2027 Round ${forecast.projectedCompPickRound} Compensatory Pick`}
-                                        className="inline-block border border-[#d97706]/60 bg-[#fffbeb] px-2 py-0.5 font-mono-ledger text-[11px] font-bold text-[#92400e]"
+                                        className="inline-block rounded-md bg-amber-50 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200"
                                       >
-                                        If Walks: Proj. Rd {forecast.projectedCompPickRound} Comp
+                                        Walk → Rd {forecast.projectedCompPickRound} Comp
                                       </span>
                                     )}
                                   {isCurrentState ? (
-                                    <span className="font-mono-ledger text-[11px] font-medium text-[#475569]">
+                                    <span className="font-mono-ledger text-[10px] text-slate-400">
                                       ~${forecast.projectedMarketApy.toFixed(1)}
-                                      M/yr mkt
+                                      M/yr
                                     </span>
                                   ) : (
                                     extensionLikelihoodPct >= 55 &&
@@ -3182,11 +3104,11 @@ export function PlayerFateJourney({
                                             row.lastActiveContractYear
                                           )
                                         }
-                                        className="border border-[#15803d] bg-[#dcfce7] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
+                                        className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors cursor-pointer"
                                       >
-                                        + 1-Click Extend (~$
+                                        + Extend (~$
                                         {forecast.projectedMarketApy.toFixed(1)}
-                                        M/yr)
+                                        M)
                                       </button>
                                     )
                                   )}
@@ -3198,20 +3120,20 @@ export function PlayerFateJourney({
                         </div>
                       </th>
 
-                      {/* 6 Year Columns (2026–2031) with Connected Horizontal Contract & Extension Bars */}
+                      {/* 6 Year Columns (2026–2031) with Sleek Linear/Fintech Gantt Contract Bars */}
                       {cells.map((cell) => {
                         const targetActionYear: LeagueYear =
                           cell.year <= 2029 ? (cell.year as LeagueYear) : 2029;
 
                         const roundedClass = `${
-                          cell.isStartOfSpan ? 'rounded-l-sm ml-1' : '-ml-px'
-                        } ${cell.isEndOfSpan ? 'rounded-r-sm mr-1' : '-mr-px'}`;
+                          cell.isStartOfSpan ? 'rounded-l-lg ml-1' : '-ml-px'
+                        } ${cell.isEndOfSpan ? 'rounded-r-lg mr-1' : '-mr-px'}`;
 
                         if (cell.segmentType === 'LOCKED_CONTRACT') {
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
+                              className="py-2 px-0 align-middle border-l border-slate-100"
                             >
                               <button
                                 type="button"
@@ -3224,25 +3146,21 @@ export function PlayerFateJourney({
                                         targetActionYear
                                       )
                                 }
-                                title={`${player.name} (${cell.year}): Locked Contract ($${cell.capHit?.toFixed(2)}M cap hit). ${
-                                  isCurrentState
-                                    ? 'Click for Scouting Dossier or open Team Builder to modify.'
-                                    : 'Click to open 4-Door options.'
-                                }`}
-                                className={`w-[calc(100%-4px)] h-14 bg-[#1e3a5f] text-white px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#152c4a] transition-colors cursor-pointer ${roundedClass}`}
+                                title={`${player.name} (${cell.year}): Locked Contract ($${cell.capHit?.toFixed(2)}M cap hit)`}
+                                className={`w-[calc(100%-3px)] h-11 bg-slate-900 text-white px-2.5 py-1 flex flex-col justify-center text-left hover:bg-slate-800 transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-xs sm:text-sm font-bold text-white">
+                                  <span className="text-xs font-semibold text-white">
                                     {cell.primaryLabel}
                                   </span>
-                                  <span className="text-[11px] font-medium text-[#bae6fd]">
-                                    Age {cell.age}
+                                  <span className="text-[10px] text-slate-400">
+                                    {cell.age}y
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between w-full font-mono-ledger text-[11px] text-[#e2e8f0] truncate">
+                                <div className="flex items-center justify-between w-full font-mono-ledger text-[10px] text-slate-300 truncate">
                                   <span>{cell.secondaryLabel}</span>
                                   {player.isRookieContract && (
-                                    <span className="text-[#86efac] font-semibold">
+                                    <span className="text-emerald-300 font-medium">
                                       Rookie
                                     </span>
                                   )}
@@ -3256,7 +3174,7 @@ export function PlayerFateJourney({
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
+                              className="py-2 px-0 align-middle border-l border-slate-100"
                             >
                               <button
                                 type="button"
@@ -3269,23 +3187,19 @@ export function PlayerFateJourney({
                                         targetActionYear
                                       )
                                 }
-                                title={`${player.name} (${cell.year}): Unguaranteed back-end year. Cutting saves +$${cell.cutSavings?.toFixed(1)}M ($${cell.deadCap?.toFixed(1)}M dead). Click to inspect.`}
-                                className={`w-[calc(100%-4px)] h-14 bg-[#fef3c7] border-y-2 border-[#d97706] ${
-                                  cell.isStartOfSpan ? 'border-l-2' : ''
-                                } ${
-                                  cell.isEndOfSpan ? 'border-r-2' : ''
-                                } text-[#78350f] px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#fde68a] transition-colors cursor-pointer ${roundedClass}`}
+                                title={`${player.name} (${cell.year}): Unguaranteed back-end year. Cutting saves +$${cell.cutSavings?.toFixed(1)}M ($${cell.deadCap?.toFixed(1)}M dead).`}
+                                className={`w-[calc(100%-3px)] h-11 bg-amber-50/95 ring-1 ring-inset ring-amber-300/80 text-amber-900 px-2.5 py-1 flex flex-col justify-center text-left hover:bg-amber-100 transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-xs sm:text-sm font-bold text-[#78350f]">
+                                  <span className="text-xs font-semibold text-amber-950">
                                     {cell.primaryLabel}
                                   </span>
-                                  <span className="text-[11px] font-medium text-[#92400e]">
-                                    Age {cell.age}
+                                  <span className="text-[10px] text-amber-700">
+                                    {cell.age}y
                                   </span>
                                 </div>
-                                <div className="font-mono-ledger text-[11px] font-bold text-[#b45309] truncate">
-                                  ✂ {cell.secondaryLabel}
+                                <div className="font-mono-ledger text-[10px] font-medium text-amber-700 truncate">
+                                  {cell.secondaryLabel}
                                 </div>
                               </button>
                             </td>
@@ -3296,7 +3210,7 @@ export function PlayerFateJourney({
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
+                              className="py-2 px-0 align-middle border-l border-slate-100"
                             >
                               <button
                                 type="button"
@@ -3309,30 +3223,22 @@ export function PlayerFateJourney({
                                         row.lastActiveContractYear
                                       )
                                 }
-                                title={
-                                  isCurrentState
-                                    ? `${player.name} projected extension window (${extensionLikelihoodPct}% likelihood, ~$${forecast.projectedMarketApy.toFixed(1)}M/yr). Click for Dossier.`
-                                    : `Click to model an extension for ${player.name} (${extensionLikelihoodPct}% Extension Likelihood at ~$${forecast.projectedMarketApy.toFixed(1)}M/yr)`
-                                }
-                                className={`w-[calc(100%-4px)] h-14 bg-[#dcfce7] border-y-2 border-dashed border-[#15803d] ${
-                                  cell.isStartOfSpan ? 'border-l-2' : ''
-                                } ${
-                                  cell.isEndOfSpan ? 'border-r-2' : ''
-                                } text-[#14532d] px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#bbf7d0] transition-colors cursor-pointer ${roundedClass}`}
+                                title={`${player.name} projected extension window (${extensionLikelihoodPct}% likelihood, ~$${forecast.projectedMarketApy.toFixed(1)}M/yr).`}
+                                className={`w-[calc(100%-3px)] h-11 bg-emerald-50/85 ring-1 ring-inset ring-emerald-300/75 text-emerald-900 px-2.5 py-1 flex flex-col justify-center text-left hover:bg-emerald-100/80 transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-xs font-bold text-[#14532d]">
+                                  <span className="text-[11px] font-semibold text-emerald-800">
                                     {cell.isStartOfSpan
-                                      ? `${extensionLikelihoodPct}% Ext. Box`
-                                      : `Ext. Yr (Age ${cell.age})`}
+                                      ? `${extensionLikelihoodPct}% Ext.`
+                                      : `Ext. Yr`}
                                   </span>
                                   {cell.isStartOfSpan && (
-                                    <span className="text-[11px] font-medium text-[#166534]">
-                                      Age {cell.age}
+                                    <span className="text-[10px] text-emerald-600">
+                                      {cell.age}y
                                     </span>
                                   )}
                                 </div>
-                                <div className="font-mono-ledger text-[11px] font-semibold text-[#14532d] truncate">
+                                <div className="font-mono-ledger text-[10px] text-emerald-700 truncate">
                                   {cell.secondaryLabel}
                                 </div>
                               </button>
@@ -3344,7 +3250,7 @@ export function PlayerFateJourney({
                           return (
                             <td
                               key={cell.year}
-                              className="py-2.5 px-0 align-middle border-l border-[#e2e8f0]"
+                              className="py-2 px-0 align-middle border-l border-slate-100"
                             >
                               <button
                                 type="button"
@@ -3357,35 +3263,35 @@ export function PlayerFateJourney({
                                         row.lastActiveContractYear
                                       )
                                 }
-                                className={`w-[calc(100%-4px)] h-14 bg-[#fee2e2] border border-dashed border-[#dc2626] px-3 py-1.5 flex flex-col justify-between text-left hover:bg-[#fecaca] transition-colors cursor-pointer ${roundedClass}`}
+                                className={`w-[calc(100%-3px)] h-11 bg-rose-50/90 ring-1 ring-inset ring-rose-200 px-2.5 py-1 flex flex-col justify-center text-left hover:bg-rose-100 transition-colors cursor-pointer ${roundedClass}`}
                               >
                                 <div className="flex items-baseline justify-between w-full font-mono-ledger">
-                                  <span className="text-xs font-bold text-[#991b1b]">
+                                  <span className="text-[11px] font-semibold text-rose-700">
                                     {cell.primaryLabel}
                                   </span>
-                                  <span className="text-[11px] text-[#7f1d1d]">
-                                    Age {cell.age}
+                                  <span className="text-[10px] text-rose-500">
+                                    {cell.age}y
                                   </span>
                                 </div>
-                                <div className="font-mono-ledger text-[11px] font-medium text-[#991b1b] truncate">
-                                  Ghost Bill Accelerates
+                                <div className="font-mono-ledger text-[10px] text-rose-600 truncate">
+                                  Ghost Bill
                                 </div>
                               </button>
                             </td>
                           );
                         }
 
-                        // CLIFF_OR_WALK
+                        // CLIFF_OR_WALK — Clean open slate text (Zero dashed box clutter)
                         return (
                           <td
                             key={cell.year}
-                            className="py-2.5 px-1 align-middle border-l border-[#e2e8f0]"
+                            className="py-2 px-2 align-middle border-l border-slate-100"
                           >
-                            <div className="h-14 border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-2.5 py-1.5 flex flex-col justify-between text-left">
-                              <div className="flex items-baseline justify-between font-mono-ledger text-[11px] font-medium text-[#475569]">
-                                <span>{cell.primaryLabel}</span>
+                            <div className="flex flex-col justify-center text-left">
+                              <div className="font-mono-ledger text-[11px] font-medium text-slate-400">
+                                {cell.primaryLabel}
                               </div>
-                              <div className="font-mono-ledger text-[10px] text-[#64748b]">
+                              <div className="font-mono-ledger text-[10px] text-slate-400/80 truncate">
                                 {cell.secondaryLabel}
                               </div>
                             </div>
@@ -3493,23 +3399,23 @@ export function PlayerFateJourney({
 
                     <div className="shrink-0 flex flex-col items-end gap-1">
                       {isNewlySignedFa ? (
-                        <span className="inline-block border border-[#15803d] bg-[#15803d] px-2 py-0.5 font-mono-ledger text-[10px] font-bold text-white">
-                          ★ NEW FA
+                        <span className="inline-block rounded-md bg-emerald-600 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold text-white">
+                          New FA
                         </span>
                       ) : activePlayerTx ? (
-                        <span className="inline-block border border-[#16a34a] bg-[#dcfce7] px-2 py-0.5 font-mono-ledger text-[10px] font-bold text-[#14532d]">
-                          ✓ {activePlayerTx.type}
+                        <span className="inline-block rounded-md bg-emerald-50 px-2 py-0.5 font-mono-ledger text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                          {activePlayerTx.type}
                         </span>
                       ) : (
                         <>
                           <span
-                            className={`inline-block border px-2 py-0.5 font-mono-ledger text-[10px] font-bold ${extBadgeColor}`}
+                            className={`inline-block rounded-md px-2 py-0.5 font-mono-ledger text-[10px] font-semibold ${extBadgeColor}`}
                           >
                             {extensionLikelihoodPct}% Ext.
                           </span>
                           {row.lastActiveContractYear === 2026 &&
                             forecast.projectedCompPickRound && (
-                              <span className="inline-block border border-[#d97706]/60 bg-[#fffbeb] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#92400e]">
+                              <span className="inline-block rounded-md bg-amber-50 px-1.5 py-0.5 font-mono-ledger text-[9px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
                                 Walk → Rd {forecast.projectedCompPickRound} Comp
                               </span>
                             )}
@@ -3527,27 +3433,27 @@ export function PlayerFateJourney({
                       const hit = cell.capHit ?? 0;
 
                       let boxStyle =
-                        'border border-dashed border-[#cbd5e1] bg-[#f8fafc] text-[#475569]';
+                        'rounded-md bg-slate-50 text-slate-500 ring-1 ring-inset ring-slate-200';
                       let statusShort = 'UFA';
 
                       if (cell.segmentType === 'LOCKED_CONTRACT') {
                         boxStyle =
-                          'bg-[#1e3a5f] text-white border border-[#1e3a5f]';
+                          'rounded-md bg-slate-900 text-white';
                         statusShort =
                           hit >= 10 ? `$${hit.toFixed(0)}M` : `$${hit.toFixed(1)}M`;
                       } else if (cell.segmentType === 'PAPER_CUT_RISK') {
                         boxStyle =
-                          'bg-[#fef3c7] text-[#78350f] border-2 border-[#d97706]';
-                        statusShort = `✂$${hit.toFixed(0)}M`;
+                          'rounded-md bg-amber-50 text-amber-900 ring-1 ring-inset ring-amber-300';
+                        statusShort = `$${hit.toFixed(0)}M`;
                       } else if (cell.segmentType === 'EXTENSION_WINDOW') {
                         boxStyle =
-                          'bg-[#dcfce7] text-[#14532d] border-2 border-dashed border-[#15803d]';
+                          'rounded-md bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-300';
                         statusShort = cell.isStartOfSpan
                           ? `${extensionLikelihoodPct}%`
                           : `~$${forecast.projectedMarketApy.toFixed(0)}M`;
                       } else if (cell.segmentType === 'VOID_GHOST_BILL') {
                         boxStyle =
-                          'bg-[#fee2e2] text-[#991b1b] border border-dashed border-[#dc2626]';
+                          'rounded-md bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200';
                         statusShort = 'Void';
                       } else if (cell.isAtOrPastCliff) {
                         statusShort = 'Cliff';
@@ -3694,9 +3600,9 @@ export function PlayerFateJourney({
                                     2026
                                   )
                                 }
-                                className="min-h-[36px] border border-[#d97706] bg-[#fef3c7] px-2.5 py-1.5 font-mono-ledger text-[11px] font-bold text-[#78350f]"
+                                className="min-h-[36px] rounded-md bg-amber-50 px-2.5 py-1.5 font-mono-ledger text-[11px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200"
                               >
-                                ✂ Cut (+$
+                                Cut (+$
                                 {forecast.bestCutSavings2026.toFixed(1)}M)
                               </button>
                             )}
@@ -4701,13 +4607,13 @@ export function PlayerFateJourney({
                     onClick={() =>
                       setFaPosFilter(faPosFilter === needPos ? 'ALL' : needPos)
                     }
-                    className={`shrink-0 snap-start min-h-[32px] border px-2.5 py-1 font-mono-ledger text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                    className={`shrink-0 snap-start rounded-full px-2.5 py-1 font-mono-ledger text-[11px] font-medium whitespace-nowrap transition-colors cursor-pointer ${
                       faPosFilter === needPos
-                        ? 'border-[#b84a27] bg-[#b84a27] text-[#f6f3ec]'
-                        : 'border-[#b84a27]/50 bg-[#b84a27]/10 text-[#b84a27] hover:bg-[#b84a27] hover:text-[#f6f3ec]'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-100'
                     }`}
                   >
-                    ★ Need {needPos}
+                    Need {needPos}
                   </button>
                 ))}
               </div>
@@ -4830,10 +4736,10 @@ export function PlayerFateJourney({
                               }
                             >
                               {faDockSourceTab === 'INTERNAL'
-                                ? `If Walks: Proj. Rd ${projectCompPickRound(fa.marketApy) ?? 6} Comp · Re-Sign is Safe`
+                                ? `If Walks: Proj. Rd ${projectCompPickRound(fa.marketApy) ?? 6} Comp · Re-Sign Safe`
                                 : evalResult.countsTowardCompFormula
                                 ? `UFA · Proj. Rd ${evalResult.projectedCompPickRound ?? 5} Comp Pick (Counts vs Formula)`
-                                : '★ Street FA (Comp-Pick Safe!)'}
+                                : 'Street FA · Comp-Safe'}
                             </span>
                           </div>
                         </div>
@@ -5015,7 +4921,7 @@ export function PlayerFateJourney({
                             ? `Walk → Proj. Rd ${projectCompPickRound(fa.marketApy) ?? 6} Comp (Re-Sign Safe)`
                             : evalResult.countsTowardCompFormula
                             ? `UFA · Proj. Rd ${evalResult.projectedCompPickRound ?? 5} Comp (Costs Formula)`
-                            : '★ Street FA (Comp-Pick Safe!)'}
+                            : 'Street FA · Comp-Safe'}
                         </span>
                       </div>
                     </div>

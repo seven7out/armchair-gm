@@ -237,7 +237,7 @@ export function evaluateFantasyPlayerSignal(
 
   if (isPaperTrap) {
     signal = 'PAPER_TRAP';
-    badgeLabel = '⚠️ Paper Contract Trap';
+    badgeLabel = 'Paper Contract Trap';
     fantasyTakeaway = `Saves +$${netSavingsIfCut2026.toFixed(1)}M if cut in 2026 ($${deadCap2026.toFixed(1)}M dead) at Age ${player.ageIn2026} — high replacement/release risk.`;
   } else if (
     depthChartOrder > starterSlots &&
@@ -246,7 +246,7 @@ export function evaluateFantasyPlayerSignal(
     vulnerableStarterAhead
   ) {
     signal = 'BREAKOUT_STASH';
-    badgeLabel = '🚀 Post-Cut Breakout Stash';
+    badgeLabel = 'Post-Cut Breakout Stash';
     fantasyTakeaway = `Cheap Year-2/3 talent ($${capHit2026.toFixed(1)}M hit) sitting behind vulnerable starter ${vulnerableStarterAhead.name} — prime Dynasty buy.`;
   } else if (
     !hasActive2027 &&
@@ -254,7 +254,7 @@ export function evaluateFantasyPlayerSignal(
     depthChartOrder <= starterSlots + 1
   ) {
     signal = 'TAG_OR_UFA_WATCH';
-    badgeLabel = '⏳ 2027 UFA / Tag Watch';
+    badgeLabel = '2027 UFA / Tag Watch';
     fantasyTakeaway = `Contract expires after 2026 (${forecast.stayProbability}% stay odds, ~$${forecast.projectedMarketApy.toFixed(1)}M/yr market APY) — situation change looming.`;
   } else if (
     depthChartOrder <= starterSlots &&
@@ -265,13 +265,13 @@ export function evaluateFantasyPlayerSignal(
     !isAtOrPastCliff
   ) {
     signal = 'INSULATED_ALPHA';
-    badgeLabel = '🔒 Insulated Alpha';
+    badgeLabel = 'Insulated Alpha';
     fantasyTakeaway = player.isRookieContract
       ? `Locked on cost-controlled rookie deal ($${capHit2026.toFixed(1)}M in '26) at Age ${player.ageIn2026} — insulated ${depthChartSlot} workload.`
       : `Protected by $${deadCap2026.toFixed(1)}M dead cap in '26 (${xray.realisticYears} real yrs left) — locked-in ${depthChartSlot} cornerstone.`;
   } else {
     signal = 'SOLID_DEPTH';
-    badgeLabel = '✓ Steady Role';
+    badgeLabel = 'Steady Role';
     fantasyTakeaway = `${depthChartSlot} on ${xray.realisticYears}-yr active runway ($${capHit2026.toFixed(1)}M '26 cap hit) — stable depth outlook.`;
   }
 
@@ -485,21 +485,21 @@ export function scanLeagueFantasyLandingSpots(
 
       if (breakoutCandidate && !isCrit26) {
         archetype = 'IN_HOUSE_BREAKOUT';
-        archetypeBadge = '🚀 In-House Stash Promotion';
+        archetypeBadge = 'In-House Stash Promotion';
         headline = `${breakoutCandidate.playerName} (${breakoutCandidate.depthChartSlot}) poised to seize touches if ${vulnerableStarters[0]?.playerName ?? 'starter'} exits`;
       } else if (hasDay1Or2Ammo && (space26 < 45 || pos === 'RB' || rd1Count > 0)) {
         archetype = 'ROOKIE_DRAFT_SMASH';
-        archetypeBadge = '🎯 Prime Rookie Draft Spot';
+        archetypeBadge = 'Prime Rookie Draft Spot';
         headline = isCrit26
           ? `Open ${pos}1 runway with Round 1–2 ammo (${topPick ? `#${topPick.overallPick}` : 'Day 2'}) & ${env.olGrade}-grade OL`
           : `Imminent ${pos} reset behind ${vulnerableStarters[0]?.playerName ?? 'expiring starter'} — prime Day 1–2 rookie landing spot`;
       } else if (space26 >= 40) {
         archetype = 'FREE_AGENT_WAR_CHEST';
-        archetypeBadge = '💰 Big-Money FA Destination';
+        archetypeBadge = 'High-Cap FA Destination';
         headline = `${capStr} warchest + urgent ${pos} need — top destination for marquee FA ${pos}s`;
       } else {
         archetype = 'IN_HOUSE_BREAKOUT';
-        archetypeBadge = '🚀 Vacated Target Funnel';
+        archetypeBadge = 'Vacated Target Funnel';
         headline = `${vulnerableStarters.length > 0 ? vulnerableStarters[0].playerName : 'Depth cliff'} leaves high-leverage ${pos} role open in '${isCrit26 ? '26' : '27'}`;
       }
 
@@ -752,7 +752,7 @@ export function evaluateTeamCampBattles(
       leader.deadCap2026 >= challenger.deadCap2026 * 2.2
     ) {
       hierarchyType = 'CLEAR_ALPHA_LOCK';
-      badgeLabel = '🔒 Locked Alpha Role';
+      badgeLabel = 'Locked Alpha Role';
       takeaway = `${leader.player.name} carries $${leader.deadCap2026.toFixed(1)}M in 2026 dead cap vs. $${challenger.deadCap2026.toFixed(1)}M for ${challenger.player.name} (${
         challenger.netCutSavings2026 >= 1.5
           ? `$${challenger.netCutSavings2026.toFixed(1)}M cuttable`
@@ -760,11 +760,11 @@ export function evaluateTeamCampBattles(
       }). Follow the guaranteed money.`;
     } else if (leader.deadCap2026 >= 4.0 && challenger.deadCap2026 >= 3.5) {
       hierarchyType = 'CO_STARTER_INVESTMENT';
-      badgeLabel = '⚖️ Paid Co-Starters';
+      badgeLabel = 'Paid Co-Starters';
       takeaway = `Both ${leader.player.name} ($${leader.deadCap2026.toFixed(1)}M dead cap) and ${challenger.player.name} ($${challenger.deadCap2026.toFixed(1)}M dead cap) have real financial insulation for 2026 touches.`;
     } else {
       hierarchyType = 'WIDE_OPEN_COMPETITION';
-      badgeLabel = '🔥 Open Camp Battle';
+      badgeLabel = 'Open Camp Battle';
       takeaway = `Low dead cap across the ${pos} room (${leader.player.name} $${leader.deadCap2026.toFixed(1)}M vs. ${challenger.player.name} $${challenger.deadCap2026.toFixed(1)}M) — snap share is wide open on merit.`;
     }
 
@@ -813,7 +813,7 @@ export function evaluateFreeAgentValueBadge(
   if (fa.ageIn2026 <= 26 && fa.overallRating >= 78) {
     return {
       tier: 'PRIME_BUY',
-      badgeLabel: '🟢 Ascending Prime Buy',
+      badgeLabel: 'Ascending Prime Buy',
       reason: `Entering athletic prime (Age ${fa.ageIn2026}) with ${Math.max(1, curve.cliffAge - fa.ageIn2026)}+ peak years before the ${fa.position} age-${curve.cliffAge} cliff.`,
     };
   }
@@ -824,7 +824,7 @@ export function evaluateFreeAgentValueBadge(
   ) {
     return {
       tier: 'CLIFF_TRAP',
-      badgeLabel: '🔴 Age-Cliff Overpay Risk',
+      badgeLabel: 'Age-Cliff Overpay Risk',
       reason: `Age ${fa.ageIn2026} vs. ${fa.position} cliff at ${curve.cliffAge} on a ${fa.marketYears}-yr / $${fa.marketApy.toFixed(1)}M APY commitment.`,
     };
   }
@@ -836,14 +836,14 @@ export function evaluateFreeAgentValueBadge(
   ) {
     return {
       tier: 'VALUE_STARTER',
-      badgeLabel: '🟢 High-Surplus Value',
+      badgeLabel: 'High-Surplus Value',
       reason: `${fa.overallRating} OVR starter talent at a cap-friendly $${fa.marketApy.toFixed(1)}M APY.`,
     };
   }
 
   return {
     tier: 'FAIR_VET',
-    badgeLabel: '🔵 Fair-Market Vet',
+    badgeLabel: 'Fair-Market Vet',
     reason: `Standard market rate ($${fa.marketApy.toFixed(1)}M APY) for a ${fa.ageIn2026}-year-old ${fa.position}.`,
   };
 }

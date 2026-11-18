@@ -747,8 +747,8 @@ export function DraftTradeSandbox() {
                     After Trade)
                   </span>
                 ) : (
-                  <span className="bg-[#b84a27] px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-[#f6f3ec]">
-                    ⚠ Needs +${tradeEvaluation.capShortfallToFitToday.toFixed(2)}M
+                  <span className="rounded-md bg-rose-600 px-2 py-0.5 font-mono-ledger text-[11px] font-semibold text-white">
+                    Needs +${tradeEvaluation.capShortfallToFitToday.toFixed(2)}M
                     More Room on Trade Day
                   </span>
                 )}

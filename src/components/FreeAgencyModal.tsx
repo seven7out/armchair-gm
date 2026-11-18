@@ -372,10 +372,10 @@ export function FreeAgencySimulatorView({
                           }`}
                         >
                           {!pred.countsTowardCompFormula
-                            ? '✓ Comp-Pick Safe (Cut)'
+                            ? 'Comp-Pick Safe (Cut)'
                             : pred.projectedCompPickRound
-                            ? `⚠ Costs Rd ${pred.projectedCompPickRound} Comp Pick`
-                            : '⚠ Cancels Comp Pick'}
+                            ? `Costs Rd ${pred.projectedCompPickRound} Comp Pick`
+                            : 'Cancels Comp Pick'}
                         </span>
                       </div>
                     </div>
@@ -423,8 +423,8 @@ export function FreeAgencySimulatorView({
                 {compSummary.netProjectedCompPicks.length} projected comp picks.
               </div>
             ) : nextUncanceledLoss ? (
-              <div className="text-[11px] text-[#b84a27]">
-                <strong>⚠ CFA Cancellation Warning:</strong> Signing{' '}
+              <div className="text-[11px] text-rose-700">
+                <strong>CFA Cancellation Warning:</strong> Signing{' '}
                 {selectedFA.name} (qualifying UFA) will pair with{' '}
                 <strong>{nextUncanceledLoss.name}</strong> and erase your
                 projected{' '}
