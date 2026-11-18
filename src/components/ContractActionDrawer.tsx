@@ -231,6 +231,7 @@ export function ContractActionDrawer() {
           <PlayerAvatar
             name={player.name}
             headshotUrl={player.headshotUrl}
+            teamId={derivedState.teamId}
             size="lg"
           />
           <div className="min-w-0">
@@ -981,11 +982,19 @@ export function ContractActionDrawer() {
 
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="border border-[#dfd9cc] bg-[#f6f3ec] p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-editorial text-sm font-bold text-[#1c1917]">
-                              {player.name}
-                            </span>
-                            <span className="font-mono-ledger text-[11px] text-[#57534e]">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <PlayerAvatar
+                                name={player.name}
+                                headshotUrl={player.headshotUrl}
+                                teamId={derivedState.teamId}
+                                size="sm"
+                              />
+                              <span className="truncate font-editorial text-sm font-bold text-[#1c1917]">
+                                {player.name}
+                              </span>
+                            </div>
+                            <span className="shrink-0 font-mono-ledger text-[11px] text-[#57534e]">
                               {player.position} · Age {player.ageIn2026} ·{' '}
                               {player.overallRating} OVR
                             </span>
@@ -1041,11 +1050,19 @@ export function ContractActionDrawer() {
                         </div>
 
                         <div className="border border-[#dfd9cc] bg-[#f6f3ec] p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-editorial text-sm font-bold text-[#1c1917]">
-                              {selectedTeammate.name}
-                            </span>
-                            <span className="font-mono-ledger text-[11px] text-[#57534e]">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <PlayerAvatar
+                                name={selectedTeammate.name}
+                                headshotUrl={selectedTeammate.headshotUrl}
+                                teamId={derivedState.teamId}
+                                size="sm"
+                              />
+                              <span className="truncate font-editorial text-sm font-bold text-[#1c1917]">
+                                {selectedTeammate.name}
+                              </span>
+                            </div>
+                            <span className="shrink-0 font-mono-ledger text-[11px] text-[#57534e]">
                               {selectedTeammate.position} · Age{' '}
                               {selectedTeammate.ageIn2026} ·{' '}
                               {selectedTeammate.overallRating} OVR
@@ -1125,6 +1142,12 @@ export function ContractActionDrawer() {
                 <div className="font-mono-ledger text-[11px] text-[#8a8379]">
                   Franchise Tag: ${franchiseTagAmount.toFixed(1)}M · Transition
                   Tag: ${transitionTagAmount.toFixed(1)}M (120% Rule Applied)
+                  {fateForecast.projectedCompPickRound && (
+                    <span className="ml-2 font-semibold text-[#92400e]">
+                      · If Walks in {nextUncoveredYear}: Proj. Rd{' '}
+                      {fateForecast.projectedCompPickRound} Comp Pick
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">

@@ -11,6 +11,7 @@ import {
   simulateRestructure,
 } from './contractEngine';
 import { createDraftedPlayer, generateRookieContract } from './draftEngine';
+import { projectCompPickRound } from './faPredictionEngine';
 import { applyPlayerExtension, createSignedFreeAgentPlayer } from './freeAgencyEngine';
 import {
   CapCalculationMode,
@@ -57,10 +58,39 @@ export function computeDerivedTeamCapState(
   let draftPicks: DraftPick[] = baseTeam.draftPicks.map((pk) => ({ ...pk }));
 
   // Track Comp Pick formula & Post-June 1 designation limit (max 2 per offseason)
-  const cfaLosses = [...(baseTeam.departingCfaLosses ?? [
-    { name: 'Carlton Davis III', position: 'CB' as PositionGroup, estApy: 18.0, projectedRound: 3 },
-    { name: 'Kevin Zeitler', position: 'OL' as PositionGroup, estApy: 9.0, projectedRound: 5 },
-  ])];
+  const defaultTeamCfaLosses =
+    baseTeam.id === 'DET'
+      ? [
+          { name: 'Carlton Davis III', position: 'CB' as PositionGroup, estApy: 18.0, projectedRound: 3 },
+          { name: 'Kevin Zeitler', position: 'OL' as PositionGroup, estApy: 9.0, projectedRound: 5 },
+        ]
+      : roster
+          .filter((p) => {
+            const cy26 = p.contractYears[2026];
+            const cy27 = p.contractYears[2027];
+            return (
+              cy26 &&
+              !cy26.isVoidYear &&
+              (!cy27 || cy27.isVoidYear) &&
+              getContractYearCapHit(cy26) >= 3.0
+            );
+          })
+          .map((p) => {
+            const hit26 = getContractYearCapHit(p.contractYears[2026]);
+            const estApy = roundCap(
+              Math.max(4.5, Math.max(hit26 * 0.95, (p.overallRating - 68) * 1.15))
+            );
+            return {
+              name: p.name,
+              position: p.position,
+              estApy,
+              projectedRound: projectCompPickRound(estApy) ?? 6,
+            };
+          })
+          .sort((a, b) => b.estApy - a.estApy)
+          .slice(0, 2);
+
+  const cfaLosses = [...(baseTeam.departingCfaLosses ?? defaultTeamCfaLosses)];
   const cfaQualifyingSignings: { name: string; position: PositionGroup; apy: number }[] = [];
   let streetFASigningsCount = 0;
   let postJune1DesignationsUsed = 0;

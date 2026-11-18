@@ -971,6 +971,8 @@ export function DraftTradeSandbox() {
                       <PlayerAvatar
                         name={p.name}
                         headshotUrl={p.headshotUrl}
+                        teamId={partnerTeam.id}
+                        teamLogoUrl={partnerTeam.logoUrl}
                         size="sm"
                       />
                       <div>

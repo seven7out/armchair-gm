@@ -9,6 +9,7 @@ import {
   createSignedFreeAgentPlayer,
   evaluateFreeAgentTarget,
   evaluatePlayerLongevity,
+  evaluateRosterPlayerFate,
   FreeAgentTarget,
   getContractYearCash,
   LEAGUE_YEARS,
@@ -333,6 +334,7 @@ export function FreeAgencySimulatorView({
                     <PlayerAvatar
                       name={fa.name}
                       headshotUrl={fa.headshotUrl}
+                      teamId={fa.previousTeam.split(' ')[0]}
                       size="sm"
                     />
                     <div className="flex-1 min-w-0">
@@ -371,6 +373,8 @@ export function FreeAgencySimulatorView({
                         >
                           {!pred.countsTowardCompFormula
                             ? '✓ Comp-Pick Safe (Cut)'
+                            : pred.projectedCompPickRound
+                            ? `⚠ Costs Rd ${pred.projectedCompPickRound} Comp Pick`
                             : '⚠ Cancels Comp Pick'}
                         </span>
                       </div>
@@ -471,26 +475,46 @@ export function FreeAgencySimulatorView({
             <div className="divide-y divide-[#dfd9cc] border-t border-[#dfd9cc] max-h-40 overflow-y-auto">
               {inHouseExpiringPlayers.map((p) => {
                 const lon = evaluatePlayerLongevity(p);
+                const fate = evaluateRosterPlayerFate(
+                  p,
+                  derivedState.years[2026].effectiveCapSpace
+                );
                 return (
                   <div
                     key={p.id}
-                    className="flex items-baseline justify-between py-2.5 px-2 text-xs"
+                    className="flex items-center justify-between gap-2.5 py-2.5 px-2 text-xs"
                   >
-                    <div>
-                      <span className="font-medium text-[#1c1917]">
-                        {p.name}
-                      </span>{' '}
-                      <span className="text-[#8a8379]">
-                        ({p.position} · Age {p.ageIn2026})
-                      </span>
-                      <div className="text-[10px] text-[#2d5a43]">
-                        {lon.extensionRecommendation}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <PlayerAvatar
+                        name={p.name}
+                        headshotUrl={p.headshotUrl}
+                        teamId={derivedState.teamId}
+                        size="sm"
+                      />
+                      <div className="min-w-0">
+                        <div>
+                          <span className="font-medium text-[#1c1917]">
+                            {p.name}
+                          </span>{' '}
+                          <span className="text-[#8a8379]">
+                            ({p.position} · Age {p.ageIn2026})
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-[#2d5a43]">
+                          {lon.extensionRecommendation}
+                          {fate.projectedCompPickRound && (
+                            <span className="ml-1.5 font-mono-ledger font-semibold text-[#92400e]">
+                              · If Walks: Proj. Rd {fate.projectedCompPickRound}{' '}
+                              Comp
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => selectPlayer(p.id, 'extend')}
-                      className="underline decoration-[#c7bfb0] underline-offset-4 text-[#1c1917] hover:text-[#2d5a43] cursor-pointer"
+                      className="shrink-0 underline decoration-[#c7bfb0] underline-offset-4 text-[#1c1917] hover:text-[#2d5a43] cursor-pointer"
                     >
                       Extend / Tag →
                     </button>
@@ -508,6 +532,7 @@ export function FreeAgencySimulatorView({
               <PlayerAvatar
                 name={selectedFA.name}
                 headshotUrl={selectedFA.headshotUrl}
+                teamId={selectedFA.previousTeam.split(' ')[0]}
                 size="lg"
               />
               <div>

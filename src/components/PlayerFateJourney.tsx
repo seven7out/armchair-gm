@@ -49,6 +49,7 @@ import {
   LeagueYear,
   POSITION_GROUPS,
   PositionGroup,
+  projectCompPickRound,
   projectPlayerCareerHorizon,
   SAMPLE_DYNASTY_ROSTER_NAMES,
   scanLeagueFantasyLandingSpots,
@@ -59,6 +60,7 @@ import {
 import {
   getLeagueWideFreeAgentPool,
   getTeamInternalFreeAgents,
+  SEED_FREE_AGENTS,
 } from '@/data/seed/freeAgents';
 import { SEED_TEAMS } from '@/data/seed/teams';
 import {
@@ -550,6 +552,28 @@ export function PlayerFateJourney({
     [isFantasyLens, activeCapState]
   );
 
+  const playerHeadshotByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const team of Object.values(SEED_TEAMS)) {
+      for (const p of team.roster) {
+        if (p.headshotUrl) {
+          map.set(p.name.toLowerCase(), p.headshotUrl);
+        }
+      }
+    }
+    for (const fa of SEED_FREE_AGENTS) {
+      if (fa.headshotUrl) {
+        map.set(fa.name.toLowerCase(), fa.headshotUrl);
+      }
+    }
+    for (const p of activeCapState.roster) {
+      if (p.headshotUrl) {
+        map.set(p.name.toLowerCase(), p.headshotUrl);
+      }
+    }
+    return map;
+  }, [activeCapState.roster]);
+
   const leagueLandingSpots = useMemo(
     () => (isFantasyLens ? scanLeagueFantasyLandingSpots(SEED_TEAMS) : []),
     [isFantasyLens]
@@ -939,6 +963,8 @@ export function PlayerFateJourney({
               <PlayerAvatar
                 name={player.name}
                 headshotUrl={player.headshotUrl}
+                teamId={baseTeam.id}
+                teamLogoUrl={baseTeam.logoUrl}
                 size="md"
               />
               <div>
@@ -1570,27 +1596,45 @@ export function PlayerFateJourney({
                           {solverInternalFas.map(({ fa }) => {
                             const existingTx = activeSignFaTxByPlayerId.get(fa.id);
                             const valueBadge = evaluateFreeAgentValueBadge(fa);
+                            const compRound = projectCompPickRound(fa.marketApy);
                             return (
                               <div
                                 key={`solv-int-${fa.id}`}
                                 className="flex items-center justify-between gap-2 border border-[#bbf7d0] bg-white p-2"
                               >
-                                <div className="min-w-0">
-                                  <div className="truncate font-bold text-[#111827]">
-                                    {fa.name}
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <PlayerAvatar
+                                    name={fa.name}
+                                    headshotUrl={
+                                      fa.headshotUrl ??
+                                      playerHeadshotByName.get(
+                                        fa.name.toLowerCase()
+                                      )
+                                    }
+                                    teamId={baseTeam.id}
+                                    teamLogoUrl={baseTeam.logoUrl}
+                                    size="sm"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="truncate font-bold text-[#111827]">
+                                      {fa.name}
+                                    </div>
+                                    <div className="font-mono-ledger text-[10px] text-[#475569]">
+                                      Age {fa.ageIn2026} · Mkt {fa.marketYears}yr / $
+                                      {fa.marketApy.toFixed(1)}M
+                                      {compRound
+                                        ? ` · If Walks: Rd ${compRound} Comp`
+                                        : ''}
+                                    </div>
+                                    <span
+                                      title={valueBadge.reason}
+                                      className={`mt-1 inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${getFaValueBadgeClass(
+                                        valueBadge.tier
+                                      )}`}
+                                    >
+                                      {valueBadge.badgeLabel}
+                                    </span>
                                   </div>
-                                  <div className="font-mono-ledger text-[10px] text-[#475569]">
-                                    Age {fa.ageIn2026} · Mkt {fa.marketYears}yr / $
-                                    {fa.marketApy.toFixed(1)}M
-                                  </div>
-                                  <span
-                                    title={valueBadge.reason}
-                                    className={`mt-1 inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${getFaValueBadgeClass(
-                                      valueBadge.tier
-                                    )}`}
-                                  >
-                                    {valueBadge.badgeLabel}
-                                  </span>
                                 </div>
                                 {existingTx ? (
                                   <button
@@ -1646,7 +1690,7 @@ export function PlayerFateJourney({
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {solverLeagueFas.map(({ fa }) => {
+                          {solverLeagueFas.map(({ fa, evalResult }) => {
                             const existingTx = activeSignFaTxByPlayerId.get(fa.id);
                             const valueBadge = evaluateFreeAgentValueBadge(fa);
                             return (
@@ -1654,25 +1698,42 @@ export function PlayerFateJourney({
                                 key={`solv-lg-${fa.id}`}
                                 className="flex items-center justify-between gap-2 border border-[#d6d0c4] bg-white p-2"
                               >
-                                <div className="min-w-0">
-                                  <div className="truncate font-bold text-[#111827]">
-                                    {fa.name}{' '}
-                                    <span className="font-mono-ledger text-[10px] font-normal text-[#475569]">
-                                      ({fa.previousTeam})
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <PlayerAvatar
+                                    name={fa.name}
+                                    headshotUrl={
+                                      fa.headshotUrl ??
+                                      playerHeadshotByName.get(
+                                        fa.name.toLowerCase()
+                                      )
+                                    }
+                                    teamId={fa.previousTeam.split(' ')[0]}
+                                    size="sm"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="truncate font-bold text-[#111827]">
+                                      {fa.name}{' '}
+                                      <span className="font-mono-ledger text-[10px] font-normal text-[#475569]">
+                                        ({fa.previousTeam})
+                                      </span>
+                                    </div>
+                                    <div className="font-mono-ledger text-[10px] text-[#475569]">
+                                      Age {fa.ageIn2026} · {fa.marketYears}yr / $
+                                      {fa.marketApy.toFixed(1)}M
+                                      {evalResult.countsTowardCompFormula &&
+                                      evalResult.projectedCompPickRound
+                                        ? ` · Proj. Rd ${evalResult.projectedCompPickRound} Comp`
+                                        : ' · Comp-Safe'}
+                                    </div>
+                                    <span
+                                      title={valueBadge.reason}
+                                      className={`mt-1 inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${getFaValueBadgeClass(
+                                        valueBadge.tier
+                                      )}`}
+                                    >
+                                      {valueBadge.badgeLabel}
                                     </span>
                                   </div>
-                                  <div className="font-mono-ledger text-[10px] text-[#475569]">
-                                    Age {fa.ageIn2026} · {fa.marketYears}yr / $
-                                    {fa.marketApy.toFixed(1)}M
-                                  </div>
-                                  <span
-                                    title={valueBadge.reason}
-                                    className={`mt-1 inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${getFaValueBadgeClass(
-                                      valueBadge.tier
-                                    )}`}
-                                  >
-                                    {valueBadge.badgeLabel}
-                                  </span>
                                 </div>
                                 {existingTx ? (
                                   <button
@@ -2081,11 +2142,37 @@ export function PlayerFateJourney({
                               {battle.badgeLabel}
                             </span>
                           </div>
-                          <div className="font-mono-ledger text-[11px] text-[#334155]">
-                            <strong>#1 {battle.leaderName}</strong> ($
-                            {battle.leaderDeadCap2026.toFixed(1)}M dead) vs.{' '}
-                            <strong>#2 {battle.challengerName}</strong> ($
-                            {battle.challengerDeadCap2026.toFixed(1)}M dead)
+                          <div className="space-y-1.5 font-mono-ledger text-[11px] text-[#334155]">
+                            <div className="flex items-center gap-2">
+                              <PlayerAvatar
+                                name={battle.leaderName}
+                                headshotUrl={playerHeadshotByName.get(
+                                  battle.leaderName.toLowerCase()
+                                )}
+                                teamId={baseTeam.id}
+                                teamLogoUrl={baseTeam.logoUrl}
+                                size="sm"
+                              />
+                              <span>
+                                <strong>#1 {battle.leaderName}</strong> ($
+                                {battle.leaderDeadCap2026.toFixed(1)}M dead)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <PlayerAvatar
+                                name={battle.challengerName}
+                                headshotUrl={playerHeadshotByName.get(
+                                  battle.challengerName.toLowerCase()
+                                )}
+                                teamId={baseTeam.id}
+                                teamLogoUrl={baseTeam.logoUrl}
+                                size="sm"
+                              />
+                              <span>
+                                <strong>#2 {battle.challengerName}</strong> ($
+                                {battle.challengerDeadCap2026.toFixed(1)}M dead)
+                              </span>
+                            </div>
                           </div>
                           <p className="text-[11px] leading-snug text-[#475569]">
                             {battle.takeaway}
@@ -2367,9 +2454,17 @@ export function PlayerFateJourney({
                             onClick={() =>
                               openPlayerDossier(item.player, item.teamId)
                             }
-                            className="font-bold text-[#111827] hover:underline text-left cursor-pointer"
+                            className="flex items-center gap-2 font-bold text-[#111827] hover:underline text-left cursor-pointer min-w-0"
                           >
-                            {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                            <PlayerAvatar
+                              name={item.player.name}
+                              headshotUrl={item.player.headshotUrl}
+                              teamId={item.teamId}
+                              size="sm"
+                            />
+                            <span className="truncate">
+                              {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                            </span>
                           </button>
                           <button
                             type="button"
@@ -2415,9 +2510,17 @@ export function PlayerFateJourney({
                             onClick={() =>
                               openPlayerDossier(item.player, item.teamId)
                             }
-                            className="font-bold text-[#111827] hover:underline text-left cursor-pointer"
+                            className="flex items-center gap-2 font-bold text-[#111827] hover:underline text-left cursor-pointer min-w-0"
                           >
-                            {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                            <PlayerAvatar
+                              name={item.player.name}
+                              headshotUrl={item.player.headshotUrl}
+                              teamId={item.teamId}
+                              size="sm"
+                            />
+                            <span className="truncate">
+                              {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                            </span>
                           </button>
                           <button
                             type="button"
@@ -2464,9 +2567,17 @@ export function PlayerFateJourney({
                             onClick={() =>
                               openPlayerDossier(item.player, item.teamId)
                             }
-                            className="font-bold text-[#111827] hover:underline text-left cursor-pointer"
+                            className="flex items-center gap-2 font-bold text-[#111827] hover:underline text-left cursor-pointer min-w-0"
                           >
-                            {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                            <PlayerAvatar
+                              name={item.player.name}
+                              headshotUrl={item.player.headshotUrl}
+                              teamId={item.teamId}
+                              size="sm"
+                            />
+                            <span className="truncate">
+                              {item.player.name} ({item.teamAbbr} · {item.evaluation.depthChartSlot})
+                            </span>
                           </button>
                           <span
                             className={`border px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${getFantasySignalBadgeClass(
@@ -2547,10 +2658,26 @@ export function PlayerFateJourney({
                         }
                       >
                         <th scope="row" className="py-3 pr-4 font-semibold text-[#111827]">
-                          <span>{entry.playerName}</span>
-                          <span className="ml-2 font-mono-ledger text-[10px] font-medium text-[#475569]">
-                            {entry.position}
-                          </span>
+                          <div className="flex items-center gap-2.5">
+                            <PlayerAvatar
+                              name={entry.playerName.replace(/\s*\(Dead Cap\)\s*/i, '')}
+                              headshotUrl={playerHeadshotByName.get(
+                                entry.playerName
+                                  .replace(/\s*\(Dead Cap\)\s*/i, '')
+                                  .trim()
+                                  .toLowerCase()
+                              )}
+                              teamId={baseTeam.id}
+                              teamLogoUrl={baseTeam.logoUrl}
+                              size="sm"
+                            />
+                            <div>
+                              <span>{entry.playerName}</span>
+                              <span className="ml-2 font-mono-ledger text-[10px] font-medium text-[#475569]">
+                                {entry.position}
+                              </span>
+                            </div>
+                          </div>
                         </th>
                         <td className="py-3 px-3 text-[#475569]">
                           {entry.reason}
@@ -2868,6 +2995,8 @@ export function PlayerFateJourney({
                           <PlayerAvatar
                             name={player.name}
                             headshotUrl={player.headshotUrl}
+                            teamId={baseTeam.id}
+                            teamLogoUrl={baseTeam.logoUrl}
                             size="sm"
                           />
                           <div className="min-w-0 flex-1">
@@ -3018,6 +3147,15 @@ export function PlayerFateJourney({
                                   >
                                     {extensionLikelihoodPct}% Ext. Likelihood
                                   </span>
+                                  {row.lastActiveContractYear === 2026 &&
+                                    forecast.projectedCompPickRound && (
+                                      <span
+                                        title={`If ${player.name} walks in 2027 UFA (~$${forecast.projectedMarketApy.toFixed(1)}M/yr), projects a 2027 Round ${forecast.projectedCompPickRound} Compensatory Pick`}
+                                        className="inline-block border border-[#d97706]/60 bg-[#fffbeb] px-2 py-0.5 font-mono-ledger text-[11px] font-bold text-[#92400e]"
+                                      >
+                                        If Walks: Proj. Rd {forecast.projectedCompPickRound} Comp
+                                      </span>
+                                    )}
                                   {isCurrentState ? (
                                     <span className="font-mono-ledger text-[11px] font-medium text-[#475569]">
                                       ~${forecast.projectedMarketApy.toFixed(1)}
@@ -3322,6 +3460,8 @@ export function PlayerFateJourney({
                       <PlayerAvatar
                         name={player.name}
                         headshotUrl={player.headshotUrl}
+                        teamId={baseTeam.id}
+                        teamLogoUrl={baseTeam.logoUrl}
                         size="sm"
                       />
                       <div className="min-w-0">
@@ -3351,7 +3491,7 @@ export function PlayerFateJourney({
                       </div>
                     </button>
 
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex flex-col items-end gap-1">
                       {isNewlySignedFa ? (
                         <span className="inline-block border border-[#15803d] bg-[#15803d] px-2 py-0.5 font-mono-ledger text-[10px] font-bold text-white">
                           ★ NEW FA
@@ -3361,11 +3501,19 @@ export function PlayerFateJourney({
                           ✓ {activePlayerTx.type}
                         </span>
                       ) : (
-                        <span
-                          className={`inline-block border px-2 py-0.5 font-mono-ledger text-[10px] font-bold ${extBadgeColor}`}
-                        >
-                          {extensionLikelihoodPct}% Ext.
-                        </span>
+                        <>
+                          <span
+                            className={`inline-block border px-2 py-0.5 font-mono-ledger text-[10px] font-bold ${extBadgeColor}`}
+                          >
+                            {extensionLikelihoodPct}% Ext.
+                          </span>
+                          {row.lastActiveContractYear === 2026 &&
+                            forecast.projectedCompPickRound && (
+                              <span className="inline-block border border-[#d97706]/60 bg-[#fffbeb] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#92400e]">
+                                Walk → Rd {forecast.projectedCompPickRound} Comp
+                              </span>
+                            )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -4639,7 +4787,11 @@ export function PlayerFateJourney({
                       <div className="flex items-start gap-2.5">
                         <PlayerAvatar
                           name={fa.name}
-                          headshotUrl={fa.headshotUrl}
+                          headshotUrl={
+                            fa.headshotUrl ??
+                            playerHeadshotByName.get(fa.name.toLowerCase())
+                          }
+                          teamId={fa.previousTeam.split(' ')[0]}
                           size="sm"
                         />
                         <div className="min-w-0">
@@ -4677,8 +4829,10 @@ export function PlayerFateJourney({
                                   : 'text-[#15803d] font-semibold'
                               }
                             >
-                              {evalResult.countsTowardCompFormula
-                                ? 'UFA (Counts vs Comp Pick)'
+                              {faDockSourceTab === 'INTERNAL'
+                                ? `If Walks: Proj. Rd ${projectCompPickRound(fa.marketApy) ?? 6} Comp · Re-Sign is Safe`
+                                : evalResult.countsTowardCompFormula
+                                ? `UFA · Proj. Rd ${evalResult.projectedCompPickRound ?? 5} Comp Pick (Counts vs Formula)`
                                 : '★ Street FA (Comp-Pick Safe!)'}
                             </span>
                           </div>
@@ -4818,7 +4972,11 @@ export function PlayerFateJourney({
                   <div className="flex items-start gap-2.5 min-w-0">
                     <PlayerAvatar
                       name={fa.name}
-                      headshotUrl={fa.headshotUrl}
+                      headshotUrl={
+                        fa.headshotUrl ??
+                        playerHeadshotByName.get(fa.name.toLowerCase())
+                      }
+                      teamId={fa.previousTeam.split(' ')[0]}
                       size="sm"
                     />
                     <div className="min-w-0">
@@ -4853,8 +5011,10 @@ export function PlayerFateJourney({
                               : 'text-[#15803d] font-semibold'
                           }
                         >
-                          {evalResult.countsTowardCompFormula
-                            ? 'UFA (Costs Comp Pick)'
+                          {faDockSourceTab === 'INTERNAL'
+                            ? `Walk → Proj. Rd ${projectCompPickRound(fa.marketApy) ?? 6} Comp (Re-Sign Safe)`
+                            : evalResult.countsTowardCompFormula
+                            ? `UFA · Proj. Rd ${evalResult.projectedCompPickRound ?? 5} Comp (Costs Formula)`
                             : '★ Street FA (Comp-Pick Safe!)'}
                         </span>
                       </div>

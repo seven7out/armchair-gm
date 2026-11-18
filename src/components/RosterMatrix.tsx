@@ -206,6 +206,8 @@ export function RosterMatrix() {
             <PlayerAvatar
               name={player.name}
               headshotUrl={player.headshotUrl}
+              teamId={baseTeam.id}
+              teamLogoUrl={baseTeam.logoUrl}
               size="sm"
             />
             <div>

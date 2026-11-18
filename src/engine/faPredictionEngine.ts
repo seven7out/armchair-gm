@@ -34,11 +34,27 @@ import {
  *    who ALSO carry the massive bonus of NOT counting against the Compensatory Pick formula!
  */
 
+export type CompPickRound = 3 | 4 | 5 | 6 | 7;
+
+/**
+ * Deterministic NFL CBA Compensatory Pick Round projection based on projected free-agent APY ($M/yr).
+ * Matches Over The Cap's historical APY percentile thresholds for Rounds 3–7.
+ */
+export function projectCompPickRound(projectedApy: number): CompPickRound | null {
+  if (projectedApy >= 16.5) return 3;
+  if (projectedApy >= 11.5) return 4;
+  if (projectedApy >= 7.5) return 5;
+  if (projectedApy >= 4.5) return 6;
+  if (projectedApy >= 2.8) return 7;
+  return null;
+}
+
 export interface MarketAvailabilityPrediction {
   classification: PredictedMarketClassification;
   classificationBadge: string;
   availabilityProbability: number;      // 0 to 100 (%)
   countsTowardCompFormula: boolean;     // True for standard UFA; False for Street FA (Cap Casualty)
+  projectedCompPickRound: CompPickRound | null;
   compPickImpactLabel: string;
   primaryDrivers: string[];
 }
@@ -147,6 +163,7 @@ export function predictMarketAvailability(
         classificationBadge: 'Trade / Cap Casualty Target',
         availabilityProbability: probability,
         countsTowardCompFormula: false,
+        projectedCompPickRound: null,
         compPickImpactLabel: 'Comp-Pick Safe (Cut or Trade)',
         primaryDrivers: drivers.slice(0, 3),
       };
@@ -158,6 +175,7 @@ export function predictMarketAvailability(
         classificationBadge: 'Projected Cap Casualty (Street FA)',
         availabilityProbability: probability,
         countsTowardCompFormula: false,
+        projectedCompPickRound: null,
         compPickImpactLabel: 'Comp-Pick Safe (Street FA)',
         primaryDrivers: drivers.slice(0, 3),
       };
@@ -168,6 +186,7 @@ export function predictMarketAvailability(
       classificationBadge: 'Likely Retained / Restructured',
       availabilityProbability: probability,
       countsTowardCompFormula: false,
+      projectedCompPickRound: null,
       compPickImpactLabel: 'Under Contract',
       primaryDrivers: drivers.slice(0, 3),
     };
@@ -222,6 +241,7 @@ export function predictMarketAvailability(
   }
 
   const probability = Math.max(8, Math.min(94, Math.round(walkScore)));
+  const projectedCompPickRound = projectCompPickRound(input.marketApy);
 
   if (probability >= 55) {
     return {
@@ -229,7 +249,10 @@ export function predictMarketAvailability(
       classificationBadge: 'Likely Open-Market UFA',
       availabilityProbability: probability,
       countsTowardCompFormula: true,
-      compPickImpactLabel: 'CFA Qualifying (Counts Against Comp Pick)',
+      projectedCompPickRound,
+      compPickImpactLabel: projectedCompPickRound
+        ? `CFA Qualifying · Proj. Rd ${projectedCompPickRound} Comp Pick`
+        : 'CFA Qualifying (Counts Against Comp Pick)',
       primaryDrivers: drivers.slice(0, 3),
     };
   }
@@ -239,7 +262,10 @@ export function predictMarketAvailability(
     classificationBadge: 'High Tag / Re-Sign Risk',
     availabilityProbability: probability,
     countsTowardCompFormula: true,
-    compPickImpactLabel: 'Unlikely to Reach Market Unprotected',
+    projectedCompPickRound,
+    compPickImpactLabel: projectedCompPickRound
+      ? `Unlikely UFA (Proj. Rd ${projectedCompPickRound} if Walks)`
+      : 'Unlikely to Reach Market Unprotected',
     primaryDrivers: drivers.slice(0, 3),
   };
 }
@@ -353,6 +379,8 @@ export interface PlayerFateForecast {
   bestCutSavings2026: number;
   bestCutSavings2027: number;
   projectedMarketApy: number;
+  projectedCompPickRound: CompPickRound | null;
+  projectedCompPickLabel: string | null;
   rationale: string;
 }
 
@@ -365,7 +393,6 @@ export function evaluateRosterPlayerFate(
   const cy2026 = player.contractYears[2026];
   const cy2027 = player.contractYears[2027];
   const hit2026 = getContractYearCapHit(cy2026);
-  const hit2027 = getContractYearCapHit(cy2027);
 
   const restructure2026 = simulateRestructure(player, 2026, 1.0, 1);
   const preCut2026 = simulateCutOrTrade(player, 2026, 'PRE_JUNE_1_CUT');
@@ -388,6 +415,10 @@ export function evaluateRosterPlayerFate(
   const projectedMarketApy = roundCap(
     Math.max(4.5, Math.max(hit2026 * 0.9, (player.overallRating - 68) * 1.15))
   );
+  const projectedCompPickRound = projectCompPickRound(projectedMarketApy);
+  const projectedCompPickLabel = projectedCompPickRound
+    ? `Proj. Rd ${projectedCompPickRound} Comp`
+    : null;
 
   // 1. Check for high Cap Casualty / Release Risk in 2026
   const yearsFromCliff = player.ageIn2026 - curve.cliffAge;
@@ -408,6 +439,8 @@ export function evaluateRosterPlayerFate(
       bestCutSavings2026,
       bestCutSavings2027,
       projectedMarketApy,
+      projectedCompPickRound: null,
+      projectedCompPickLabel: null,
       rationale: `Carries a $${hit2026.toFixed(1)}M cap hit at Age ${player.ageIn2026} (cliff @${curve.cliffAge}); releasing unlocks +$${bestCutSavings2026.toFixed(1)}M in 2026 cap space.`,
     };
   }
@@ -417,15 +450,21 @@ export function evaluateRosterPlayerFate(
     if (yearsFromCliff >= 0 || longevity.postContractViableYears === 0) {
       return {
         fate: 'WALK_CANDIDATE',
-        badgeLabel: 'UFA Walk Risk (72% Let Go)',
-        shortActionLabel: 'Expiring @ Age Cliff',
+        badgeLabel: projectedCompPickRound
+          ? `UFA Walk · Proj. Rd ${projectedCompPickRound} Comp`
+          : 'UFA Walk Risk (72% Let Go)',
+        shortActionLabel: projectedCompPickRound
+          ? `Walk → Proj. Rd ${projectedCompPickRound} Comp`
+          : 'Expiring @ Age Cliff',
         recommendedActionTab: 'extend',
         stayProbability: 28,
         maxRestructureSavings2026: restructure2026.currentYearCapSavings,
         bestCutSavings2026,
         bestCutSavings2027,
         projectedMarketApy,
-        rationale: `Contract expires after 2026 at Age ${player.ageIn2026 + 1} (${player.position} cliff @${curve.cliffAge}) — front office likely lets contract expire for Comp Pick value.`,
+        projectedCompPickRound,
+        projectedCompPickLabel,
+        rationale: `Contract expires after 2026 at Age ${player.ageIn2026 + 1} (${player.position} cliff @${curve.cliffAge}) — letting him walk in UFA (~$${projectedMarketApy.toFixed(1)}M/yr market) projects a 2027 Round ${projectedCompPickRound ?? 6} Compensatory Pick.`,
       };
     }
 
@@ -440,7 +479,9 @@ export function evaluateRosterPlayerFate(
         bestCutSavings2026,
         bestCutSavings2027,
         projectedMarketApy,
-        rationale: `Entering final contract year with +${longevity.postContractViableYears} prime starter seasons before Age-${curve.cliffAge} cliff; prime candidate for a multi-year extension (~$${projectedMarketApy.toFixed(1)}M/yr).`,
+        projectedCompPickRound,
+        projectedCompPickLabel,
+        rationale: `Entering final contract year with +${longevity.postContractViableYears} prime starter seasons before Age-${curve.cliffAge} cliff; prime extension candidate (~$${projectedMarketApy.toFixed(1)}M/yr)${projectedCompPickRound ? ` or Proj. Rd ${projectedCompPickRound} Comp Pick if allowed to walk` : ''}.`,
       };
     }
 
@@ -454,7 +495,9 @@ export function evaluateRosterPlayerFate(
       bestCutSavings2026,
       bestCutSavings2027,
       projectedMarketApy,
-      rationale: `Unsigned for 2027; candidate for a short-term bridge extension or open-market test depending on draft replacements.`,
+      projectedCompPickRound,
+      projectedCompPickLabel,
+      rationale: `Unsigned for 2027 (~$${projectedMarketApy.toFixed(1)}M/yr market)${projectedCompPickRound ? ` — nets a projected 2027 Round ${projectedCompPickRound} Comp Pick if signed elsewhere` : ''}.`,
     };
   }
 
@@ -470,6 +513,8 @@ export function evaluateRosterPlayerFate(
       bestCutSavings2026,
       bestCutSavings2027,
       projectedMarketApy,
+      projectedCompPickRound,
+      projectedCompPickLabel,
       rationale: `Core pillar with $${(cy2026?.baseSalary ?? 0).toFixed(1)}M base salary in 2026; converting base to bonus immediately clears +$${restructure2026.currentYearCapSavings.toFixed(1)}M in 2026 cap room.`,
     };
   }
@@ -490,6 +535,8 @@ export function evaluateRosterPlayerFate(
       bestCutSavings2026,
       bestCutSavings2027,
       projectedMarketApy,
+      projectedCompPickRound,
+      projectedCompPickLabel,
       rationale: `Entering extension-eligible window with +${longevity.postContractViableYears} prime seasons ahead of Age-${curve.cliffAge} cliff; locking in now beats 2027 cap inflation.`,
     };
   }
@@ -511,6 +558,8 @@ export function evaluateRosterPlayerFate(
     bestCutSavings2026,
     bestCutSavings2027,
     projectedMarketApy,
+    projectedCompPickRound,
+    projectedCompPickLabel,
     rationale: player.isRookieContract
       ? `Cost-controlled rookie contract ($${hit2026.toFixed(2)}M hit in 2026) providing elite surplus value.`
       : `Protected multi-year deal ($${preCut2026.currentYearDeadCap.toFixed(1)}M dead cap if cut in 2026 vs $${hit2026.toFixed(1)}M cap hit).`,
@@ -864,6 +913,7 @@ export function evaluateFutureSeasonRosterOutlook(
     if (!cy) {
       const isPrimeResign =
         ageInTargetYear < curve.cliffAge && player.overallRating >= 77;
+      const compRound = projectCompPickRound(projectedMarketApy);
 
       offContractFreeAgents.push({
         player,
@@ -874,11 +924,17 @@ export function evaluateFutureSeasonRosterOutlook(
           ? `${targetYear} Free Agent (Just Expired)`
           : `Expired in ${expiredEnteringYear ?? 2027}`,
         subStatusLabel: isPrimeResign
-          ? `Prime Re-Sign (~$${projectedMarketApy.toFixed(1)}M/yr)`
+          ? `Prime Re-Sign (~$${projectedMarketApy.toFixed(1)}M/yr)${
+              isNewlyExpiredInTargetYear && compRound
+                ? ` · Proj. Rd ${compRound} Comp`
+                : ''
+            }`
+          : compRound
+          ? `Walk → Proj. Rd ${compRound} Comp`
           : `Likely Walk / Market FA`,
         rationale: isPrimeResign
-          ? `Off contract in ${targetYear} at Age ${ageInTargetYear} (${curve.cliffAge - ageInTargetYear} yrs before ${player.position} cliff). Projecting ~$${projectedMarketApy.toFixed(1)}M/yr to re-sign.`
-          : `Contract expired after ${lastActiveYear}; at Age ${ageInTargetYear} in ${targetYear}, projected to test the open market or be replaced via the draft.`,
+          ? `Off contract in ${targetYear} at Age ${ageInTargetYear} (${curve.cliffAge - ageInTargetYear} yrs before ${player.position} cliff). Projecting ~$${projectedMarketApy.toFixed(1)}M/yr to re-sign${compRound ? ` (or Proj. Rd ${compRound} Comp Pick if lost in UFA)` : ''}.`
+          : `Contract expired after ${lastActiveYear}; at Age ${ageInTargetYear} in ${targetYear}, projected to test the open market${compRound ? ` (Proj. Rd ${compRound} Comp Pick if signed elsewhere)` : ' or be replaced via the draft'}.`,
         capHitInTargetYear: 0,
         baseSalaryInTargetYear: 0,
         proratedBonusInTargetYear: 0,
@@ -1308,6 +1364,11 @@ export function buildPlayerContractTimelineRow(
     }
 
     // 4. Off-Contract / Post-Cliff / Low-Likelihood Walk Year
+    const isFirstUfaYear = yr === lastActiveContractYear + 1;
+    const compRoundLabel =
+      isFirstUfaYear && forecast.projectedCompPickRound
+        ? `Walk → Proj. Rd ${forecast.projectedCompPickRound} Comp`
+        : null;
     return {
       year: yr,
       age,
@@ -1322,7 +1383,8 @@ export function buildPlayerContractTimelineRow(
       primaryLabel: isAtOrPastCliff
         ? `Age ${age} (Cliff)`
         : `UFA (${extensionLikelihoodPct}% Re-Sign)`,
-      secondaryLabel: isAtOrPastCliff ? 'Decline / Walk' : 'Open Market',
+      secondaryLabel:
+        compRoundLabel ?? (isAtOrPastCliff ? 'Decline / Walk' : 'Open Market'),
       isAtOrPastCliff,
     };
   });

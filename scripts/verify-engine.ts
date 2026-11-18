@@ -5,11 +5,13 @@ import {
   evaluateFantasyPlayerSignal,
   evaluateFreeAgentValueBadge,
   evaluatePlayerLongevity,
+  evaluateRosterPlayerFate,
   evaluateTeamCampBattles,
   evaluateTeamFantasyEnvironment,
   generateRookieContract,
   getContractYearCapHit,
   getDraftPickTradeValue,
+  projectCompPickRound,
   roundCap,
   SAMPLE_DYNASTY_ROSTER_NAMES,
   scanLeagueFantasyLandingSpots,
@@ -263,6 +265,47 @@ assert(
 
 console.log(
   `\n7. Camp Battle & FA Value Badge Checks:\n   Detroit Camp Rooms: ${detCampBattles.map((b) => `${b.position}=${b.badgeLabel} (${b.leaderName} $${b.leaderDeadCap2026}M dead)`).join(' | ')}\n   FA Value Badge Check: ${primeYoungFa!.name} -> ${evaluateFreeAgentValueBadge(primeYoungFa!).badgeLabel} | Aging RB Test -> ${evaluateFreeAgentValueBadge(agingExpensiveFa).badgeLabel}`
+);
+
+// 9. Universal Player Image/Logo Coverage & Projected Comp Pick Round Checks
+let totalCheckedPlayers = 0;
+let missingHeadshots = 0;
+for (const tid of allTeamIds) {
+  for (const p of SEED_TEAMS[tid].roster) {
+    totalCheckedPlayers++;
+    if (!p.headshotUrl) missingHeadshots++;
+  }
+}
+assert(
+  missingHeadshots === 0,
+  `Expected 100% headshotUrl coverage across all 32 teams, found ${missingHeadshots}/${totalCheckedPlayers} missing`
+);
+
+assert(projectCompPickRound(30.5) === 3, 'Expected $30.5M APY -> Rd 3 Comp Pick');
+assert(projectCompPickRound(15.2) === 4, 'Expected $15.2M APY -> Rd 4 Comp Pick');
+assert(projectCompPickRound(9.0) === 5, 'Expected $9.0M APY -> Rd 5 Comp Pick');
+assert(projectCompPickRound(6.0) === 6, 'Expected $6.0M APY -> Rd 6 Comp Pick');
+assert(projectCompPickRound(3.2) === 7, 'Expected $3.2M APY -> Rd 7 Comp Pick');
+assert(projectCompPickRound(1.5) === null, 'Expected $1.5M APY -> null (below CFA threshold)');
+
+const expiringStarter = detBase.roster.find((p) => {
+  const cy27 = p.contractYears[2027];
+  return !cy27 || cy27.isVoidYear;
+});
+assert(Boolean(expiringStarter), 'Detroit Lions must have an expiring 2026 contract');
+const expiringFate = evaluateRosterPlayerFate(
+  expiringStarter!,
+  baseState.years[2026].effectiveCapSpace
+);
+assert(
+  expiringFate.projectedCompPickRound !== null &&
+    expiringFate.projectedCompPickRound >= 3 &&
+    expiringFate.projectedCompPickRound <= 7,
+  `Expected expiring player ${expiringStarter!.name} to carry a projected Comp Pick round (3-7), got ${expiringFate.projectedCompPickRound}`
+);
+
+console.log(
+  `\n8. Avatar Coverage & Comp Pick Round Checks:\n   Headshot Coverage: ${totalCheckedPlayers - missingHeadshots}/${totalCheckedPlayers} (100%)\n   Comp Pick Thresholds: $30.5M->Rd ${projectCompPickRound(30.5)}, $15.2M->Rd ${projectCompPickRound(15.2)}, $9.0M->Rd ${projectCompPickRound(9.0)}, $6.0M->Rd ${projectCompPickRound(6.0)}, $3.2M->Rd ${projectCompPickRound(3.2)}\n   Sample Expiring (${expiringStarter!.name}): ${expiringFate.projectedCompPickLabel} (~$${expiringFate.projectedMarketApy}M/yr)`
 );
 
 console.log('\n✅ ALL DETERMINISTIC CAP ENGINE CHECKS PASSED!');

@@ -157,6 +157,8 @@ export function GlobalPlayerSearch({
                       <PlayerAvatar
                         name={entry.player.name}
                         headshotUrl={entry.player.headshotUrl}
+                        teamId={entry.teamId}
+                        teamLogoUrl={entry.teamLogoUrl}
                         size="sm"
                       />
                       <div className="min-w-0">
@@ -295,6 +297,8 @@ export function PlayerDossierModal() {
             <PlayerAvatar
               name={player.name}
               headshotUrl={player.headshotUrl}
+              teamId={teamId}
+              teamLogoUrl={teamData?.logoUrl}
               size="lg"
             />
             <div>
@@ -490,6 +494,12 @@ export function PlayerDossierModal() {
                 {xray.headlineApy.toFixed(2)}M/yr)
               </div>
               <p className="mt-1 text-xs text-[#57534e]">{fate.rationale}</p>
+              {fate.projectedCompPickRound && (
+                <div className="mt-2 inline-block border border-[#d97706]/50 bg-[#fffbeb] px-2 py-0.5 font-mono-ledger text-[11px] font-bold text-[#92400e]">
+                  Projected Comp Pick if Lost in UFA: Round{' '}
+                  {fate.projectedCompPickRound}
+                </div>
+              )}
             </div>
 
             <div className="border border-[#dfd9cc] bg-[#f6f3ec] p-3.5">

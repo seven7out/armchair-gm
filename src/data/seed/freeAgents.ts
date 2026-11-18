@@ -619,6 +619,18 @@ export function getTeamInternalFreeAgents(teamId: string): FreeAgentTarget[] {
   if (!team) return [];
 
   const activeNames = new Set(team.roster.map((p) => p.name.toLowerCase()));
+  const headshotByName = new Map<string, string>();
+  for (const t of Object.values(SEED_TEAMS)) {
+    for (const p of t.roster) {
+      if (p.headshotUrl) headshotByName.set(p.name.toLowerCase(), p.headshotUrl);
+    }
+  }
+  for (const fa of [...SEED_FREE_AGENTS, ...DET_PENDING_INTERNAL_FAS]) {
+    if (fa.headshotUrl) {
+      headshotByName.set(fa.name.toLowerCase(), fa.headshotUrl);
+    }
+  }
+
   const results: FreeAgentTarget[] = [];
   const seen = new Set<string>();
 
@@ -641,6 +653,10 @@ export function getTeamInternalFreeAgents(teamId: string): FreeAgentTarget[] {
       results.push({
         ...fa,
         id: `fa-internal-${team.id.toLowerCase()}-${fa.id}`,
+        headshotUrl:
+          fa.headshotUrl ??
+          headshotByName.get(fa.name.toLowerCase()) ??
+          team.logoUrl,
         predictionFeatures: {
           ...fa.predictionFeatures,
           originType: 'UNDER_CONTRACT_VETERAN',
@@ -666,6 +682,7 @@ export function getTeamInternalFreeAgents(teamId: string): FreeAgentTarget[] {
       overallRating: loss.estApy >= 14 ? 84 : loss.estApy >= 8 ? 79 : 75,
       accruedSeasons: 6,
       previousTeam: team.abbreviation,
+      headshotUrl: headshotByName.get(lower) ?? team.logoUrl,
       marketApy: roundCap(Math.max(2.0, loss.estApy)),
       marketYears: loss.estApy >= 10 ? 3 : 2,
       marketGuaranteedPct: 0.52,

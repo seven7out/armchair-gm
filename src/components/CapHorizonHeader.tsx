@@ -782,6 +782,18 @@ export function CapHorizonHeader() {
                     <span className="text-[11px] font-semibold text-[#475569]">
                       <JargonTip term="COMP_PICK">
                         Comp: {compSummary.netProjectedCompPicks.length}
+                        {compSummary.netProjectedCompPicks.length > 0 && (
+                          <span className="text-[#92400e] ml-1">
+                            (
+                            {compSummary.netProjectedCompPicks
+                              .map((label) => {
+                                const m = label.match(/Rd\s*(\d+)/);
+                                return m ? `Rd ${m[1]}` : label;
+                              })
+                              .join(', ')}
+                            )
+                          </span>
+                        )}
                       </JargonTip>{' '}
                       ·{' '}
                       <JargonTip term="POST_JUNE_1_DESIGNATION">

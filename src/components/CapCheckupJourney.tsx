@@ -310,6 +310,7 @@ export function CapCheckupJourney() {
                   <PlayerAvatar
                     name={w.player.name}
                     headshotUrl={w.player.headshotUrl}
+                    teamId={derivedState.teamId}
                     size="sm"
                   />
                   <div className="min-w-0">
@@ -400,6 +401,7 @@ export function CapCheckupJourney() {
                           <PlayerAvatar
                             name={player.name}
                             headshotUrl={player.headshotUrl}
+                            teamId={derivedState.teamId}
                             size="sm"
                           />
                           <div className="min-w-0">
@@ -503,6 +505,7 @@ export function CapCheckupJourney() {
                           <PlayerAvatar
                             name={player.name}
                             headshotUrl={player.headshotUrl}
+                            teamId={derivedState.teamId}
                             size="sm"
                           />
                           <div className="min-w-0">
