@@ -88,17 +88,17 @@ export function CapHorizonHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md">
-        {/* Masthead Row — Clean Stripe / Fey Fintech Top Bar */}
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5 sm:px-6 sm:py-3 border-b border-slate-200/80">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3.5">
+      <header className="sticky top-0 z-30 border-b border-[#dfd9cc] bg-[#f6f3ec]/95 backdrop-blur-sm">
+        {/* Masthead Row — Compact on iPhone/Pixel, Full on Desktop */}
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5 sm:px-6 sm:py-4 border-b border-[#dfd9cc]">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             {!isMainWorkspace && (
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={goBack}
                   title="Go back to previous view"
-                  className="flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 border border-[#1c1917] bg-[#1c1917] px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   <span>Back</span>
@@ -107,7 +107,7 @@ export function CapHorizonHeader() {
                   type="button"
                   onClick={goHome}
                   title="Return to Roster & Cap Home"
-                  className="hidden sm:flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="hidden sm:flex items-center gap-1.5 border border-[#1c1917] bg-[#fcfaf6] px-2.5 py-1.5 text-xs font-semibold text-[#1c1917] hover:bg-[#ede8dd] transition-colors cursor-pointer"
                 >
                   <Home className="h-3.5 w-3.5" />
                   <span>Roster Home</span>
@@ -119,32 +119,32 @@ export function CapHorizonHeader() {
               type="button"
               onClick={goHome}
               title="Return to Armchair GM Home Hub"
-              className="flex items-center gap-2 sm:gap-2.5 text-left hover:opacity-80 transition-opacity cursor-pointer"
+              className="flex items-center gap-2 sm:gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
             >
               {baseTeam.logoUrl && (
                 <img
                   src={baseTeam.logoUrl}
                   alt={`${baseTeam.city} ${baseTeam.name} logo`}
-                  className="h-6 w-6 sm:h-7 sm:w-7 object-contain"
+                  className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
                 />
               )}
-              <div className="flex items-baseline gap-2.5">
-                <span className="font-editorial text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+              <div>
+                <span className="font-editorial text-lg sm:text-2xl font-normal tracking-tight text-[#1c1917]">
                   Armchair GM
                 </span>
-                <span className="hidden xl:inline text-[11px] font-medium text-slate-400">
-                  {baseTeam.city} {baseTeam.name}
+                <span className="ml-3 hidden xl:inline text-xs uppercase tracking-[0.14em] text-[#8a8379]">
+                  {baseTeam.city} {baseTeam.name} · OTC Live Ledger
                 </span>
               </div>
             </button>
 
             {/* All-32 NFL Franchise Directory Toggle */}
-            <div className="flex items-center text-xs">
+            <div className="flex items-center gap-2 text-xs">
               <button
                 type="button"
                 onClick={() => setIsDirectoryOpen((prev) => !prev)}
                 aria-expanded={isDirectoryOpen}
-                className="flex items-center gap-1.5 sm:gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 sm:gap-2 border border-[#1c1917] bg-[#fcfaf6] px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#ede8dd] transition-colors cursor-pointer"
               >
                 {baseTeam.logoUrl && (
                   <img
@@ -153,15 +153,15 @@ export function CapHorizonHeader() {
                     className="h-4 w-4 object-contain"
                   />
                 )}
-                <span className="font-semibold">
+                <span className="font-semibold sm:font-medium">
                   <span className="hidden sm:inline">{baseTeam.city} </span>
-                  {baseTeam.name}
+                  {baseTeam.name} ({baseTeam.abbreviation})
                 </span>
-                <span className="hidden sm:inline text-[11px] font-mono-ledger text-slate-400">
-                  {baseTeam.abbreviation}
+                <span className="hidden sm:inline text-[10px] text-[#8a8379]">
+                  · 32 Clubs
                 </span>
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-slate-400 transition-transform ${
+                  className={`h-3.5 w-3.5 transition-transform ${
                     isDirectoryOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -169,12 +169,12 @@ export function CapHorizonHeader() {
             </div>
           </div>
 
-          {/* Center Navigation — Segmented Pill Control (Desktop md+) */}
+          {/* Center Navigation — Compact Quick Workspace Nav + Baseline Peek (Desktop md+) */}
           <nav
             aria-label="Quick Workspace Navigation"
-            className="hidden md:flex items-center gap-2"
+            className="hidden md:flex items-center gap-1.5"
           >
-            <div className="flex items-center rounded-lg bg-slate-100 p-0.5 text-xs">
+            <div className="flex items-center border border-[#111827] bg-white p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => {
@@ -185,10 +185,10 @@ export function CapHorizonHeader() {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }
                 }}
-                className={`rounded-md px-3 py-1.5 font-medium transition-all cursor-pointer ${
+                className={`px-3 py-1.5 font-semibold transition-colors cursor-pointer ${
                   isMainWorkspace && !compareOriginalBaseline
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-[#1e3a5f] text-white'
+                    : 'text-[#111827] hover:bg-[#f1f5f9]'
                 }`}
               >
                 Roster &amp; Cap
@@ -204,9 +204,9 @@ export function CapHorizonHeader() {
                       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }, 60);
                 }}
-                className="rounded-md px-3 py-1.5 font-medium text-emerald-700 hover:bg-white/70 transition-all cursor-pointer"
+                className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#15803d] hover:bg-[#f0fdf4] transition-colors cursor-pointer"
               >
-                Free Agents
+                + Free Agents
               </button>
               <button
                 type="button"
@@ -219,7 +219,7 @@ export function CapHorizonHeader() {
                       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }, 60);
                 }}
-                className="rounded-md px-3 py-1.5 font-medium text-slate-600 hover:bg-white/70 hover:text-slate-900 transition-all cursor-pointer"
+                className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#111827] hover:bg-[#f1f5f9] transition-colors cursor-pointer"
               >
                 Trades &amp; Draft
               </button>
@@ -229,25 +229,25 @@ export function CapHorizonHeader() {
               <button
                 type="button"
                 onClick={() => setCompareOriginalBaseline(!compareOriginalBaseline)}
-                className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                className={`border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                   compareOriginalBaseline
-                    ? 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-300'
-                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'border-[#b45309] bg-[#fef3c7] text-[#78350f]'
+                    : 'border-[#c7bfb0] bg-[#fcfaf6] text-[#334155] hover:border-[#111827]'
                 }`}
               >
                 {compareOriginalBaseline
-                  ? 'Viewing Baseline (Tap for Projected)'
-                  : 'Compare Baseline'}
+                  ? 'Viewing Original Baseline (Tap for Projected)'
+                  : 'Peek Original Baseline'}
               </button>
             )}
           </nav>
 
-          {/* Right Controls: Global Player Lookup, Cap vs Cash Toggle, Growth & Moves Notebook */}
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
+          {/* Right Controls: Global Player Lookup, Cap vs Cash Toggle, Growth & Scenario Notebook */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-xs">
             <div className="hidden lg:block">
               <GlobalPlayerSearch
-                placeholder="Search any NFL player..."
-                className="w-52 xl:w-60"
+                placeholder="Lookup any NFL player (age, yrs left, deal)..."
+                className="w-56 xl:w-64"
               />
             </div>
 
@@ -259,16 +259,16 @@ export function CapHorizonHeader() {
             <div
               role="group"
               aria-label="Cap Accounting Roster Rule"
-              className="hidden md:flex items-center rounded-lg bg-slate-100 p-0.5 text-[11px]"
+              className="hidden md:flex items-center border border-[#c7bfb0] text-[11px]"
             >
               <button
                 type="button"
                 onClick={() => setCapCalculationMode('TOP_51')}
                 title="Offseason rule: only top 51 cap hits + replacement pool count"
-                className={`rounded-md px-2 py-1 font-medium transition-all cursor-pointer ${
+                className={`px-2 py-1 cursor-pointer ${
                   capCalculationMode === 'TOP_51'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'bg-[#1e3a5f] text-white font-semibold'
+                    : 'text-[#57534e] hover:text-[#111827]'
                 }`}
               >
                 Top-51
@@ -277,10 +277,10 @@ export function CapHorizonHeader() {
                 type="button"
                 onClick={() => setCapCalculationMode('FULL_53')}
                 title="In-season 53-man rule: all active roster contracts count against the cap"
-                className={`rounded-md px-2 py-1 font-medium transition-all cursor-pointer ${
+                className={`px-2 py-1 cursor-pointer ${
                   capCalculationMode === 'FULL_53'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'bg-[#1e3a5f] text-white font-semibold'
+                    : 'text-[#57534e] hover:text-[#111827]'
                 }`}
               >
                 53-Man
@@ -288,14 +288,14 @@ export function CapHorizonHeader() {
             </div>
 
             {/* Cap vs Cash Accounting Toggle */}
-            <div className="hidden md:flex items-center rounded-lg bg-slate-100 p-0.5 text-[11px]">
+            <div className="hidden md:flex items-center border border-[#c7bfb0] text-[11px]">
               <button
                 type="button"
                 onClick={() => setLedgerMode('CAP')}
-                className={`rounded-md px-2 py-1 font-medium transition-all cursor-pointer ${
+                className={`px-2 py-1 cursor-pointer ${
                   ledgerMode === 'CAP'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'bg-[#1c1917] text-[#f6f3ec] font-medium'
+                    : 'text-[#57534e]'
                 }`}
               >
                 Cap Hit
@@ -303,22 +303,22 @@ export function CapHorizonHeader() {
               <button
                 type="button"
                 onClick={() => setLedgerMode('CASH')}
-                className={`rounded-md px-2 py-1 font-medium transition-all cursor-pointer ${
+                className={`px-2 py-1 cursor-pointer ${
                   ledgerMode === 'CASH'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'bg-[#1c1917] text-[#f6f3ec] font-medium'
+                    : 'text-[#57534e]'
                 }`}
               >
                 Owner Cash
               </button>
             </div>
 
-            <div className="hidden 2xl:flex items-center gap-1.5 text-slate-500">
+            <div className="hidden 2xl:flex items-center gap-1.5 text-[#57534e]">
               <select
                 aria-label="Annual League Cap Growth Rate"
                 value={capGrowthRate}
                 onChange={(e) => setCapGrowthRate(parseFloat(e.target.value))}
-                className="rounded-md bg-slate-100 px-2 py-1 font-mono-ledger text-xs font-medium text-slate-700 focus:outline-none cursor-pointer"
+                className="bg-transparent font-mono-ledger text-xs font-medium text-[#1c1917] underline decoration-[#c7bfb0] underline-offset-4 focus:outline-none cursor-pointer"
               >
                 <option value={0.05}>+5.0%/yr</option>
                 <option value={0.075}>+7.5%/yr</option>
@@ -334,27 +334,27 @@ export function CapHorizonHeader() {
                 }
                 openFreeAgencyModal({ position: 'ALL' });
               }}
-              className="hidden sm:inline-flex rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+              className="hidden sm:inline-flex border border-[#1c1917] px-3 py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
             >
-              + Sign FA
+              + Sign Free Agent
             </button>
 
             <button
               type="button"
               onClick={() => setScenarioDrawerOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 bg-[#1c1917] px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
             >
-              <span className="hidden sm:inline">Moves</span>
+              <span className="hidden sm:inline">Moves Notebook</span>
               <span className="sm:hidden">Moves</span>
-              <span className="rounded bg-white/15 px-1.5 py-0.5 font-mono-ledger text-[10px]">
-                {enabledCount}/{transactions.length}
+              <span className="font-mono-ledger text-[11px] opacity-80">
+                [{enabledCount}/{transactions.length}]
               </span>
               {enabledCount > 0 && Math.abs(netCapDelta2026) >= 0.05 && (
                 <span
-                  className={`rounded px-1.5 py-0.5 font-mono-ledger text-[10px] font-semibold ${
+                  className={`ml-0.5 px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${
                     netCapDelta2026 >= 0
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-rose-500/20 text-rose-300'
+                      ? 'bg-[#15803d] text-white'
+                      : 'bg-[#b91c1c] text-white'
                   }`}
                 >
                   {netCapDelta2026 >= 0 ? '+' : '−'}$
@@ -368,7 +368,7 @@ export function CapHorizonHeader() {
                 type="button"
                 onClick={resetScenarioStack}
                 title="Reset all simulated GM moves"
-                className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600 transition-colors cursor-pointer"
+                className="p-1 sm:p-1.5 text-[#57534e] hover:text-[#b84a27] transition-colors cursor-pointer"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
               </button>
@@ -378,16 +378,16 @@ export function CapHorizonHeader() {
 
         {/* Expandable All-32 NFL Club Directory (Grouped by Division) */}
         {isDirectoryOpen && (
-          <div className="max-h-[75dvh] overflow-y-auto border-b border-slate-200 bg-white shadow-lg">
+          <div className="max-h-[75dvh] overflow-y-auto border-b-2 border-[#1c1917] bg-[#fcfaf6] shadow-lg">
             <div className="mx-auto max-w-[1440px] px-4 py-4 sm:px-6 sm:py-5">
-              <div className="mb-3 flex items-baseline justify-between border-b border-slate-100 pb-2">
-                <span className="text-xs font-medium text-slate-500">
-                  All 32 NFL Franchises · Live 2026–2029 Cap Ledgers
+              <div className="mb-3 flex items-baseline justify-between border-b border-[#dfd9cc] pb-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#57534e]">
+                  All 32 NFL Franchises · Live Over The Cap 2026–2029 Books
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsDirectoryOpen(false)}
-                  className="text-xs font-medium text-slate-500 hover:text-slate-900 cursor-pointer"
+                  className="text-xs font-semibold text-[#1c1917] cursor-pointer"
                 >
                   Close ✕
                 </button>
@@ -396,10 +396,10 @@ export function CapHorizonHeader() {
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
                 {teamsByDivision.map((group) => (
                   <div key={group.division} className="space-y-1.5">
-                    <div className="border-b border-slate-100 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    <div className="border-b border-[#dfd9cc] pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a8379]">
                       {group.division}
                     </div>
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       {group.teams.map((team) => {
                         const isSelected = team.id === selectedTeamId;
                         return (
@@ -410,10 +410,10 @@ export function CapHorizonHeader() {
                               selectTeam(team.id);
                               setIsDirectoryOpen(false);
                             }}
-                            className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors cursor-pointer ${
+                            className={`flex w-full items-center gap-2 px-1.5 py-1 text-left text-xs transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-slate-900 font-semibold text-white'
-                                : 'text-slate-700 hover:bg-slate-100'
+                                ? 'bg-[#1c1917] font-semibold text-[#f6f3ec]'
+                                : 'text-[#1c1917] hover:bg-[#ede8dd]'
                             }`}
                           >
                             {team.logoUrl && (
@@ -427,12 +427,12 @@ export function CapHorizonHeader() {
                             <span
                               className={`ml-auto font-mono-ledger text-[10px] ${
                                 isSelected
-                                  ? 'text-slate-300'
+                                  ? 'text-[#f6f3ec]/90'
                                   : team.cap26 < 10
-                                  ? 'text-rose-600 font-semibold'
+                                  ? 'text-[#b84a27] font-semibold'
                                   : team.cap26 >= 35
-                                  ? 'text-emerald-600 font-medium'
-                                  : 'text-slate-400'
+                                  ? 'text-[#2d5a43] font-medium'
+                                  : 'text-[#8a8379]'
                               }`}
                             >
                               {team.cap26 < 0 ? '−$' : '$'}
@@ -450,15 +450,15 @@ export function CapHorizonHeader() {
         )}
 
         {/* MOBILE COMPACT 4-YEAR CAP PILL STRIP (Visible on Phone <768px so sticky header stays slim) */}
-        <div className="md:hidden px-3 py-2 bg-white border-b border-slate-200 space-y-2">
+        <div className="md:hidden px-3 py-2 bg-white border-b border-[#d6d0c4] space-y-2">
           {enabledCount > 0 && (
             <button
               type="button"
               onClick={() => setCompareOriginalBaseline(!compareOriginalBaseline)}
-              className={`w-full rounded-lg px-2.5 py-1 font-mono-ledger text-[11px] font-medium text-center ${
+              className={`w-full border px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-center ${
                 compareOriginalBaseline
-                  ? 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-300'
-                  : 'bg-slate-100 text-slate-700'
+                  ? 'border-[#b45309] bg-[#fef3c7] text-[#78350f]'
+                  : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155]'
               }`}
             >
               {compareOriginalBaseline
@@ -487,29 +487,21 @@ export function CapHorizonHeader() {
                   onClick={() =>
                     setReceiptYear((prev) => (prev === year ? null : year))
                   }
-                  className={`flex flex-col items-center rounded-lg py-1.5 px-1 text-center transition-colors ${
+                  className={`flex flex-col items-center border py-1.5 px-1 text-center transition-colors ${
                     isActiveReceipt
-                      ? 'bg-slate-900 text-white'
+                      ? 'border-[#1e3a5f] bg-[#eff6ff]'
                       : showMobDelta
-                      ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-200'
-                      : 'bg-slate-50 ring-1 ring-inset ring-slate-200 active:bg-slate-100'
+                      ? 'border-[#2563eb]/50 bg-[#eff6ff]/60'
+                      : 'border-[#d6d0c4] bg-[#f7f5f0] active:bg-[#ebe6dc]'
                   }`}
                 >
-                  <span
-                    className={`font-mono-ledger text-[11px] font-semibold ${
-                      isActiveReceipt ? 'text-slate-300' : 'text-slate-500'
-                    }`}
-                  >
+                  <span className="font-mono-ledger text-[11px] font-semibold text-[#334155]">
                     &apos;{String(year).slice(2)}{' '}
                     {isCurrentStateMode ? 'Now' : 'Proj'}
                   </span>
                   <span
                     className={`font-mono-ledger text-xs font-bold ${
-                      isActiveReceipt
-                        ? 'text-white'
-                        : isOverCap
-                        ? 'text-rose-600'
-                        : 'text-emerald-600'
+                      isOverCap ? 'text-[#b91c1c]' : 'text-[#15803d]'
                     }`}
                   >
                     {isOverCap ? '−$' : '+$'}
@@ -518,14 +510,10 @@ export function CapHorizonHeader() {
                   {showMobDelta && (
                     <span
                       className={`font-mono-ledger text-[9px] font-bold leading-none mt-0.5 ${
-                        isActiveReceipt
-                          ? 'text-emerald-300'
-                          : mobDelta >= 0
-                          ? 'text-emerald-600'
-                          : 'text-rose-600'
+                        mobDelta >= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
                       }`}
                     >
-                      {mobDelta >= 0 ? '+' : '−'}
+                      Δ{mobDelta >= 0 ? '+' : '−'}
                       {Math.abs(mobDelta).toFixed(1)}M
                     </span>
                   )}
@@ -665,7 +653,7 @@ export function CapHorizonHeader() {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80 py-2.5 sm:py-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 py-3">
           {LEAGUE_YEARS.map((year) => {
             const yData = displayCapState.years[year];
             const baseYearData = baselineState.years[year];
@@ -688,41 +676,61 @@ export function CapHorizonHeader() {
             return (
               <div
                 key={year}
-                className="px-2 sm:px-4 first:pl-0 last:pr-0 py-2 sm:py-0.5"
+                className="border border-[#d6d0c4] bg-white px-4 py-3 shadow-2xs"
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <div className="flex items-baseline gap-1.5 min-w-0">
-                    <span className="font-mono-ledger text-sm font-bold text-slate-900">
+                  <div className="flex items-baseline gap-2 min-w-0">
+                    <span className="font-editorial text-xl font-bold text-[#111827]">
                       {year}
                     </span>
-                    <span className="font-mono-ledger text-[11px] text-slate-400">
+                    <span className="font-mono-ledger text-xs font-medium text-[#475569]">
                       <JargonTip term="ADJUSTED_CAP">
-                        /${yData.adjustedCapCeiling.toFixed(0)}M
+                        Limit ${yData.adjustedCapCeiling.toFixed(1)}M
                       </JargonTip>
                     </span>
                   </div>
 
                   {ledgerMode === 'CAP' ? (
-                    <div className="flex items-baseline gap-1.5 shrink-0">
+                    <div className="text-right shrink-0">
                       <button
                         type="button"
                         onClick={() =>
                           setReceiptYear((prev) => (prev === year ? null : year))
                         }
-                        title="Click to see cap space breakdown"
-                        className={`font-mono-ledger text-base sm:text-lg font-bold tracking-tight hover:underline decoration-dotted underline-offset-4 cursor-pointer ${
-                          isOverCap ? 'text-rose-600' : 'text-emerald-600'
+                        title="Click to see exact Spendable Now math receipt & why sites disagree"
+                        className={`font-mono-ledger text-lg sm:text-xl font-bold underline decoration-dotted underline-offset-4 cursor-pointer ${
+                          isOverCap ? 'text-[#b91c1c]' : 'text-[#15803d]'
                         }`}
                       >
                         {isOverCap ? '−$' : '+$'}
-                        {Math.abs(yData.effectiveCapSpace).toFixed(1)}M
+                        {Math.abs(yData.effectiveCapSpace).toFixed(2)}M
                       </button>
-                      <span className="text-[10px] font-medium text-slate-400">
-                        {isReceiptOpen ? '▲' : '▼'}
-                      </span>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#475569]">
+                        {isReceiptOpen
+                          ? 'Hide Receipt ▲'
+                          : isCurrentStateMode
+                          ? 'Current Space ▼'
+                          : 'Projected Space ▼'}
+                      </div>
+                      {!isCurrentStateMode &&
+                        enabledCount > 0 &&
+                        Math.abs(deltaVsCurrent) >= 0.05 && (
+                          <div
+                            className={`mt-0.5 font-mono-ledger text-[11px] font-semibold ${
+                              deltaVsCurrent >= 0
+                                ? 'text-[#15803d]'
+                                : 'text-[#b91c1c]'
+                            }`}
+                          >
+                            Was {baseYearData.effectiveCapSpace >= 0 ? '+$' : '−$'}
+                            {Math.abs(baseYearData.effectiveCapSpace).toFixed(1)}M
+                            {' ('}Δ {deltaVsCurrent >= 0 ? '+' : '−'}$
+                            {Math.abs(deltaVsCurrent).toFixed(1)}M{')'}
+                          </div>
+                        )}
                     </div>
                   ) : (
-                    <span className="font-mono-ledger text-base font-bold text-slate-900">
+                    <span className="font-mono-ledger text-lg font-bold text-[#111827]">
                       <JargonTip term="CASH_SPEND">
                         Cash ${yData.totalCashSpend.toFixed(1)}M
                       </JargonTip>
@@ -730,42 +738,25 @@ export function CapHorizonHeader() {
                   )}
                 </div>
 
-                {!isCurrentStateMode &&
-                  enabledCount > 0 &&
-                  Math.abs(deltaVsCurrent) >= 0.05 && (
-                    <div
-                      className={`mt-0.5 text-right font-mono-ledger text-[10px] font-medium ${
-                        deltaVsCurrent >= 0
-                          ? 'text-emerald-600'
-                          : 'text-rose-600'
-                      }`}
-                    >
-                      Was {baseYearData.effectiveCapSpace >= 0 ? '+$' : '−$'}
-                      {Math.abs(baseYearData.effectiveCapSpace).toFixed(1)}M (
-                      {deltaVsCurrent >= 0 ? '+' : '−'}$
-                      {Math.abs(deltaVsCurrent).toFixed(1)}M)
-                    </div>
-                  )}
-
-                {/* Sleek rounded hairline progress bar */}
-                <div className="mt-1.5 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                {/* Single hairline progress rule */}
+                <div className="mt-2 h-2 w-full bg-[#e2e8f0] rounded-xs overflow-hidden flex">
                   <motion.div
                     className={`h-full ${
-                      isOverCap ? 'bg-rose-500' : 'bg-slate-800'
+                      isOverCap ? 'bg-[#b91c1c]' : 'bg-[#1e3a5f]'
                     }`}
                     initial={false}
                     animate={{ width: `${activePct}%` }}
                     transition={{ type: 'spring', stiffness: 260, damping: 30 }}
                   />
                   <motion.div
-                    className="h-full bg-amber-500"
+                    className="h-full bg-[#d97706]"
                     initial={false}
                     animate={{ width: `${deadPct}%` }}
                     transition={{ type: 'spring', stiffness: 260, damping: 30 }}
                   />
                 </div>
 
-                <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 font-mono-ledger text-[11px] text-slate-500">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-1 font-mono-ledger text-xs font-medium text-[#334155]">
                   <span>
                     <JargonTip term="TOP_51_RULE">
                       {activeCapLabel} ${activeCapVal.toFixed(1)}M
@@ -782,17 +773,17 @@ export function CapHorizonHeader() {
                         );
                       }}
                       title="View itemized Dead Money breakdown"
-                      className="underline decoration-dotted underline-offset-2 text-amber-700 hover:text-slate-900 cursor-pointer"
+                      className="underline decoration-dotted underline-offset-2 text-[#b45309] hover:text-[#111827] cursor-pointer"
                     >
                       Dead ${yData.deadMoneyTotal.toFixed(1)}M
                     </button>
                   </span>
                   {year === 2026 ? (
-                    <span className="text-[11px] font-medium text-slate-500">
+                    <span className="text-[11px] font-semibold text-[#475569]">
                       <JargonTip term="COMP_PICK">
                         Comp: {compSummary.netProjectedCompPicks.length}
                         {compSummary.netProjectedCompPicks.length > 0 && (
-                          <span className="text-amber-700 ml-1">
+                          <span className="text-[#92400e] ml-1">
                             (
                             {compSummary.netProjectedCompPicks
                               .map((label) => {
@@ -803,17 +794,30 @@ export function CapHorizonHeader() {
                             )
                           </span>
                         )}
+                      </JargonTip>{' '}
+                      ·{' '}
+                      <JargonTip term="POST_JUNE_1_DESIGNATION">
+                        Post-6/1:{' '}
+                        <strong
+                          className={
+                            compSummary.postJune1DesignationsUsed > 2
+                              ? 'text-[#b91c1c]'
+                              : ''
+                          }
+                        >
+                          {compSummary.postJune1DesignationsUsed}/2
+                        </strong>
                       </JargonTip>
                     </span>
                   ) : yData.rolloverFromPriorYear > 0 ? (
-                    <span className="text-emerald-600 font-medium">
+                    <span className="text-[#15803d] font-semibold">
                       <JargonTip term="ROLLOVER">
                         +${yData.rolloverFromPriorYear.toFixed(1)}M roll
                       </JargonTip>
                     </span>
                   ) : (
-                    <span className="text-slate-400">
-                      {yData.activeRosterCount} deals
+                    <span className="text-[#475569]">
+                      {yData.activeRosterCount} contracts
                     </span>
                   )}
                 </div>
@@ -824,7 +828,7 @@ export function CapHorizonHeader() {
 
         {/* Expandable "Spendable Now" Math Receipt (Desktop md+) */}
         {receiptYear !== null && (
-          <div className="hidden md:block rounded-lg border border-slate-200 bg-slate-50/90 px-3.5 py-2 mb-3 text-xs">
+          <div className="hidden md:block border border-[#d6d0c4] bg-white px-3.5 py-2 mb-3 text-xs shadow-2xs">
             {(() => {
               const rData = displayCapState.years[receiptYear];
               const activeCapVal =

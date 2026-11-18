@@ -2,26 +2,25 @@
 
 :root {
   color-scheme: light;
-  --paper: #f8fafc;
+  --paper: #f7f5f0;
   --paper-elevated: #ffffff;
-  --paper-muted: #f1f5f9;
-  --ink: #0f172a;
+  --paper-muted: #ebe6dc;
+  --ink: #111827;
   --ink-secondary: #334155;
-  --ink-muted: #64748b;
-  --rule: #e2e8f0;
-  --rule-strong: #cbd5e1;
-  --forest: #059669;
-  --terracotta: #dc2626;
-  --ochre: #d97706;
+  --ink-muted: #475569;
+  --rule: #d6d0c4;
+  --rule-strong: #94a3b8;
+  --forest: #15803d;
+  --terracotta: #b91c1c;
+  --ochre: #b45309;
 }
 
 body {
   background-color: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
-  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3 {
@@ -49,8 +48,7 @@ h1, h2, h3 {
 }
 
 .font-editorial {
-  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.025em;
+  font-family: var(--font-serif), Georgia, Cambria, "Times New Roman", serif;
 }
 
 .font-mono-ledger {

@@ -223,10 +223,10 @@ export function ContractActionDrawer() {
       onClick={(e) => {
         if (e.target === dialogRef.current) selectPlayer(null);
       }}
-      className="mt-auto mb-0 sm:m-auto w-full max-w-3xl max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-900/40 backdrop:backdrop-blur-xs"
+      className="mt-auto mb-0 sm:m-auto w-full max-w-3xl max-h-[92dvh] overflow-y-auto border-t-2 sm:border border-[#1c1917] bg-[#f6f3ec] p-0 text-[#1c1917] shadow-2xl backdrop:bg-[#1c1917]/40"
     >
-      {/* Clean Fintech Drawer Header */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-xs flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3.5 sm:px-7 sm:py-5">
+      {/* Editorial Header (Sticky on Phone Bottom Sheet) */}
+      <div className="sticky top-0 z-20 bg-[#f6f3ec] flex items-start justify-between gap-3 border-b border-[#dfd9cc] px-4 py-3.5 sm:px-7 sm:py-5">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <PlayerAvatar
             name={player.name}
@@ -943,10 +943,10 @@ export function ContractActionDrawer() {
                   <button
                     type="button"
                     onClick={() => setShowTeammateCompare((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-left text-xs font-medium text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="flex w-full items-center justify-between border border-[#dfd9cc] bg-[#fcfaf6] px-3.5 py-2.5 text-left text-xs font-semibold text-[#1e3a5f] hover:border-[#1c1917] transition-colors cursor-pointer"
                   >
                     <span>
-                      Compare &ldquo;Keep One / Cut One&rdquo; vs.{' '}
+                      ⚖️ Compare &ldquo;Keep One / Cut One&rdquo; vs.{' '}
                       {selectedTeammate.name} ({selectedTeammate.position})
                     </span>
                     <span className="font-mono-ledger text-[11px] text-[#57534e]">
