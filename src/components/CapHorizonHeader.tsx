@@ -181,9 +181,13 @@ export function CapHorizonHeader() {
                   setCompareOriginalBaseline(false);
                   if (!isMainWorkspace) {
                     setActiveTab('team-builder');
-                  } else {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }
+                  window.dispatchEvent(
+                    new CustomEvent('armchair-gm:open-workspace-tab', {
+                      detail: 'ACTIVE',
+                    })
+                  );
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className={`px-3 py-1.5 font-semibold transition-colors cursor-pointer ${
                   isMainWorkspace && !compareOriginalBaseline
@@ -198,11 +202,12 @@ export function CapHorizonHeader() {
                 onClick={() => {
                   setCompareOriginalBaseline(false);
                   openInTeamBuilder({ subTab: 'fa-dock' });
-                  setTimeout(() => {
-                    document
-                      .getElementById('add-free-agents-dock')
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 60);
+                  window.dispatchEvent(
+                    new CustomEvent('armchair-gm:open-workspace-tab', {
+                      detail: 'FREE_AGENTS',
+                    })
+                  );
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#15803d] hover:bg-[#f0fdf4] transition-colors cursor-pointer"
               >
@@ -213,11 +218,12 @@ export function CapHorizonHeader() {
                 onClick={() => {
                   setCompareOriginalBaseline(false);
                   openInTeamBuilder({ subTab: 'draft-trade' });
-                  setTimeout(() => {
-                    document
-                      .getElementById('team-builder-workbench')
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 60);
+                  window.dispatchEvent(
+                    new CustomEvent('armchair-gm:open-workspace-tab', {
+                      detail: 'DRAFT_PICKS',
+                    })
+                  );
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#111827] hover:bg-[#f1f5f9] transition-colors cursor-pointer"
               >
