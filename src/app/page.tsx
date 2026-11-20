@@ -30,7 +30,7 @@ const JOURNEY_LABELS: Record<ActiveTab, string> = {
 export default function ArmchairGMApp() {
   const {
     activeTab,
-    compareOriginalBaseline,
+    appMode,
     navHistory,
     goBack,
     goHome,
@@ -99,7 +99,7 @@ export default function ArmchairGMApp() {
         {activeTab === 'cap-checkup' && <CapCheckupJourney />}
         {(activeTab === 'player-fate' || activeTab === 'team-builder') && (
           <PlayerFateJourney
-            mode={compareOriginalBaseline ? 'CURRENT_STATE' : 'TEAM_BUILDER'}
+            mode={appMode === 'CONTRACT_EXPLORER' ? 'CURRENT_STATE' : 'TEAM_BUILDER'}
           />
         )}
         {activeTab === 'free-agency' && <FreeAgencySimulatorView />}

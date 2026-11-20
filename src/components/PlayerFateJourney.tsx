@@ -34,8 +34,10 @@ import {
   evaluateFreeAgentTarget,
   evaluateFreeAgentValueBadge,
   evaluateFutureSeasonRosterOutlook,
+  evaluatePlayerContractInsurance,
   evaluateTeamCampBattles,
   evaluateTeamFantasyEnvironment,
+  evaluateTeamInsuranceOverview,
   evaluateTeamPositionalNeedsByYear,
   FantasyPlayerEvaluation,
   FantasySignalType,
@@ -45,6 +47,7 @@ import {
   generateRookieContract,
   getContractYearCapHit,
   isFantasySkillPosition,
+  LEAGUE_DOCUMENTED_INSURANCE_SPOTLIGHTS,
   LEAGUE_YEARS,
   LeagueYear,
   POSITION_GROUPS,
@@ -54,6 +57,7 @@ import {
   SAMPLE_DYNASTY_ROSTER_NAMES,
   scanLeagueFantasyLandingSpots,
   simulateCutOrTrade,
+  simulateInsuranceCapCredit,
   simulateRestructure,
   TIMELINE_HORIZON_YEARS,
 } from '@/engine';
@@ -70,7 +74,6 @@ import {
 } from '@/store/useGMStore';
 import { PlayerAvatar } from './PlayerAvatar';
 import { JargonTip } from './JargonTooltip';
-import { GlobalPlayerSearch } from './PlayerDossierModal';
 import { CapCheckupJourney } from './CapCheckupJourney';
 import { DraftTradeSandbox } from './DraftTradeSandbox';
 import { RosterMatrix } from './RosterMatrix';
@@ -78,6 +81,7 @@ import { RosterMatrix } from './RosterMatrix';
 type Journey2ViewMode = 'TIMELINE_BARS' | 'BUCKET_CARDS';
 type RosterCategoryTab =
   | 'ACTIVE'
+  | 'INSURANCE'
   | 'NEEDS'
   | 'FREE_AGENTS'
   | 'DRAFT_PICKS'
@@ -157,6 +161,7 @@ export function PlayerFateJourney({
     teamBuilderPosFilter,
     setTeamBuilderSubTab,
     setTeamBuilderPosFilter,
+    setAppMode,
     setCompareOriginalBaseline,
     openInTeamBuilder,
     selectTeam,
@@ -166,7 +171,6 @@ export function PlayerFateJourney({
     addExtensionTransaction,
     addSignFATransaction,
     addQuickTradeTransaction,
-    addDraftSigningTransaction,
     applyAutoCapReliefPlaybook,
     applyExtendCorePillarsPlaybook,
     removeTransaction,
@@ -180,6 +184,15 @@ export function PlayerFateJourney({
     useState<TableDisplayMode>('BARS');
   const [rosterCategoryTab, setRosterCategoryTab] =
     useState<RosterCategoryTab>('ACTIVE');
+  const [insurancePlayerId, setInsurancePlayerId] = useState<string | null>(
+    null
+  );
+  const [insuranceGamesMissed, setInsuranceGamesMissed] = useState<
+    4 | 8 | 12 | 17
+  >(17);
+  const [insuranceCoveragePct, setInsuranceCoveragePct] = useState<
+    0.5 | 0.75 | 1.0
+  >(1.0);
   const [openActionMenuPlayerId, setOpenActionMenuPlayerId] = useState<
     string | null
   >(null);
@@ -546,12 +559,38 @@ export function PlayerFateJourney({
       });
   }, [activeCapState.roster, space2026, isCurrentState, activePlayerTxMap]);
 
-  const effectiveTab =
-    !isCurrentState && enabledMovesCount === 0 && rosterCategoryTab === 'MODIFIED'
+  const effectiveTab: RosterCategoryTab =
+    isCurrentState &&
+    (rosterCategoryTab === 'MODIFIED' || rosterCategoryTab === 'FREE_AGENTS')
       ? 'ACTIVE'
-      : isCurrentState && rosterCategoryTab === 'MODIFIED'
+      : !isCurrentState &&
+        enabledMovesCount === 0 &&
+        rosterCategoryTab === 'MODIFIED'
       ? 'ACTIVE'
       : rosterCategoryTab;
+
+  const teamInsuranceOverview = useMemo(
+    () => evaluateTeamInsuranceOverview(activeCapState),
+    [activeCapState]
+  );
+
+  const documentedInsuranceById = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof evaluatePlayerContractInsurance>>();
+    for (const item of teamInsuranceOverview.documentedClauses) {
+      map.set(item.player.id, item.profile);
+    }
+    return map;
+  }, [teamInsuranceOverview]);
+
+  const selectedInsuranceEntry = useMemo(() => {
+    if (insurancePlayerId) {
+      const exact = teamInsuranceOverview.allTracked.find(
+        (e) => e.player.id === insurancePlayerId
+      );
+      if (exact) return exact;
+    }
+    return teamInsuranceOverview.allTracked[0] ?? null;
+  }, [insurancePlayerId, teamInsuranceOverview]);
 
   // Fantasy Lens computed signals & league radars (lazy-computed when active)
   const fantasyEvalByPlayerId = useMemo(() => {
@@ -1257,83 +1296,126 @@ export function PlayerFateJourney({
 
   return (
     <div className="mx-auto max-w-[1440px] px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
-      {/* 1. Unified Header + Smart Playbooks + Mobile Layout Switch */}
+      {/* 1. Mode-Specific Workspace Header (Contract Explorer vs Team Builder) */}
       <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 sm:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-[#dfd9cc] pb-4">
-          <div className="flex flex-wrap items-center gap-2.5">
-            {isCurrentState && (
-              <span className="bg-[#b45309] px-2 py-0.5 font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-white shrink-0">
-                Original Baseline
-              </span>
-            )}
-            <h1 className="font-editorial text-[clamp(1.35rem,1rem+1.5vw,1.95rem)] font-bold leading-tight text-[#111827]">
-              {baseTeam.city} {baseTeam.name} · {activeCapState.roster.length}-Man Roster
-            </h1>
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {isCurrentState ? (
+                <span className="bg-[#1e3a5f] px-2.5 py-0.5 font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-white shrink-0">
+                  Contract Explorer · Signed Truth
+                </span>
+              ) : (
+                <span className="bg-[#15803d] px-2.5 py-0.5 font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-white shrink-0">
+                  Team Builder · Sandbox
+                </span>
+              )}
+              <h1 className="font-editorial text-[clamp(1.35rem,1rem+1.5vw,1.95rem)] font-bold leading-tight text-[#111827]">
+                {baseTeam.city} {baseTeam.name} · {activeCapState.roster.length}-Man Roster
+              </h1>
+            </div>
+            <p className="text-xs text-[#475569]">
+              {isCurrentState
+                ? 'Explore real signed contracts, guarantees, insurance clauses (such as Clause 54), void years, and dead cap.'
+                : 'Start from defaults and test cuts, restructures, extensions, trades, or free-agent signings — reset anytime.'}
+            </p>
           </div>
 
-          {/* 1-Tap GM Playbooks, Share Build & Compact View Toggles */}
+          {/* Right Action Controls: Explorer CTA vs Team Builder Playbooks + View Toggles */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={applyAutoCapReliefPlaybook}
-              title="Auto-apply up to 3 top restructures and clean casualty cuts to clear cap space"
-              className="inline-flex items-center gap-1 border border-[#15803d] bg-[#f0fdf4] px-2.5 py-1.5 text-xs font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              <span>⚡ Auto-Clear Cap</span>
-            </button>
+            {isCurrentState ? (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleFantasyLens}
+                  title="Focus on QB/RB/WR/TE contract insulation, paper-contract traps, rookie landing spots & Sleeper roster audit"
+                  className={`inline-flex items-center gap-1 border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                    isFantasyLens
+                      ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
+                      : 'border-[#7c3aed]/60 bg-[#f5f3ff] text-[#4c1d95] hover:bg-[#7c3aed] hover:text-white'
+                  }`}
+                >
+                  <span>Fantasy Lens{isFantasyLens ? ' · ON' : ''}</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={applyExtendCorePillarsPlaybook}
-              title="Extend up to 3 prime young core starters (85+ OVR, age <= 27) entering extension windows"
-              className="inline-flex items-center gap-1 border border-[#1e3a5f] bg-[#eff6ff] px-2.5 py-1.5 text-xs font-semibold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors cursor-pointer"
-            >
-              <Lock className="h-3.5 w-3.5" />
-              <span>🔒 Extend Core Pillars</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setAppMode('TEAM_BUILDER')}
+                  className="inline-flex items-center gap-1.5 border border-[#15803d] bg-[#15803d] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#14532d] transition-colors cursor-pointer"
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  <span>
+                    {enabledMovesCount > 0
+                      ? `Resume Team Builder (${enabledMovesCount}) →`
+                      : 'Edit in Team Builder →'}
+                  </span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={applyAutoCapReliefPlaybook}
+                  title="Auto-apply up to 3 top restructures and clean casualty cuts to clear cap space"
+                  className="inline-flex items-center gap-1 border border-[#15803d] bg-[#f0fdf4] px-2.5 py-1.5 text-xs font-semibold text-[#14532d] hover:bg-[#15803d] hover:text-white transition-colors cursor-pointer"
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>Auto-Clear Cap</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={toggleFantasyLens}
-              title="Focus on QB/RB/WR/TE contract insulation, paper-contract traps, rookie landing spots & Sleeper roster audit"
-              className={`inline-flex items-center gap-1 border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                isFantasyLens
-                  ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
-                  : 'border-[#7c3aed]/60 bg-[#f5f3ff] text-[#4c1d95] hover:bg-[#7c3aed] hover:text-white'
-              }`}
-            >
-              <span>🏈 Fantasy Lens{isFantasyLens ? ' · ON' : ''}</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={applyExtendCorePillarsPlaybook}
+                  title="Extend up to 3 prime young core starters (85+ OVR, age <= 27) entering extension windows"
+                  className="inline-flex items-center gap-1 border border-[#1e3a5f] bg-[#eff6ff] px-2.5 py-1.5 text-xs font-semibold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors cursor-pointer"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Extend Core</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                const shareUrl = buildShareableScenarioUrl(
-                  window.location.href,
-                  baseTeam.id,
-                  transactions
-                );
-                window.history.replaceState(null, '', shareUrl);
-                navigator.clipboard?.writeText(shareUrl);
-                setCopiedShareUrl(true);
-                setTimeout(() => setCopiedShareUrl(false), 2500);
-              }}
-              title="Copy shareable link with your current team & offseason moves"
-              className="inline-flex items-center gap-1 border border-[#111827] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#111827] hover:bg-[#111827] hover:text-white transition-colors cursor-pointer"
-            >
-              {copiedShareUrl ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-[#15803d]" />
-                  <span>✓ Link Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Link2 className="h-3.5 w-3.5" />
-                  <span>🔗 Share Build</span>
-                </>
-              )}
-            </button>
+                <button
+                  type="button"
+                  onClick={toggleFantasyLens}
+                  title="Focus on QB/RB/WR/TE contract insulation, paper-contract traps, rookie landing spots & Sleeper roster audit"
+                  className={`inline-flex items-center gap-1 border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                    isFantasyLens
+                      ? 'border-[#7c3aed] bg-[#7c3aed] text-white'
+                      : 'border-[#7c3aed]/60 bg-[#f5f3ff] text-[#4c1d95] hover:bg-[#7c3aed] hover:text-white'
+                  }`}
+                >
+                  <span>Fantasy Lens{isFantasyLens ? ' · ON' : ''}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareUrl = buildShareableScenarioUrl(
+                      window.location.href,
+                      baseTeam.id,
+                      transactions
+                    );
+                    window.history.replaceState(null, '', shareUrl);
+                    navigator.clipboard?.writeText(shareUrl);
+                    setCopiedShareUrl(true);
+                    setTimeout(() => setCopiedShareUrl(false), 2500);
+                  }}
+                  title="Copy shareable link with your current team & offseason moves"
+                  className="inline-flex items-center gap-1 border border-[#111827] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#111827] hover:bg-[#111827] hover:text-white transition-colors cursor-pointer"
+                >
+                  {copiedShareUrl ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-[#15803d]" />
+                      <span>Link Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="h-3.5 w-3.5" />
+                      <span>Share Build</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
 
             {/* Phone vs Desktop Layout Switcher */}
             <div className="hidden md:inline-flex border border-[#c7bfb0] bg-[#f6f3ec] p-0.5">
@@ -1418,100 +1500,134 @@ export function PlayerFateJourney({
           </div>
         </div>
 
-        {/* Baseline Peek Banner OR Live Move Chips when Active Moves Exist */}
-        {isCurrentState ? (
+        {/* Mode Status Strip: Team Builder Active Edits + Prominent Reset to Defaults */}
+        {!isCurrentState && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#dfd9cc] pb-3 text-xs">
-            <span className="font-mono-ledger font-semibold text-[#b45309]">
-              Comparing untouched baseline ({enabledMovesCount} move
-              {enabledMovesCount === 1 ? '' : 's'} paused from view)
-            </span>
-            <button
-              type="button"
-              onClick={() => setCompareOriginalBaseline(false)}
-              className="border border-[#15803d] bg-[#15803d] px-3 py-1 font-semibold text-white hover:bg-[#14532d] transition-colors cursor-pointer"
-            >
-              Return to Projected Moves →
-            </button>
-          </div>
-        ) : transactions.length > 0 ? (
-          <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar border-b border-[#dfd9cc] pb-2.5 text-xs">
-            <span className="shrink-0 font-mono-ledger font-bold text-[#1e3a5f]">
-              Moves ({enabledMovesCount}):
-            </span>
-            {transactions.map((tx, idx) => (
-              <div
-                key={tx.id}
-                className={`shrink-0 inline-flex items-center gap-2 border px-2 py-1 text-[11px] font-mono-ledger ${
-                  tx.enabled
-                    ? 'border-[#2563eb]/50 bg-[#eff6ff] text-[#1e3a5f]'
-                    : 'border-[#cbd5e1] bg-[#f8fafc] text-[#64748b] opacity-60 line-through'
-                }`}
-              >
-                <span className="font-bold text-[#475569]">#{idx + 1}</span>
-                <span className="font-semibold text-[#111827]">{tx.label}</span>
-                {tx.capDelta2026 !== 0 && (
-                  <span
-                    className={`font-bold ${
-                      tx.capDelta2026 >= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
+            {transactions.length > 0 ? (
+              <div className="flex flex-1 items-center gap-2 overflow-x-auto no-scrollbar min-w-0">
+                <span className="shrink-0 font-mono-ledger font-bold text-[#1e3a5f]">
+                  Active Edits ({enabledMovesCount}):
+                </span>
+                {transactions.map((tx, idx) => (
+                  <div
+                    key={tx.id}
+                    className={`shrink-0 inline-flex items-center gap-2 border px-2 py-1 text-[11px] font-mono-ledger ${
+                      tx.enabled
+                        ? 'border-[#2563eb]/50 bg-[#eff6ff] text-[#1e3a5f]'
+                        : 'border-[#cbd5e1] bg-[#f8fafc] text-[#64748b] opacity-60 line-through'
                     }`}
                   >
-                    {formatCapDelta(tx.capDelta2026)}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeTransaction(tx.id)}
-                  title={`Undo move #${idx + 1}: ${tx.label}`}
-                  className="inline-flex items-center border border-[#b91c1c]/40 bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#b91c1c] hover:bg-[#b91c1c] hover:text-white transition-colors cursor-pointer"
-                >
-                  ✕
-                </button>
+                    <span className="font-bold text-[#475569]">#{idx + 1}</span>
+                    <span className="font-semibold text-[#111827]">{tx.label}</span>
+                    {tx.capDelta2026 !== 0 && (
+                      <span
+                        className={`font-bold ${
+                          tx.capDelta2026 >= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
+                        }`}
+                      >
+                        {formatCapDelta(tx.capDelta2026)}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeTransaction(tx.id)}
+                      title={`Undo move #${idx + 1}: ${tx.label}`}
+                      className="inline-flex items-center border border-[#b91c1c]/40 bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#b91c1c] hover:bg-[#b91c1c] hover:text-white transition-colors cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <span className="font-mono-ledger text-[11px] text-[#475569]">
+                At default {baseTeam.name} roster (0 edits). Click any player, Free Agents, or Trades &amp; Draft to simulate moves.
+              </span>
+            )}
+
             <button
               type="button"
+              disabled={transactions.length === 0}
               onClick={resetScenarioStack}
-              className="shrink-0 ml-auto inline-flex items-center gap-1 border border-[#b84a27]/40 bg-[#b84a27]/10 px-2.5 py-1 text-[11px] font-semibold text-[#b84a27] hover:bg-[#b84a27] hover:text-[#f6f3ec] cursor-pointer"
+              className={`shrink-0 inline-flex items-center gap-1.5 border px-3 py-1.5 font-mono-ledger text-xs font-semibold transition-colors ${
+                transactions.length > 0
+                  ? 'border-[#b91c1c] bg-[#b91c1c] text-white hover:bg-[#991b1b] cursor-pointer'
+                  : 'border-[#d6d0c4] bg-white text-[#94a3b8] cursor-not-allowed'
+              }`}
             >
-              <RotateCcw className="h-3 w-3" />
-              <span>Reset</span>
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>
+                {transactions.length > 0
+                  ? `Reset to Defaults (${transactions.length})`
+                  : 'Reset to Defaults'}
+              </span>
             </button>
           </div>
-        ) : null}
+        )}
 
-        {/* Primary Single-Row Workstation Tab Bar (1 Focused View at a Time) */}
+        {/* Primary Single-Row Workstation Tab Bar (Mode-Tailored, 1 Focused View at a Time) */}
         <div className="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-[#dfd9cc] pb-3 text-xs">
           {(
-            [
-              {
-                id: 'ACTIVE',
-                label: `Roster Ledger (${activeCapState.roster.length})`,
-              },
-              {
-                id: 'NEEDS',
-                label: `Needs & Depth (${criticalPositions2026Or2027.length})`,
-              },
-              {
-                id: 'FREE_AGENTS',
-                label: `Free Agents (${internalFaPool.length + faPool.length})`,
-              },
-              {
-                id: 'DRAFT_PICKS',
-                label: `Trades & Draft (${activeCapState.draftPicks.length} Picks)`,
-              },
-              {
-                id: 'DEAD_MONEY',
-                label: `Dead Money ($${activeCapState.years[2026].deadMoneyTotal.toFixed(1)}M)`,
-              },
-              ...(!isCurrentState && enabledMovesCount > 0
-                ? [
-                    {
-                      id: 'MODIFIED' as RosterCategoryTab,
-                      label: `Modified (${enabledMovesCount})`,
-                    },
-                  ]
-                : []),
-            ] as { id: RosterCategoryTab; label: string }[]
+            isCurrentState
+              ? [
+                  {
+                    id: 'ACTIVE' as RosterCategoryTab,
+                    label: `Signed Contracts (${activeCapState.roster.length})`,
+                  },
+                  {
+                    id: 'INSURANCE' as RosterCategoryTab,
+                    label: `Insurance & Clauses (${
+                      teamInsuranceOverview.documentedClauses.length +
+                      teamInsuranceOverview.primeInsurable.length
+                    })`,
+                  },
+                  {
+                    id: 'NEEDS' as RosterCategoryTab,
+                    label: `Positional Depth (${criticalPositions2026Or2027.length})`,
+                  },
+                  {
+                    id: 'DRAFT_PICKS' as RosterCategoryTab,
+                    label: `Draft Picks (${activeCapState.draftPicks.length})`,
+                  },
+                  {
+                    id: 'DEAD_MONEY' as RosterCategoryTab,
+                    label: `Dead Money ($${activeCapState.years[2026].deadMoneyTotal.toFixed(1)}M)`,
+                  },
+                ]
+              : [
+                  {
+                    id: 'ACTIVE' as RosterCategoryTab,
+                    label: `Roster & Edits (${activeCapState.roster.length})`,
+                  },
+                  {
+                    id: 'NEEDS' as RosterCategoryTab,
+                    label: `Needs & Depth (${criticalPositions2026Or2027.length})`,
+                  },
+                  {
+                    id: 'FREE_AGENTS' as RosterCategoryTab,
+                    label: `Free Agents (${internalFaPool.length + faPool.length})`,
+                  },
+                  {
+                    id: 'DRAFT_PICKS' as RosterCategoryTab,
+                    label: `Trades & Draft (${activeCapState.draftPicks.length} Picks)`,
+                  },
+                  {
+                    id: 'DEAD_MONEY' as RosterCategoryTab,
+                    label: `Dead Money ($${activeCapState.years[2026].deadMoneyTotal.toFixed(1)}M)`,
+                  },
+                  {
+                    id: 'INSURANCE' as RosterCategoryTab,
+                    label: `Insurance & Clauses`,
+                  },
+                  ...(enabledMovesCount > 0
+                    ? [
+                        {
+                          id: 'MODIFIED' as RosterCategoryTab,
+                          label: `Modified (${enabledMovesCount})`,
+                        },
+                      ]
+                    : []),
+                ]
           ).map((cat) => (
             <button
               key={cat.id}
@@ -2321,6 +2437,401 @@ export function PlayerFateJourney({
       )}
 
       {/* =====================================================================
+          CATEGORY TAB VIEW: CONTRACT INSURANCE & SPECIAL CLAUSES (CBA ART. 13)
+         ===================================================================== */}
+      {effectiveTab === 'INSURANCE' && (
+        <section className="space-y-5">
+          {/* Top Overview + CBA Article 13 Explainer */}
+          <div className="border border-[#d6d0c4] bg-white p-4 sm:p-6 space-y-5 shadow-2xs">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#dfd9cc] pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-[#1e3a5f]" />
+                  <h2 className="font-editorial text-xl sm:text-2xl text-[#111827]">
+                    Contract Insurance &amp; CBA Cap-Credit Clauses · {baseTeam.city}{' '}
+                    {baseTeam.name}
+                  </h2>
+                </div>
+                <p className="text-xs text-[#475569] max-w-3xl">
+                  Explore real-world club disability insurance rights (like Aidan
+                  Hutchinson&rsquo;s Clause 54), how injury payouts return future salary
+                  cap credits under NFL CBA Article 13, and existing structural clauses
+                  on {baseTeam.name}&rsquo;s books.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 font-mono-ledger text-xs shrink-0">
+                <div className="border border-[#d6d0c4] bg-[#fcfaf6] px-3 py-2">
+                  <div className="text-[10px] text-[#64748b] uppercase">
+                    Key Insurable Deals
+                  </div>
+                  <div className="mt-0.5 text-base font-bold text-[#1e3a5f]">
+                    {teamInsuranceOverview.documentedClauses.length +
+                      teamInsuranceOverview.primeInsurable.length}
+                  </div>
+                </div>
+                <div className="border border-[#d6d0c4] bg-[#fcfaf6] px-3 py-2">
+                  <div className="text-[10px] text-[#64748b] uppercase">
+                    Void Ghost Bills
+                  </div>
+                  <div className="mt-0.5 text-base font-bold text-[#b91c1c]">
+                    ${teamInsuranceOverview.totalVoidGhostBills.toFixed(1)}M
+                  </div>
+                </div>
+                <div className="border border-[#d6d0c4] bg-[#fcfaf6] px-3 py-2">
+                  <div className="text-[10px] text-[#64748b] uppercase">
+                    Future Cut-Risk Deals
+                  </div>
+                  <div className="mt-0.5 text-base font-bold text-[#b45309]">
+                    {teamInsuranceOverview.cutRiskContractsCount}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3 Plain-English CBA Article 13 Rule Callouts */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-3.5 space-y-1">
+                <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#1e3a5f]">
+                  1. Off-Cap Owner Cash Premiums
+                </div>
+                <p className="text-[#334155] leading-relaxed">
+                  Clubs pay third-party disability insurance premiums out of ownership
+                  cash. <strong>$0 counts against the salary cap</strong>—making
+                  insurance one of the only ways cash-rich owners can hedge cap risk.
+                </p>
+              </div>
+              <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-3.5 space-y-1">
+                <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#15803d]">
+                  2. &ldquo;Refund From Player&rdquo; Rule
+                </div>
+                <p className="text-[#334155] leading-relaxed">
+                  An injury alone does not clear a player&rsquo;s cap hit. When an
+                  insurer reimburses the club for missed games, CBA Article 13 classifies
+                  the payout as a <strong>refund from the player</strong>.
+                </p>
+              </div>
+              <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-3.5 space-y-1">
+                <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-wider text-[#b45309]">
+                  3. Next-Year Salary Cap Credit
+                </div>
+                <p className="text-[#334155] leading-relaxed">
+                  The reimbursed cap-counted portion of base salary, signing bonus, or
+                  option bonus returns to the club as a{' '}
+                  <strong>salary cap credit in the following league year</strong>.
+                </p>
+              </div>
+            </div>
+
+            {/* Interactive Club Insurance Explorer & "What If Injured?" Calculator */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Left 5 Cols: Club's Documented & Prime Insurable Contracts */}
+              <div className="lg:col-span-5 space-y-2">
+                <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-[0.1em] text-[#475569]">
+                  {baseTeam.name} Documented &amp; High-Exposure Contracts (Click to Inspect)
+                </div>
+                {teamInsuranceOverview.allTracked.length === 0 ? (
+                  <div className="border border-[#dfd9cc] bg-[#fcfaf6] p-4 text-xs text-[#64748b]">
+                    No high-guarantee insurance-tier contracts detected on the current{' '}
+                    {baseTeam.name} books.
+                  </div>
+                ) : (
+                  <div className="border border-[#d6d0c4] divide-y divide-[#e2e8f0] max-h-[460px] overflow-y-auto">
+                    {teamInsuranceOverview.allTracked.map(({ player, profile }) => {
+                      const isSelected =
+                        selectedInsuranceEntry?.player.id === player.id;
+                      return (
+                        <button
+                          key={`ins-list-${player.id}`}
+                          type="button"
+                          onClick={() => setInsurancePlayerId(player.id)}
+                          className={`w-full px-3 py-2.5 text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#ede8dd] border-l-4 border-l-[#1e3a5f]'
+                              : 'bg-white hover:bg-[#fcfaf6]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <PlayerAvatar
+                              name={player.name}
+                              headshotUrl={player.headshotUrl}
+                              teamId={baseTeam.id}
+                              teamLogoUrl={baseTeam.logoUrl}
+                              size="sm"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="truncate font-semibold text-xs text-[#111827]">
+                                  {player.name}
+                                </span>
+                                <span className="font-mono-ledger text-[10px] text-[#475569]">
+                                  {player.position}
+                                </span>
+                              </div>
+                              <div className="mt-0.5">
+                                <span
+                                  className={`inline-block border px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold ${
+                                    profile.isDocumentedRealClause
+                                      ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                                      : profile.tier === 'PRIME_INSURABLE'
+                                      ? 'border-[#15803d] bg-[#dcfce7] text-[#14532d]'
+                                      : 'border-[#d97706] bg-[#fef3c7] text-[#78350f]'
+                                  }`}
+                                >
+                                  {profile.badgeLabel}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right font-mono-ledger shrink-0">
+                            <div className="text-xs font-bold text-[#15803d]">
+                              up to +${profile.maxFullSeasonCapCredit.toFixed(1)}M
+                            </div>
+                            <div className="text-[10px] text-[#64748b]">
+                              ${profile.maxInsurablePool2026.toFixed(1)}M pool
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Right 7 Cols: Detailed Policy Breakdown + Interactive Cap-Credit Estimator */}
+              <div className="lg:col-span-7 border-2 border-[#1e3a5f] bg-[#fcfaf6] p-4 sm:p-5 space-y-4">
+                {selectedInsuranceEntry ? (
+                  (() => {
+                    const { player, profile } = selectedInsuranceEntry;
+                    const sim = simulateInsuranceCapCredit(
+                      profile,
+                      insuranceGamesMissed,
+                      insuranceCoveragePct
+                    );
+                    return (
+                      <>
+                        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#dfd9cc] pb-3">
+                          <div className="flex items-center gap-3">
+                            <PlayerAvatar
+                              name={player.name}
+                              headshotUrl={player.headshotUrl}
+                              teamId={baseTeam.id}
+                              teamLogoUrl={baseTeam.logoUrl}
+                              size="md"
+                            />
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="font-editorial text-lg font-bold text-[#111827]">
+                                  {player.name}
+                                </h3>
+                                <span
+                                  className={`border px-2 py-0.5 font-mono-ledger text-[10px] font-bold ${
+                                    profile.isDocumentedRealClause
+                                      ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                                      : 'border-[#15803d] bg-[#dcfce7] text-[#14532d]'
+                                  }`}
+                                >
+                                  {profile.badgeLabel}
+                                </span>
+                              </div>
+                              <div className="font-mono-ledger text-xs text-[#475569]">
+                                {player.position} · Age {player.ageIn2026} · OVR{' '}
+                                {player.overallRating}/99 ·{' '}
+                                {profile.insurableWindowLabel}
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => openPlayerDossier(player, baseTeam.id)}
+                            className="border border-[#111827] bg-white px-3 py-1.5 font-mono-ledger text-xs font-semibold text-[#111827] hover:bg-[#111827] hover:text-white transition-colors cursor-pointer"
+                          >
+                            Full Contract Dossier →
+                          </button>
+                        </div>
+
+                        {profile.clauseReference && (
+                          <div className="border-l-4 border-l-[#1e3a5f] bg-white px-3 py-2 font-mono-ledger text-xs font-bold text-[#1e3a5f]">
+                            {profile.clauseReference}
+                          </div>
+                        )}
+
+                        <p className="text-xs leading-relaxed text-[#334155]">
+                          {profile.summary}
+                        </p>
+
+                        {profile.componentBreakdown.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono-ledger text-xs">
+                            {profile.componentBreakdown.map((comp) => (
+                              <div
+                                key={comp.label}
+                                className="border border-[#d6d0c4] bg-white p-2.5"
+                              >
+                                <div className="text-[10px] text-[#64748b]">
+                                  {comp.label}
+                                </div>
+                                <div className="mt-0.5 text-sm font-bold text-[#111827]">
+                                  ${comp.amount.toFixed(2)}M
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="border border-[#d6d0c4] bg-white p-4 space-y-3">
+                          <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-[0.1em] text-[#334155]">
+                            Interactive CBA Cap-Credit Estimator (Read-Only)
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-4 text-xs">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-semibold text-[#475569]">
+                                Games Missed:
+                              </span>
+                              {([4, 8, 12, 17] as const).map((g) => (
+                                <button
+                                  key={g}
+                                  type="button"
+                                  onClick={() => setInsuranceGamesMissed(g)}
+                                  className={`border px-2.5 py-1 font-mono-ledger text-xs font-semibold cursor-pointer ${
+                                    insuranceGamesMissed === g
+                                      ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                                      : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155] hover:border-[#111827]'
+                                  }`}
+                                >
+                                  {g === 17 ? '17 (Full Season)' : `${g} Games`}
+                                </button>
+                              ))}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-semibold text-[#475569]">
+                                Policy Coverage:
+                              </span>
+                              {([0.5, 0.75, 1.0] as const).map((pct) => (
+                                <button
+                                  key={pct}
+                                  type="button"
+                                  onClick={() => setInsuranceCoveragePct(pct)}
+                                  className={`border px-2.5 py-1 font-mono-ledger text-xs font-semibold cursor-pointer ${
+                                    insuranceCoveragePct === pct
+                                      ? 'border-[#15803d] bg-[#15803d] text-white'
+                                      : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155] hover:border-[#111827]'
+                                  }`}
+                                >
+                                  {Math.round(pct * 100)}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-[#e2e8f0] pt-3 font-mono-ledger">
+                            <div>
+                              <div className="text-[10px] uppercase text-[#64748b]">
+                                Est. Next-Year Cap Credit
+                              </div>
+                              <div className="text-xl font-bold text-[#15803d]">
+                                +${sim.projectedNextYearCapCredit.toFixed(2)}M
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase text-[#64748b]">
+                                Est. Insurer Payout
+                              </div>
+                              <div className="text-xl font-bold text-[#111827]">
+                                ${sim.projectedCashReimbursement.toFixed(2)}M
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase text-[#64748b]">
+                                Est. Owner Premium (0% Cap)
+                              </div>
+                              <div className="text-xl font-semibold text-[#475569]">
+                                ~${sim.estimatedOwnerPremium.toFixed(2)}M/yr
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()
+                ) : (
+                  <div className="py-10 text-center text-xs text-[#64748b]">
+                    Select a contract on the left to inspect its CBA insurance protection.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* League-Wide Documented Insurance Benchmarks */}
+            <div className="border-t border-[#dfd9cc] pt-4 space-y-2.5">
+              <div className="font-mono-ledger text-[10px] font-bold uppercase tracking-[0.12em] text-[#475569]">
+                League-Wide Documented Contract Insurance Benchmarks
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                {LEAGUE_DOCUMENTED_INSURANCE_SPOTLIGHTS.map((spot) => {
+                  const targetTeam = SEED_TEAMS[spot.teamId];
+                  const targetPlayer = targetTeam?.roster.find(
+                    (p) =>
+                      p.name.toLowerCase() === spot.playerName.toLowerCase()
+                  );
+                  return (
+                    <div
+                      key={spot.playerName}
+                      className="border border-[#d6d0c4] bg-[#fcfaf6] p-3.5 flex flex-col justify-between gap-2.5"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-[#111827]">
+                            {spot.playerName} ({spot.teamLabel})
+                          </span>
+                          <span className="border border-[#1e3a5f] bg-[#eff6ff] px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold text-[#1e3a5f]">
+                            Documented
+                          </span>
+                        </div>
+                        <div className="font-mono-ledger text-[11px] font-semibold text-[#15803d]">
+                          {spot.headline}
+                        </div>
+                        <p className="text-[11px] text-[#475569] leading-relaxed">
+                          {spot.detail}
+                        </p>
+                      </div>
+                      {targetPlayer && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openPlayerDossier(targetPlayer, spot.teamId)
+                            }
+                            className="border border-[#1e3a5f] bg-[#1e3a5f] px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-white hover:bg-[#152c4a] cursor-pointer"
+                          >
+                            Inspect {spot.playerName.split(' ').pop()} Contract →
+                          </button>
+                          {baseTeam.id !== spot.teamId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                selectTeam(spot.teamId);
+                                setInsurancePlayerId(targetPlayer.id);
+                              }}
+                              className="border border-[#d6d0c4] bg-white px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-[#334155] hover:border-[#111827] cursor-pointer"
+                            >
+                              Switch to {spot.teamId}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* =====================================================================
           CATEGORY TAB VIEW: DRAFT PICKS & ROOKIE SCALE CAPITAL
          ===================================================================== */}
       {effectiveTab === 'DRAFT_PICKS' && (
@@ -2330,19 +2841,31 @@ export function PlayerFateJourney({
               <h2 className="font-editorial text-xl sm:text-2xl text-[#111827]">
                 Draft Capital &amp; Rookie Slot Reserve ({activeCapState.draftPicks.length} Picks)
               </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  if (isCurrentState) setCompareOriginalBaseline(false);
-                  setTeamBuilderSubTab('draft-trade');
-                  document
-                    .getElementById('draft-trade-workbench')
-                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
-                className="border border-[#1e3a5f] bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152c4a] cursor-pointer"
-              >
-                Open Draft &amp; Trade Room ↓
-              </button>
+              {isCurrentState ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    openInTeamBuilder({ subTab: 'draft-trade' });
+                    setRosterCategoryTab('DRAFT_PICKS');
+                  }}
+                  className="border border-[#15803d] bg-[#15803d] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#14532d] cursor-pointer"
+                >
+                  Open Draft &amp; Trade Room in Team Builder →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTeamBuilderSubTab('draft-trade');
+                    document
+                      .getElementById('draft-trade-workbench')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="border border-[#1e3a5f] bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152c4a] cursor-pointer"
+                >
+                  Open Draft &amp; Trade Room ↓
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -2387,6 +2910,7 @@ export function PlayerFateJourney({
             </div>
           </section>
 
+          {!isCurrentState && (
           <div id="draft-trade-workbench" className="scroll-mt-24 space-y-4">
             <div className="flex flex-wrap items-center gap-2 border border-[#1c1917] bg-[#fcfaf6] p-2">
               {(
@@ -2433,6 +2957,7 @@ export function PlayerFateJourney({
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
@@ -2685,11 +3210,7 @@ export function PlayerFateJourney({
                               type="button"
                               onClick={() =>
                                 isCurrentState
-                                  ? openInTeamBuilder({
-                                      playerId: player.id,
-                                      drawerTab: forecast.recommendedActionTab,
-                                      actionYear: 2026,
-                                    })
+                                  ? openPlayerDossier(player, baseTeam.id)
                                   : selectPlayer(
                                       player.id,
                                       forecast.recommendedActionTab,
@@ -2708,6 +3229,21 @@ export function PlayerFateJourney({
                               <span className="truncate font-semibold text-[#111827]">
                                 {player.name}
                               </span>
+                              {documentedInsuranceById.has(player.id) && (
+                                <span
+                                  title={
+                                    documentedInsuranceById.get(player.id)
+                                      ?.clauseReference ?? 'Documented Contract Insurance'
+                                  }
+                                  className="shrink-0 border border-[#1e3a5f] bg-[#eff6ff] px-1.5 py-0.5 font-mono-ledger text-[9px] font-bold text-[#1e3a5f]"
+                                >
+                                  {documentedInsuranceById
+                                    .get(player.id)
+                                    ?.badgeLabel.includes('Clause 54')
+                                    ? 'Clause 54'
+                                    : 'Insured'}
+                                </span>
+                              )}
                               {player.injuryStatus && (
                                 <span className="shrink-0 font-mono-ledger text-[10px] font-bold text-[#b91c1c]">
                                   ({player.injuryStatus})
@@ -3077,6 +3613,28 @@ export function PlayerFateJourney({
                                   >
                                     {extensionLikelihoodPct}% Ext. Likelihood
                                   </span>
+                                  {documentedInsuranceById.has(player.id) && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openPlayerDossier(player, baseTeam.id)
+                                      }
+                                      title={`${
+                                        documentedInsuranceById.get(player.id)
+                                          ?.clauseReference ?? 'Documented Contract Insurance'
+                                      } — Click to inspect CBA cap-credit math`}
+                                      className="inline-flex items-center gap-1 border border-[#1e3a5f] bg-[#eff6ff] px-2 py-0.5 font-mono-ledger text-[11px] font-bold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors cursor-pointer"
+                                    >
+                                      <ShieldCheck className="h-3 w-3" />
+                                      <span>
+                                        {documentedInsuranceById
+                                          .get(player.id)
+                                          ?.badgeLabel.includes('Clause 54')
+                                          ? 'Clause 54 · Insured'
+                                          : 'Insured · CBA Credits'}
+                                      </span>
+                                    </button>
+                                  )}
                                   {row.lastActiveContractYear === 2026 &&
                                     forecast.projectedCompPickRound && (
                                       <span

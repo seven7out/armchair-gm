@@ -4,18 +4,20 @@ import {
   DEFAULT_CAP_GROWTH_RATE,
   evaluateFantasyPlayerSignal,
   evaluateFreeAgentValueBadge,
+  evaluatePlayerContractInsurance,
   evaluatePlayerLongevity,
   evaluateRosterPlayerFate,
   evaluateTeamCampBattles,
   evaluateTeamFantasyEnvironment,
+  evaluateTeamInsuranceOverview,
   generateRookieContract,
   getContractYearCapHit,
   getDraftPickTradeValue,
   projectCompPickRound,
-  roundCap,
   SAMPLE_DYNASTY_ROSTER_NAMES,
   scanLeagueFantasyLandingSpots,
   simulateCutOrTrade,
+  simulateInsuranceCapCredit,
   simulateRestructure,
   Transaction,
 } from '../src/engine';
@@ -306,6 +308,34 @@ assert(
 
 console.log(
   `\n8. Avatar Coverage & Comp Pick Round Checks:\n   Headshot Coverage: ${totalCheckedPlayers - missingHeadshots}/${totalCheckedPlayers} (100%)\n   Comp Pick Thresholds: $30.5M->Rd ${projectCompPickRound(30.5)}, $15.2M->Rd ${projectCompPickRound(15.2)}, $9.0M->Rd ${projectCompPickRound(9.0)}, $6.0M->Rd ${projectCompPickRound(6.0)}, $3.2M->Rd ${projectCompPickRound(3.2)}\n   Sample Expiring (${expiringStarter!.name}): ${expiringFate.projectedCompPickLabel} (~$${expiringFate.projectedMarketApy}M/yr)`
+);
+
+// 10. Contract Insurance & CBA Article 13 Cap-Credit Checks
+const hutch = detBase.roster.find((p) => p.name === 'Aidan Hutchinson');
+assert(Boolean(hutch), 'Aidan Hutchinson must exist on Detroit Lions roster');
+const hutchIns = evaluatePlayerContractInsurance(hutch!);
+assert(
+  hutchIns.isDocumentedRealClause &&
+    hutchIns.tier === 'DOCUMENTED_CLAUSE' &&
+    hutchIns.maxFullSeasonCapCredit === 19.83,
+  `Expected Aidan Hutchinson to evaluate as documented Clause 54 ($19.83M max cap credit), got ${hutchIns.tier} ($${hutchIns.maxFullSeasonCapCredit}M)`
+);
+const hutchFullSim = simulateInsuranceCapCredit(hutchIns, 17, 1.0);
+const hutchHalfSim = simulateInsuranceCapCredit(hutchIns, 8, 0.75);
+assert(
+  hutchFullSim.projectedNextYearCapCredit === 19.83 &&
+    hutchHalfSim.projectedNextYearCapCredit > 0 &&
+    hutchHalfSim.projectedNextYearCapCredit < hutchFullSim.projectedNextYearCapCredit,
+  'Insurance cap credit simulation must scale monotonically with games missed and coverage %'
+);
+const detInsOverview = evaluateTeamInsuranceOverview(baseState);
+assert(
+  detInsOverview.documentedClauses.length >= 1 &&
+    detInsOverview.primeInsurable.length >= 1,
+  'Detroit Lions insurance overview must surface documented Clause 54 and prime insurable contracts'
+);
+console.log(
+  `\n9. Contract Insurance & CBA Cap-Credit Checks:\n   Aidan Hutchinson: ${hutchIns.badgeLabel} | 2026-27 Pool=$${hutchIns.maxInsurablePool2026}M | 17g/100% Credit=+$${hutchFullSim.projectedNextYearCapCredit}M | 8g/75% Credit=+$${hutchHalfSim.projectedNextYearCapCredit}M\n   Detroit Tracked Insurance Deals: ${detInsOverview.documentedClauses.length} Documented, ${detInsOverview.primeInsurable.length} Prime Insurable`
 );
 
 console.log('\n✅ ALL DETERMINISTIC CAP ENGINE CHECKS PASSED!');

@@ -28,6 +28,8 @@ import {
 } from '@/data/seed/freeAgents';
 import { SEED_TEAMS } from '@/data/seed/teams';
 
+export type AppMode = 'CONTRACT_EXPLORER' | 'TEAM_BUILDER';
+
 export type ActiveTab =
   | 'player-fate'
   | 'team-builder'
@@ -48,6 +50,7 @@ interface GMStoreState {
   baseTeam: TeamSeedData;
   capGrowthRate: number;
   capCalculationMode: CapCalculationMode;
+  appMode: AppMode;
   compareOriginalBaseline: boolean;
   transactions: Transaction[];
   baselineState: DerivedTeamCapState;
@@ -74,6 +77,7 @@ interface GMStoreState {
   selectTeam: (teamId: string) => void;
   setCapGrowthRate: (rate: number) => void;
   setCapCalculationMode: (mode: CapCalculationMode) => void;
+  setAppMode: (mode: AppMode) => void;
   setCompareOriginalBaseline: (val: boolean) => void;
   setActiveTab: (tab: ActiveTab) => void;
   setTeamBuilderSubTab: (sub: TeamBuilderSubTab) => void;
@@ -542,6 +546,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     const { baseTeam, capGrowthRate, capCalculationMode } = get();
     set({
       transactions: nextTx,
+      appMode: 'TEAM_BUILDER',
       compareOriginalBaseline: false,
       derivedState: recompute(baseTeam, nextTx, capGrowthRate, capCalculationMode),
       ...extra,
@@ -553,12 +558,13 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     baseTeam: initialTeam,
     capGrowthRate: DEFAULT_CAP_GROWTH_RATE,
     capCalculationMode: 'TOP_51',
-    compareOriginalBaseline: false,
+    appMode: 'CONTRACT_EXPLORER',
+    compareOriginalBaseline: true,
     transactions: [],
     baselineState: initialDerived,
     derivedState: initialDerived,
 
-    activeTab: 'team-builder',
+    activeTab: 'player-fate',
     teamBuilderSubTab: 'fa-dock',
     teamBuilderPosFilter: 'ALL',
     navHistory: [],
@@ -578,12 +584,13 @@ export const useGMStore = create<GMStoreState>((set, get) => {
       const nextTeam = SEED_TEAMS[teamId] ?? SEED_TEAMS['DET'];
       const rate = get().capGrowthRate;
       const mode = get().capCalculationMode;
+      const currentAppMode = get().appMode;
       const freshBaseline = recompute(nextTeam, [], rate, mode);
       set({
         selectedTeamId: nextTeam.id,
         baseTeam: nextTeam,
         transactions: [],
-        compareOriginalBaseline: false,
+        compareOriginalBaseline: currentAppMode === 'CONTRACT_EXPLORER',
         selectedPlayerId: null,
         initialDrawerTab: null,
         baselineState: freshBaseline,
@@ -609,8 +616,21 @@ export const useGMStore = create<GMStoreState>((set, get) => {
       });
     },
 
+    setAppMode: (mode) =>
+      set({
+        appMode: mode,
+        compareOriginalBaseline: mode === 'CONTRACT_EXPLORER',
+        activeTab: mode === 'CONTRACT_EXPLORER' ? 'player-fate' : 'team-builder',
+        selectedPlayerId: null,
+        isScenarioDrawerOpen: false,
+      }),
+
     setCompareOriginalBaseline: (val) =>
-      set({ compareOriginalBaseline: val }),
+      set({
+        compareOriginalBaseline: val,
+        appMode: val ? 'CONTRACT_EXPLORER' : 'TEAM_BUILDER',
+        activeTab: val ? 'player-fate' : 'team-builder',
+      }),
 
     setActiveTab: (tab) => {
       const current = get().activeTab;
@@ -635,6 +655,7 @@ export const useGMStore = create<GMStoreState>((set, get) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       set({
+        appMode: 'TEAM_BUILDER',
         activeTab: 'team-builder',
         compareOriginalBaseline: false,
         navHistory: nextHistory,
@@ -970,12 +991,14 @@ export const useGMStore = create<GMStoreState>((set, get) => {
           }
         }
 
+        const hasMoves = replayed.length > 0;
         set({
           selectedTeamId: targetTeam.id,
           baseTeam: targetTeam,
           transactions: replayed,
-          compareOriginalBaseline: false,
-          activeTab: 'team-builder',
+          appMode: hasMoves ? 'TEAM_BUILDER' : 'CONTRACT_EXPLORER',
+          compareOriginalBaseline: !hasMoves,
+          activeTab: hasMoves ? 'team-builder' : 'player-fate',
           selectedPlayerId: null,
           initialDrawerTab: null,
           baselineState: freshBaseline,
@@ -1157,7 +1180,10 @@ export const useGMStore = create<GMStoreState>((set, get) => {
     },
 
     resetScenarioStack: () => {
-      commitTransactions([]);
+      commitTransactions([], {
+        selectedPlayerId: null,
+        isScenarioDrawerOpen: false,
+      });
     },
   };
 });

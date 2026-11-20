@@ -31,7 +31,7 @@ export function CapHorizonHeader() {
     baseTeam,
     capGrowthRate,
     capCalculationMode,
-    compareOriginalBaseline,
+    appMode,
     transactions,
     baselineState,
     derivedState,
@@ -40,8 +40,7 @@ export function CapHorizonHeader() {
     selectTeam,
     setCapGrowthRate,
     setCapCalculationMode,
-    setCompareOriginalBaseline,
-    setActiveTab,
+    setAppMode,
     openInTeamBuilder,
     goBack,
     goHome,
@@ -58,8 +57,9 @@ export function CapHorizonHeader() {
   const enabledCount = transactions.filter((t) => t.enabled).length;
   const isMainWorkspace =
     activeTab === 'team-builder' || activeTab === 'player-fate';
-  const isCurrentStateMode = compareOriginalBaseline && enabledCount > 0;
-  const displayCapState = isCurrentStateMode ? baselineState : derivedState;
+  const isExplorerMode = appMode === 'CONTRACT_EXPLORER';
+  const isCurrentStateMode = isExplorerMode;
+  const displayCapState = isExplorerMode ? baselineState : derivedState;
   const compSummary = displayCapState.compPickSummary;
   const activeCapLabel = capCalculationMode === 'FULL_53' ? 'All-53' : 'Top-51';
   const netCapDelta2026 =
@@ -169,19 +169,22 @@ export function CapHorizonHeader() {
             </div>
           </div>
 
-          {/* Center Navigation — Compact Quick Workspace Nav + Baseline Peek (Desktop md+) */}
+          {/* Center Primary 2-Mode Switcher: Contract Explorer vs Team Builder (Desktop md+) */}
           <nav
-            aria-label="Quick Workspace Navigation"
-            className="hidden md:flex items-center gap-1.5"
+            aria-label="Primary App Mode"
+            className="hidden md:flex items-center gap-2"
           >
-            <div className="flex items-center border border-[#111827] bg-white p-0.5 text-xs">
+            <div
+              role="tablist"
+              aria-label="Application Mode"
+              className="flex items-center border-2 border-[#111827] bg-white p-0.5 text-xs"
+            >
               <button
                 type="button"
+                role="tab"
+                aria-selected={isExplorerMode}
                 onClick={() => {
-                  setCompareOriginalBaseline(false);
-                  if (!isMainWorkspace) {
-                    setActiveTab('team-builder');
-                  }
+                  setAppMode('CONTRACT_EXPLORER');
                   window.dispatchEvent(
                     new CustomEvent('armchair-gm:open-workspace-tab', {
                       detail: 'ACTIVE',
@@ -189,70 +192,49 @@ export function CapHorizonHeader() {
                   );
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className={`px-3 py-1.5 font-semibold transition-colors cursor-pointer ${
-                  isMainWorkspace && !compareOriginalBaseline
+                className={`px-3.5 py-1.5 font-semibold transition-colors cursor-pointer ${
+                  isExplorerMode
                     ? 'bg-[#1e3a5f] text-white'
                     : 'text-[#111827] hover:bg-[#f1f5f9]'
                 }`}
               >
-                Roster &amp; Cap
+                Contract Explorer
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={!isExplorerMode}
                 onClick={() => {
-                  setCompareOriginalBaseline(false);
-                  openInTeamBuilder({ subTab: 'fa-dock' });
-                  window.dispatchEvent(
-                    new CustomEvent('armchair-gm:open-workspace-tab', {
-                      detail: 'FREE_AGENTS',
-                    })
-                  );
+                  setAppMode('TEAM_BUILDER');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#15803d] hover:bg-[#f0fdf4] transition-colors cursor-pointer"
-              >
-                + Free Agents
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCompareOriginalBaseline(false);
-                  openInTeamBuilder({ subTab: 'draft-trade' });
-                  window.dispatchEvent(
-                    new CustomEvent('armchair-gm:open-workspace-tab', {
-                      detail: 'DRAFT_PICKS',
-                    })
-                  );
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="border-l border-[#d6d0c4] px-3 py-1.5 font-semibold text-[#111827] hover:bg-[#f1f5f9] transition-colors cursor-pointer"
-              >
-                Trades &amp; Draft
-              </button>
-            </div>
-
-            {enabledCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setCompareOriginalBaseline(!compareOriginalBaseline)}
-                className={`border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                  compareOriginalBaseline
-                    ? 'border-[#b45309] bg-[#fef3c7] text-[#78350f]'
-                    : 'border-[#c7bfb0] bg-[#fcfaf6] text-[#334155] hover:border-[#111827]'
+                className={`border-l border-[#d6d0c4] px-3.5 py-1.5 font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+                  !isExplorerMode
+                    ? 'bg-[#15803d] text-white'
+                    : 'text-[#111827] hover:bg-[#f0fdf4]'
                 }`}
               >
-                {compareOriginalBaseline
-                  ? 'Viewing Original Baseline (Tap for Projected)'
-                  : 'Peek Original Baseline'}
+                <span>Team Builder</span>
+                {enabledCount > 0 && (
+                  <span
+                    className={`px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${
+                      !isExplorerMode
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#dcfce7] text-[#14532d]'
+                    }`}
+                  >
+                    {enabledCount}
+                  </span>
+                )}
               </button>
-            )}
+            </div>
           </nav>
 
-          {/* Right Controls: Global Player Lookup, Cap vs Cash Toggle, Growth & Scenario Notebook */}
+          {/* Right Controls: Mode-Aware Utility & Sandbox Controls */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-xs">
             <div className="hidden lg:block">
               <GlobalPlayerSearch
-                placeholder="Lookup any NFL player (age, yrs left, deal)..."
+                placeholder="Lookup any NFL player (contract, insurance, yrs left)..."
                 className="w-56 xl:w-64"
               />
             </div>
@@ -332,52 +314,62 @@ export function CapHorizonHeader() {
               </select>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (isCurrentStateMode) {
-                  openInTeamBuilder({ subTab: 'fa-dock' });
-                }
-                openFreeAgencyModal({ position: 'ALL' });
-              }}
-              className="hidden sm:inline-flex border border-[#1c1917] px-3 py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
-            >
-              + Sign Free Agent
-            </button>
+            {!isExplorerMode && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openInTeamBuilder({ subTab: 'fa-dock' });
+                    openFreeAgencyModal({ position: 'ALL' });
+                  }}
+                  className="hidden sm:inline-flex border border-[#1c1917] px-3 py-1.5 text-xs font-medium text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
+                >
+                  + Sign Free Agent
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setScenarioDrawerOpen(true)}
-              className="flex items-center gap-1.5 bg-[#1c1917] px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
-            >
-              <span className="hidden sm:inline">Moves Notebook</span>
-              <span className="sm:hidden">Moves</span>
-              <span className="font-mono-ledger text-[11px] opacity-80">
-                [{enabledCount}/{transactions.length}]
-              </span>
-              {enabledCount > 0 && Math.abs(netCapDelta2026) >= 0.05 && (
-                <span
-                  className={`ml-0.5 px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${
-                    netCapDelta2026 >= 0
-                      ? 'bg-[#15803d] text-white'
-                      : 'bg-[#b91c1c] text-white'
+                <button
+                  type="button"
+                  onClick={() => setScenarioDrawerOpen(true)}
+                  className="flex items-center gap-1.5 bg-[#1c1917] px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
+                >
+                  <span className="hidden sm:inline">Moves</span>
+                  <span className="sm:hidden">Moves</span>
+                  <span className="font-mono-ledger text-[11px] opacity-80">
+                    [{enabledCount}]
+                  </span>
+                  {enabledCount > 0 && Math.abs(netCapDelta2026) >= 0.05 && (
+                    <span
+                      className={`ml-0.5 px-1.5 py-0.5 font-mono-ledger text-[10px] font-bold ${
+                        netCapDelta2026 >= 0
+                          ? 'bg-[#15803d] text-white'
+                          : 'bg-[#b91c1c] text-white'
+                      }`}
+                    >
+                      {netCapDelta2026 >= 0 ? '+' : '−'}$
+                      {Math.abs(netCapDelta2026).toFixed(1)}M
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={transactions.length === 0}
+                  onClick={resetScenarioStack}
+                  title={
+                    transactions.length > 0
+                      ? 'Reset team back to default signed roster'
+                      : 'Team is currently at default signed roster'
+                  }
+                  className={`inline-flex items-center gap-1 border px-2.5 py-1 sm:py-1.5 text-xs font-semibold transition-colors ${
+                    transactions.length > 0
+                      ? 'border-[#b91c1c] bg-[#fef2f2] text-[#b91c1c] hover:bg-[#b91c1c] hover:text-white cursor-pointer'
+                      : 'border-[#d6d0c4] bg-[#fcfaf6] text-[#94a3b8] cursor-not-allowed'
                   }`}
                 >
-                  {netCapDelta2026 >= 0 ? '+' : '−'}$
-                  {Math.abs(netCapDelta2026).toFixed(1)}M
-                </span>
-              )}
-            </button>
-
-            {transactions.length > 0 && (
-              <button
-                type="button"
-                onClick={resetScenarioStack}
-                title="Reset all simulated GM moves"
-                className="p-1 sm:p-1.5 text-[#57534e] hover:text-[#b84a27] transition-colors cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </button>
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -455,23 +447,47 @@ export function CapHorizonHeader() {
           </div>
         )}
 
-        {/* MOBILE COMPACT 4-YEAR CAP PILL STRIP (Visible on Phone <768px so sticky header stays slim) */}
+        {/* MOBILE COMPACT 2-MODE SWITCHER + 4-YEAR CAP PILL STRIP (Visible on Phone <768px) */}
         <div className="md:hidden px-3 py-2 bg-white border-b border-[#d6d0c4] space-y-2">
-          {enabledCount > 0 && (
+          <div
+            role="tablist"
+            aria-label="Mobile Application Mode"
+            className="grid grid-cols-2 border-2 border-[#111827] bg-white p-0.5 text-xs"
+          >
             <button
               type="button"
-              onClick={() => setCompareOriginalBaseline(!compareOriginalBaseline)}
-              className={`w-full border px-2.5 py-1 font-mono-ledger text-[11px] font-semibold text-center ${
-                compareOriginalBaseline
-                  ? 'border-[#b45309] bg-[#fef3c7] text-[#78350f]'
-                  : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155]'
+              role="tab"
+              aria-selected={isExplorerMode}
+              onClick={() => {
+                setAppMode('CONTRACT_EXPLORER');
+                window.dispatchEvent(
+                  new CustomEvent('armchair-gm:open-workspace-tab', {
+                    detail: 'ACTIVE',
+                  })
+                );
+              }}
+              className={`py-1.5 px-2 font-semibold text-center transition-colors ${
+                isExplorerMode
+                  ? 'bg-[#1e3a5f] text-white'
+                  : 'text-[#111827]'
               }`}
             >
-              {compareOriginalBaseline
-                ? 'Viewing Original Baseline (Tap for Projected)'
-                : 'Peek Original Baseline'}
+              Contract Explorer
             </button>
-          )}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!isExplorerMode}
+              onClick={() => setAppMode('TEAM_BUILDER')}
+              className={`border-l border-[#d6d0c4] py-1.5 px-2 font-semibold text-center transition-colors ${
+                !isExplorerMode
+                  ? 'bg-[#15803d] text-white'
+                  : 'text-[#111827]'
+              }`}
+            >
+              Team Builder{enabledCount > 0 ? ` (${enabledCount})` : ''}
+            </button>
+          </div>
           <div className="grid grid-cols-5 items-center gap-1.5">
             {LEAGUE_YEARS.map((year) => {
               const yData = displayCapState.years[year];
@@ -555,8 +571,9 @@ export function CapHorizonHeader() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCompareOriginalBaseline(false);
-                          setActiveTab('team-builder');
+                          if (!isMainWorkspace) {
+                            setAppMode(appMode);
+                          }
                           window.dispatchEvent(
                             new CustomEvent('armchair-gm:open-dead-money')
                           );
@@ -772,8 +789,9 @@ export function CapHorizonHeader() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setCompareOriginalBaseline(false);
-                        setActiveTab('team-builder');
+                        if (!isMainWorkspace) {
+                          setAppMode(appMode);
+                        }
                         window.dispatchEvent(
                           new CustomEvent('armchair-gm:open-dead-money')
                         );
@@ -928,102 +946,166 @@ export function CapHorizonHeader() {
       </div>
     </header>
 
-    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — 4 Thumb Targets */}
+    {/* FIXED BOTTOM MOBILE NAVIGATION BAR (iPhone & Pixel <768px) — Mode-Aware 4 Thumb Targets */}
     <nav
       aria-label="Mobile Quick Navigation"
       className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t-2 border-[#111827] bg-white/98 backdrop-blur-md pb-[max(0.45rem,env(safe-area-inset-bottom,0px))] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] shadow-[0_-4px_12px_rgba(17,24,39,0.1)]"
     >
-      <div className="grid grid-cols-4 divide-x divide-[#d6d0c4]">
-        <button
-          type="button"
-          onClick={() => {
-            setCompareOriginalBaseline(false);
-            if (!isMainWorkspace) {
-              setActiveTab('team-builder');
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center transition-colors ${
-            isMainWorkspace && !compareOriginalBaseline
-              ? 'bg-[#1e3a5f] text-white'
-              : 'text-[#111827] active:bg-[#f1f5f9]'
-          }`}
-        >
-          <span className="text-xs font-bold leading-tight">Roster</span>
-          <span
-            className={`mt-0.5 font-mono-ledger text-[10px] font-medium ${
-              isMainWorkspace && !compareOriginalBaseline
-                ? 'text-[#e2e8f0]'
-                : 'text-[#475569]'
+      {isExplorerMode ? (
+        <div className="grid grid-cols-4 divide-x divide-[#d6d0c4]">
+          <button
+            type="button"
+            onClick={() => {
+              setAppMode('CONTRACT_EXPLORER');
+              window.dispatchEvent(
+                new CustomEvent('armchair-gm:open-workspace-tab', {
+                  detail: 'ACTIVE',
+                })
+              );
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center bg-[#1e3a5f] text-white"
+          >
+            <span className="text-xs font-bold leading-tight">Contracts</span>
+            <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#e2e8f0]">
+              Signed Books
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAppMode('CONTRACT_EXPLORER');
+              window.dispatchEvent(
+                new CustomEvent('armchair-gm:open-workspace-tab', {
+                  detail: 'INSURANCE',
+                })
+              );
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center text-[#111827] active:bg-[#ebe6dc]"
+          >
+            <span className="text-xs font-bold leading-tight text-[#1e3a5f]">
+              Insurance
+            </span>
+            <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#475569]">
+              Clauses &amp; CBA
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAppMode('CONTRACT_EXPLORER');
+              window.dispatchEvent(
+                new CustomEvent('armchair-gm:open-workspace-tab', {
+                  detail: 'NEEDS',
+                })
+              );
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center text-[#111827] active:bg-[#ebe6dc]"
+          >
+            <span className="text-xs font-bold leading-tight">Depth</span>
+            <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#b45309]">
+              2026–29
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAppMode('TEAM_BUILDER');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center bg-[#f0fdf4] text-[#14532d] active:bg-[#dcfce7]"
+          >
+            <span className="text-xs font-bold leading-tight text-[#15803d]">
+              Team Builder
+            </span>
+            <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#14532d]">
+              Edit Roster →
+            </span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 divide-x divide-[#d6d0c4]">
+          <button
+            type="button"
+            onClick={() => {
+              setAppMode('TEAM_BUILDER');
+              window.dispatchEvent(
+                new CustomEvent('armchair-gm:open-workspace-tab', {
+                  detail: 'ACTIVE',
+                })
+              );
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center bg-[#15803d] text-white"
+          >
+            <span className="text-xs font-bold leading-tight">Roster</span>
+            <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#dcfce7]">
+              Edit Deals
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              openInTeamBuilder({ subTab: 'fa-dock' });
+              window.dispatchEvent(
+                new CustomEvent('armchair-gm:open-workspace-tab', {
+                  detail: 'FREE_AGENTS',
+                })
+              );
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center text-[#111827] hover:bg-[#f0fdf4] active:bg-[#dcfce7]"
+          >
+            <span className="text-xs font-bold leading-tight text-[#15803d]">
+              + Free Agents
+            </span>
+            <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#14532d]">
+              Sign / Re-Sign
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setScenarioDrawerOpen(true)}
+            className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center bg-[#f8fafc] text-[#111827] active:bg-[#ebe6dc]"
+          >
+            <span className="text-xs font-bold leading-tight">
+              Moves ({enabledCount})
+            </span>
+            <span
+              className={`mt-0.5 font-mono-ledger text-[10px] font-bold ${
+                netCapDelta2026 >= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
+              }`}
+            >
+              {enabledCount > 0
+                ? `${netCapDelta2026 >= 0 ? '+' : '−'}$${Math.abs(netCapDelta2026).toFixed(1)}M`
+                : 'Notebook'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            disabled={transactions.length === 0}
+            onClick={resetScenarioStack}
+            className={`flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center transition-colors ${
+              transactions.length > 0
+                ? 'bg-[#fef2f2] text-[#b91c1c] active:bg-[#fee2e2]'
+                : 'bg-white text-[#94a3b8]'
             }`}
           >
-            Cap Grid
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setCompareOriginalBaseline(false);
-            if (!isMainWorkspace) {
-              setActiveTab('team-builder');
-            }
-            setTimeout(() => {
-              (
-                document.getElementById('need-solver-strip') ??
-                document.getElementById('positional-needs-matrix')
-              )?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 60);
-          }}
-          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center text-[#111827] hover:bg-[#f1f5f9] active:bg-[#ebe6dc] transition-colors"
-        >
-          <span className="text-xs font-bold leading-tight">Needs</span>
-          <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#b45309]">
-            Solve &apos;26
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setCompareOriginalBaseline(false);
-            openInTeamBuilder({ subTab: 'fa-dock' });
-            setTimeout(() => {
-              (
-                document.getElementById('add-free-agents-dock') ??
-                document.getElementById('team-builder-workbench')
-              )?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 80);
-          }}
-          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center text-[#111827] hover:bg-[#f0fdf4] active:bg-[#dcfce7] transition-colors"
-        >
-          <span className="text-xs font-bold leading-tight text-[#15803d]">
-            + Free Agents
-          </span>
-          <span className="mt-0.5 font-mono-ledger text-[10px] font-medium text-[#14532d]">
-            Sign / Re-Sign
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setScenarioDrawerOpen(true)}
-          className="flex flex-col items-center justify-center min-h-[52px] py-2 px-1 text-center bg-[#f8fafc] text-[#111827] active:bg-[#ebe6dc] transition-colors"
-        >
-          <span className="text-xs font-bold leading-tight">
-            Moves ({enabledCount})
-          </span>
-          <span
-            className={`mt-0.5 font-mono-ledger text-[10px] font-bold ${
-              netCapDelta2026 >= 0 ? 'text-[#15803d]' : 'text-[#b91c1c]'
-            }`}
-          >
-            {enabledCount > 0
-              ? `${netCapDelta2026 >= 0 ? '+' : '−'}$${Math.abs(netCapDelta2026).toFixed(1)}M`
-              : 'Notebook'}
-          </span>
-        </button>
-      </div>
+            <span className="text-xs font-bold leading-tight">Reset</span>
+            <span className="mt-0.5 font-mono-ledger text-[10px] font-medium">
+              {transactions.length > 0 ? 'To Defaults' : 'Default'}
+            </span>
+          </button>
+        </div>
+      )}
     </nav>
     </>
   );

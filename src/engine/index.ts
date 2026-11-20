@@ -6,5 +6,6 @@ export * from './draftEngine';
 export * from './freeAgencyEngine';
 export * from './faPredictionEngine';
 export * from './fantasyEngine';
+export * from './contractInsuranceEngine';
 export * from './capEngine';
 export * from './jargonTooltips';

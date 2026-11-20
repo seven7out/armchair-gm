@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import {
   computeRealContractXRay,
+  evaluatePlayerContractInsurance,
   evaluateRosterPlayerFate,
   getContractYearCapHit,
   getDraftPickTradeValue,
@@ -25,6 +26,7 @@ import {
   POSITIONAL_MARKET_COMPS,
   projectPlayerCareerHorizon,
   simulateCutOrTrade,
+  simulateInsuranceCapCredit,
 } from '@/engine';
 import { SEED_TEAMS } from '@/data/seed/teams';
 import { useGMStore } from '@/store/useGMStore';
@@ -48,19 +50,23 @@ export function GlobalPlayerSearch({
   placeholder?: string;
   className?: string;
 }) {
-  const { selectedTeamId, derivedState, openPlayerDossier } = useGMStore();
+  const { selectedTeamId, appMode, baselineState, derivedState, openPlayerDossier } =
+    useGMStore();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Build league-wide player index using live derivedState for the selected team
-  // and SEED_TEAMS for the other 31 NFL franchises
+  // Build league-wide player index using baselineState in Contract Explorer
+  // or derivedState in Team Builder for the selected team
+  const activeRosterForSearch =
+    appMode === 'CONTRACT_EXPLORER' ? baselineState.roster : derivedState.roster;
+
   const allLeaguePlayers = useMemo(() => {
     const list: LeaguePlayerEntry[] = [];
 
     for (const team of Object.values(SEED_TEAMS)) {
       const roster =
-        team.id === selectedTeamId ? derivedState.roster : team.roster;
+        team.id === selectedTeamId ? activeRosterForSearch : team.roster;
       for (const player of roster) {
         list.push({
           player,
@@ -74,7 +80,7 @@ export function GlobalPlayerSearch({
       }
     }
     return list;
-  }, [selectedTeamId, derivedState.roster]);
+  }, [selectedTeamId, activeRosterForSearch]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -205,16 +211,21 @@ export function PlayerDossierModal() {
   const {
     dossierPlayer,
     selectedTeamId,
+    appMode,
+    baselineState,
     derivedState,
     closePlayerDossier,
     selectTeam,
     selectPlayer,
+    openInTeamBuilder,
     setActiveTab,
     addTradeTransaction,
   } = useGMStore();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const [insGamesMissed, setInsGamesMissed] = useState<4 | 8 | 12 | 17>(17);
+  const [insCoveragePct, setInsCoveragePct] = useState<0.5 | 0.75 | 1.0>(1.0);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -231,6 +242,8 @@ export function PlayerDossierModal() {
 
   if (!dossierPlayer) return null;
 
+  const isExplorerMode = appMode === 'CONTRACT_EXPLORER';
+  const activeState = isExplorerMode ? baselineState : derivedState;
   const { player, teamId } = dossierPlayer;
   const teamData = SEED_TEAMS[teamId] ?? SEED_TEAMS[selectedTeamId];
   const isOnActiveTeam = teamId === selectedTeamId;
@@ -239,7 +252,13 @@ export function PlayerDossierModal() {
   const xray = computeRealContractXRay(player);
   const fate = evaluateRosterPlayerFate(
     player,
-    derivedState.years[2026].effectiveCapSpace
+    activeState.years[2026].effectiveCapSpace
+  );
+  const insuranceProfile = evaluatePlayerContractInsurance(player);
+  const insuranceSim = simulateInsuranceCapCredit(
+    insuranceProfile,
+    insGamesMissed,
+    insCoveragePct
   );
   const marketComps = POSITIONAL_MARKET_COMPS[player.position] ?? [];
 
@@ -621,6 +640,152 @@ export function PlayerDossierModal() {
           </div>
         </section>
 
+        {/* 3B. Contract Insurance & CBA Article 13 Salary Cap Credit Protection */}
+        <section
+          className={`border p-5 space-y-3.5 ${
+            insuranceProfile.isDocumentedRealClause
+              ? 'border-2 border-[#1e3a5f] bg-[#f8fafc]'
+              : 'border-[#dfd9cc] bg-[#fcfaf6]'
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#dfd9cc] pb-2.5">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[#1e3a5f] shrink-0" />
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#111827]">
+                Contract Insurance &amp; CBA Cap-Credit Protection
+              </span>
+            </div>
+            <span
+              className={`border px-2 py-0.5 font-mono-ledger text-[10px] font-bold ${
+                insuranceProfile.isDocumentedRealClause
+                  ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                  : insuranceProfile.tier === 'PRIME_INSURABLE'
+                  ? 'border-[#15803d] bg-[#dcfce7] text-[#14532d]'
+                  : insuranceProfile.tier === 'MODERATE_INSURABLE'
+                  ? 'border-[#d97706] bg-[#fef3c7] text-[#78350f]'
+                  : 'border-[#cbd5e1] bg-white text-[#475569]'
+              }`}
+            >
+              {insuranceProfile.badgeLabel}
+            </span>
+          </div>
+
+          {insuranceProfile.clauseReference && (
+            <div className="font-mono-ledger text-xs font-bold text-[#1e3a5f]">
+              {insuranceProfile.clauseReference} · {insuranceProfile.insurableWindowLabel}
+            </div>
+          )}
+
+          <p className="text-xs leading-relaxed text-[#334155]">
+            {insuranceProfile.summary}
+          </p>
+
+          {insuranceProfile.tier !== 'MINIMAL_EXPOSURE' && (
+            <>
+              {insuranceProfile.componentBreakdown.length > 0 && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 font-mono-ledger text-xs">
+                  {insuranceProfile.componentBreakdown.map((comp) => (
+                    <div
+                      key={comp.label}
+                      className="border border-[#d6d0c4] bg-white px-3 py-2"
+                    >
+                      <div className="text-[10px] text-[#64748b]">{comp.label}</div>
+                      <div className="mt-0.5 font-bold text-[#111827]">
+                        ${comp.amount.toFixed(2)}M
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Interactive "What If Injured?" CBA Cap Credit Estimator */}
+              <div className="border border-[#d6d0c4] bg-white p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono-ledger text-[10px] font-bold uppercase tracking-[0.1em] text-[#334155]">
+                    CBA Article 13 &ldquo;What If Injured?&rdquo; Cap-Credit Estimator
+                  </span>
+                  <span className="font-mono-ledger text-[10px] text-[#64748b]">
+                    Owner Premiums: $0 Cap Hit
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-semibold text-[#475569]">
+                      Games Missed:
+                    </span>
+                    {([4, 8, 12, 17] as const).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setInsGamesMissed(g)}
+                        className={`border px-2 py-0.5 font-mono-ledger text-[11px] font-semibold cursor-pointer ${
+                          insGamesMissed === g
+                            ? 'border-[#1e3a5f] bg-[#1e3a5f] text-white'
+                            : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155] hover:border-[#111827]'
+                        }`}
+                      >
+                        {g === 17 ? '17 (Full Yr)' : `${g}g`}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-semibold text-[#475569]">
+                      Policy Coverage:
+                    </span>
+                    {([0.5, 0.75, 1.0] as const).map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => setInsCoveragePct(pct)}
+                        className={`border px-2 py-0.5 font-mono-ledger text-[11px] font-semibold cursor-pointer ${
+                          insCoveragePct === pct
+                            ? 'border-[#15803d] bg-[#15803d] text-white'
+                            : 'border-[#cbd5e1] bg-[#f8fafc] text-[#334155] hover:border-[#111827]'
+                        }`}
+                      >
+                        {Math.round(pct * 100)}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 font-mono-ledger text-xs pt-1 border-t border-[#e2e8f0]">
+                  <div>
+                    <div className="text-[10px] text-[#64748b]">
+                      Est. Next-Year Cap Credit
+                    </div>
+                    <div className="text-base font-bold text-[#15803d]">
+                      +${insuranceSim.projectedNextYearCapCredit.toFixed(2)}M
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[#64748b]">
+                      Est. Insurer Cash Payout
+                    </div>
+                    <div className="text-base font-bold text-[#111827]">
+                      ${insuranceSim.projectedCashReimbursement.toFixed(2)}M
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[#64748b]">
+                      Est. Owner Premium (Off-Cap)
+                    </div>
+                    <div className="text-base font-semibold text-[#475569]">
+                      ~${insuranceSim.estimatedOwnerPremium.toFixed(2)}M/yr
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <p className="text-[11px] text-[#64748b] leading-relaxed">
+            {insuranceProfile.cbaRuleNote}
+          </p>
+        </section>
+
         {/* 4. Positional Market Valuation Benchmarks */}
         {marketComps.length > 0 && (
           <section className="border border-[#dfd9cc] bg-[#fcfaf6] p-4">
@@ -728,7 +893,15 @@ export function PlayerDossierModal() {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-[#57534e]">
-              Want to simulate a move for <strong>{player.name}</strong>?
+              {isExplorerMode ? (
+                <>
+                  Viewing signed contract facts for <strong>{player.name}</strong>. Switch to Team Builder to test changes.
+                </>
+              ) : (
+                <>
+                  Want to simulate a move for <strong>{player.name}</strong>?
+                </>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -737,11 +910,21 @@ export function PlayerDossierModal() {
                   type="button"
                   onClick={() => {
                     closePlayerDossier();
-                    selectPlayer(player.id, fate.recommendedActionTab, 2026);
+                    if (isExplorerMode) {
+                      openInTeamBuilder({
+                        playerId: player.id,
+                        drawerTab: fate.recommendedActionTab,
+                        actionYear: 2026,
+                      });
+                    } else {
+                      selectPlayer(player.id, fate.recommendedActionTab, 2026);
+                    }
                   }}
                   className="bg-[#1c1917] px-4 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
                 >
-                  Edit Contract (Cut / Trade / Restructure / Extend) →
+                  {isExplorerMode
+                    ? 'Edit Contract in Team Builder →'
+                    : 'Edit Contract (Cut / Trade / Restructure / Extend) →'}
                 </button>
               ) : (
                 <>
@@ -750,16 +933,21 @@ export function PlayerDossierModal() {
                     onClick={() => {
                       selectTeam(teamId);
                       closePlayerDossier();
-                      selectPlayer(player.id, fate.recommendedActionTab, 2026);
+                      if (!isExplorerMode) {
+                        selectPlayer(player.id, fate.recommendedActionTab, 2026);
+                      }
                     }}
                     className="border border-[#1c1917] bg-[#fcfaf6] px-4 py-2 text-xs font-semibold text-[#1c1917] hover:bg-[#1c1917] hover:text-[#f6f3ec] transition-colors cursor-pointer"
                   >
-                    Switch to {teamData?.name} &amp; Manage Contract →
+                    {isExplorerMode
+                      ? `Explore ${teamData?.name} Books →`
+                      : `Switch to ${teamData?.name} & Manage Contract →`}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       closePlayerDossier();
+                      openInTeamBuilder({ subTab: 'draft-trade' });
                       setActiveTab('draft');
                     }}
                     className="bg-[#1c1917] px-4 py-2 text-xs font-semibold text-[#f6f3ec] hover:bg-[#332e2a] transition-colors cursor-pointer"
